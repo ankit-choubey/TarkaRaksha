@@ -4,7 +4,6 @@ Natural-language interpretation is delegated to the existing T08 intent parser.
 This service adds the buyer-agent boundary around that validated contract and
 supports deterministic proposal creation and constrained replanning.
 """
-from datetime import datetime, timezone
 import hashlib
 
 from backend.app.domain.buyer.contracts import (
@@ -57,15 +56,9 @@ class BuyerAgentService:
     ) -> BuyerAgentDecision:
         """Evaluate an offer without changing the authorized buyer constraints."""
         if merchant_response.intent_id != intent.intent_id:
-            return BuyerAgentDecision(
-                decision=BuyerAgentDecisionType.ABSTAIN,
-                explanation="Merchant response is bound to a different intent.",
-            )
+            return BuyerAgentDecision(decision=BuyerAgentDecisionType.ABSTAIN, explanation="Merchant response is bound to a different intent.")
         if merchant_response.transaction_id != transaction_id:
-            return BuyerAgentDecision(
-                decision=BuyerAgentDecisionType.ABSTAIN,
-                explanation="Merchant response is bound to a different transaction.",
-            )
+            return BuyerAgentDecision(decision=BuyerAgentDecisionType.ABSTAIN, explanation="Merchant response is bound to a different transaction.")
         if not merchant_response.is_success:
             return BuyerAgentDecision(
                 decision=BuyerAgentDecisionType.REPLAN,
@@ -73,15 +66,9 @@ class BuyerAgentService:
                 explanation=merchant_response.rejection_reason or "Merchant rejected the request; retain authorized constraints and replan.",
             )
         if merchant_response.total_amount is None:
-            return BuyerAgentDecision(
-                decision=BuyerAgentDecisionType.ABSTAIN,
-                explanation="Merchant response lacks a total amount; insufficient evidence for a buyer decision.",
-            )
+            return BuyerAgentDecision(decision=BuyerAgentDecisionType.ABSTAIN, explanation="Merchant response lacks a total amount; insufficient evidence for a buyer decision.")
         if merchant_response.total_amount.currency != intent.currency:
-            return BuyerAgentDecision(
-                decision=BuyerAgentDecisionType.ABSTAIN,
-                explanation="Merchant offer currency conflicts with the authorized intent.",
-            )
+            return BuyerAgentDecision(decision=BuyerAgentDecisionType.ABSTAIN, explanation="Merchant offer currency conflicts with the authorized intent.")
         if merchant_response.total_amount.amount > intent.max_total.amount:
             return BuyerAgentDecision(
                 decision=BuyerAgentDecisionType.REPLAN,
@@ -100,16 +87,14 @@ class BuyerAgentService:
             explanation="Offer satisfies the buyer constraints represented in the intent; TarkaRaksha remains authoritative for integrity and payment.",
         )
 
-    def replan(self, request: BuyerReplanRequest) -> BuyerReplanResult:
+    def replan(self, request: BuyerReplanRequest, transaction_id: str | None = None) -> BuyerReplanResult:
         """Produce a bounded replan from feedback without relaxing authorization."""
-        proposal = self.propose(request.intent, request.buyer_agent_id, request.intent.intent_id)
+        effective_transaction_id = transaction_id or request.intent.intent_id
+        proposal = self.propose(request.intent, request.buyer_agent_id, effective_transaction_id)
         reason = request.integrity_feedback or "Replan requested by the transaction control flow."
         if request.merchant_response is not None:
             decision = self.evaluate_merchant_response(
-                request.intent,
-                request.buyer_agent_id,
-                request.intent.intent_id,
-                request.merchant_response,
+                request.intent, request.buyer_agent_id, effective_transaction_id, request.merchant_response
             )
             if decision.decision == BuyerAgentDecisionType.ABSTAIN:
                 return BuyerReplanResult(
@@ -131,19 +116,13 @@ class BuyerAgentService:
             raise ValueError("question and missing_constraint are required")
         digest = hashlib.sha256(f"{intent_id}:{question}:{missing_constraint}".encode()).hexdigest()[:12]
         return BuyerClarification(
-            clarification_id=f"clarify_{digest}",
-            intent_id=intent_id,
-            question=question,
-            missing_constraint=missing_constraint,
+            clarification_id=f"clarify_{digest}", intent_id=intent_id,
+            question=question, missing_constraint=missing_constraint,
         )
 
     @staticmethod
     def _delivery_limit(intent: IntentContract) -> int:
-        """Use the intent's delivery constraint only when represented in the contract.
-
-        The current T03/T08 IntentContract does not contain a delivery field, so
-        the safe fallback is unbounded rather than inventing a buyer constraint.
-        """
+        """Do not invent a delivery constraint absent from the authoritative contract."""
         return 2**31 - 1
 
     @staticmethod
