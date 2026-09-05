@@ -83,6 +83,18 @@ from backend.app.domain.kill_switch import (
     UnauthorizedResumeError,
 )
 from backend.app.services.kill_switch import KillSwitchService
+from backend.app.domain.operational_mode import (
+    HumanReviewDecision,
+    HumanReviewRequiredError,
+    HumanReviewRequirement,
+    HumanReviewStatus,
+    ModeTransitionRecord,
+    OperationalAction,
+    OperationalEvaluationResult,
+    OperationalMode,
+    OperationalModePolicy,
+)
+from backend.app.services.operational_mode import OperationalModeService
 from backend.app.domain.explanation import ExplanationResult
 from backend.app.services.explanation import (
     EvidenceAwareExplanationService,
@@ -120,6 +132,8 @@ class TransactionSession:
         self.binding_context = binding_context
         self.binding_outcome: Optional[BindingVerificationOutcome] = None
         self.kill_switch_record: Optional[KillSwitchRecord] = None
+        self.operational_evaluation: Optional[OperationalEvaluationResult] = None
+        self.human_review_requirement: Optional[HumanReviewRequirement] = None
 
 
 class TransactionService:
@@ -135,11 +149,13 @@ class TransactionService:
         binding_service: Optional[TransactionBindingService] = None,
         kill_switch_service: Optional[KillSwitchService] = None,
         explanation_service: Optional[EvidenceAwareExplanationService] = None,
+        operational_mode_service: Optional[OperationalModeService] = None,
     ):
         self._default_provider = default_provider
         self._binding_service = binding_service or TransactionBindingService()
         self._kill_switch_service = kill_switch_service or KillSwitchService()
         self._explanation_service = explanation_service or EvidenceAwareExplanationService()
+        self._operational_mode_service = operational_mode_service or OperationalModeService()
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
         self._recovery_executor = RecoveryExecutor()
@@ -156,6 +172,10 @@ class TransactionService:
     @property
     def kill_switch_service(self) -> KillSwitchService:
         return self._kill_switch_service
+
+    @property
+    def operational_mode_service(self) -> OperationalModeService:
+        return self._operational_mode_service
 
     @property
     def recovery_executor(self) -> RecoveryExecutor:
@@ -220,6 +240,50 @@ class TransactionService:
             request=request,
             reference_time=reference_time,
         )
+
+    def get_operational_mode(self) -> OperationalMode:
+        """Returns the current active operational deployment mode (SHADOW, GUARDED, HUMAN_REVIEW)."""
+        return self._operational_mode_service.get_mode()
+
+    def set_operational_mode(
+        self,
+        new_mode: OperationalMode,
+        changed_by: str,
+        reason: str,
+        reference_time: Optional[datetime] = None,
+    ) -> ModeTransitionRecord:
+        """Sets active operational deployment mode with strict authority verification."""
+        return self._operational_mode_service.set_mode(
+            new_mode=new_mode,
+            changed_by=changed_by,
+            reason=reason,
+            reference_time=reference_time,
+        )
+
+    def submit_human_review(
+        self,
+        decision: HumanReviewDecision,
+    ) -> HumanReviewRequirement:
+        """Submits explicit human review approval or rejection."""
+        session = self.get_session(decision.transaction_id)
+        expected_intent = session.intent.intent_id if session else None
+        expected_agent = session.intent.issued_by if session else None
+        expected_merchant = session.intent.merchant_id if session else None
+        updated_req = self._operational_mode_service.submit_human_review(
+            decision=decision,
+            expected_intent_id=expected_intent,
+            expected_agent_id=expected_agent,
+            expected_merchant_id=expected_merchant,
+        )
+        if session:
+            session.human_review_requirement = updated_req
+        return updated_req
+
+    def get_human_review(self, review_id: str) -> Optional[HumanReviewRequirement]:
+        return self._operational_mode_service.get_review_requirement(review_id)
+
+    def get_human_review_for_transaction(self, transaction_id: str) -> Optional[HumanReviewRequirement]:
+        return self._operational_mode_service.get_review_for_transaction(transaction_id)
 
     def explain_transaction(
         self,
@@ -672,6 +736,29 @@ class TransactionService:
             reference_time=eval_ts,
         )
         session.kill_switch_record = ks_rec
+
+        # 8.6 Deterministic Operational Mode Policy Evaluation (I10)
+        op_eval = self._operational_mode_service.evaluate_transaction(
+            transaction_id=session.transaction_id,
+            integrity_status=eval_result.status,
+            kill_switch_state=ks_rec.resulting_state if ks_rec else KillSwitchState.RUNNING,
+            amount=session.intent.max_total,
+            reference_time=eval_ts,
+        )
+        session.operational_evaluation = op_eval
+
+        # In HUMAN_REVIEW mode, if review is required, create the bound requirement
+        if op_eval.action == OperationalAction.REQUIRE_HUMAN_REVIEW and not self._operational_mode_service.get_review_for_transaction(session.transaction_id):
+            session.human_review_requirement = self._operational_mode_service.create_review_requirement(
+                transaction_id=session.transaction_id,
+                intent_id=session.intent.intent_id,
+                agent_id=session.intent.issued_by or "buyer_agent",
+                merchant_id=session.intent.merchant_id or "merchant_store",
+                reason=op_eval.reason,
+                integrity_status=eval_result.status,
+                kill_switch_state=ks_rec.resulting_state if ks_rec else KillSwitchState.RUNNING,
+                reference_time=eval_ts,
+            )
 
         # 9. If DRIFT or UNKNOWN, generate Machine-Readable Drift Proof (MRDP)
         mrdp_proof: Optional[MRDP] = None

@@ -39,10 +39,12 @@ from backend.app.domain.tix.contracts import (
     TIXMessageType,
     TIXParticipantRole,
 )
+from backend.app.domain.operational_mode import OperationalMode
 from backend.app.services.buyer.agent_service import BuyerAgentService
 from backend.app.services.evaluation import evaluate_integrity
 from backend.app.services.merchant.catalog_service import MerchantCatalogService
 from backend.app.services.mrdp import build_mrdp
+from backend.app.services.operational_mode import OperationalModeService
 from backend.app.services.tix.exchange_service import TIXExchangeService
 
 
@@ -54,10 +56,12 @@ class BoundedNegotiationService:
         buyer_service: Optional[BuyerAgentService] = None,
         merchant_service: Optional[MerchantCatalogService] = None,
         tix_service: Optional[TIXExchangeService] = None,
+        operational_mode_service: Optional[OperationalModeService] = None,
     ):
         self.buyer_service = buyer_service or BuyerAgentService()
         self.merchant_service = merchant_service or MerchantCatalogService()
         self.tix_service = tix_service or TIXExchangeService()
+        self.operational_mode_service = operational_mode_service
 
     def validate_proposal_against_intent(
         self,
@@ -124,6 +128,27 @@ class BoundedNegotiationService:
         ref_time = reference_time or intent.issued_at
         merch_id = merchant_id or initial_merchant_response.merchant_id
         session_id = f"neg_sess_{uuid.uuid4().hex[:12]}"
+
+        # Invariant: SHADOW mode never executes automated remediation
+        if self.operational_mode_service and self.operational_mode_service.get_mode() == OperationalMode.SHADOW:
+            return NegotiationSession(
+                session_id=session_id,
+                transaction_id=transaction_id,
+                intent_id=intent.intent_id,
+                buyer_agent_id=buyer_agent_id,
+                merchant_id=merch_id,
+                state=NegotiationState.ABSTAINED,
+                current_round=0,
+                policy=pol,
+                rounds=[],
+                original_verdict=IntegrityStatus.DRIFT,
+                original_violations=["SHADOW mode active: automated remediation is disabled."],
+                final_verdict=IntegrityStatus.DRIFT,
+                is_settled=True,
+                termination_reason="Automated negotiation/remediation disabled in SHADOW mode (DETECTION=ACTIVE, ENFORCEMENT=DISABLED).",
+                created_at=ref_time,
+                updated_at=ref_time,
+            )
 
         # 1. Initial Deterministic Evaluation
         initial_res = evaluate_integrity(
