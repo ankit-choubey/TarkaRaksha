@@ -18,6 +18,12 @@ from .integrity import IntegrityResult, Decision, MRDP, MRDPErrorCode
 from .recovery import RecoveryProposal, ActionRequest
 from .transaction import Transaction
 from .payment import ProviderOrder, ProviderPayment, ProviderWebhookEvent
+from .slice import (
+    CreateTransactionRequest,
+    CreateTransactionResponse,
+    CompleteTransactionRequest,
+    CompleteTransactionResponse,
+)
 
 __all__ = [
     "ActionType",
@@ -43,4 +49,8 @@ __all__ = [
     "ProviderOrder",
     "ProviderPayment",
     "ProviderWebhookEvent",
+    "CreateTransactionRequest",
+    "CreateTransactionResponse",
+    "CompleteTransactionRequest",
+    "CompleteTransactionResponse",
 ]
