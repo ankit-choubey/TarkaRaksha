@@ -7,10 +7,10 @@
 E-Series Final Extension
 
 ## Current Task
-E1 — Integration Boundary
+E4 — Security / Threat Guard Composition
 
 ## Task Status
-COMPLETE (C_E1 PASS)
+COMPLETE (C_E4 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -47,14 +47,15 @@ COMPLETE (C_E1 PASS)
 - [x] **I22 — Complete Hero Transaction** (Completed 2026-09-06)
 - [x] **E0 — Final Baseline & Contract Freeze** (Completed 2026-09-06)
 - [x] **E1 — Integration Boundary** (Completed 2026-09-06)
+- [x] **E4 — Security / Threat Guard Composition** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T03:30:00+05:30 — E1 checkpoint
+2026-09-06T03:38:00+05:30 — E4 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (777 passed, 2 warnings in 36.41s across all unit, integration, and adversarial suites: 764 baseline + 13 E1 tests)
+- `pytest` (804 passed, 2 warnings in 39.08s across all unit, integration, and adversarial suites: 777 baseline + 27 E4 tests)
 - `scripts/verify_api_smoke.py`: PASS (FastAPI routes, scenarios, certifications, replay validation, hero-transaction, and intent parsing verified)
 - `npm run build` (frontend): PASS (Next.js 15.5.25 Turbopack production build clean)
 

@@ -822,3 +822,46 @@ E1 — Integration Boundary
   - `make test-bootstrap`: PASS
   - `make test-env`: PASS (including Next.js production build)
   - `scripts/verify_api_smoke.py`: PASS
+
+---
+
+## E4 Verification Record (Security / Threat Guard Composition)
+
+- **Implementation Scope**:
+  - Additive, isolated security threat guard composition (`SecurityGuardService` & pure deterministic `SecurityThreatEvaluator`).
+  - Strict preservation of the governing authority model: Untrusted content is DATA, never AUTHORITY. Zero LLM authority in security decisions.
+  - Composed existing primitives directly without duplicate engines:
+    - I2 Protocol Security (replay protection, timestamp freshness, message deduplication)
+    - I8 Agent/Transaction/Payment Binding (identity and context misalignment detection)
+    - I9 Deterministic Kill Switch (triggers safety pause/kill on critical violations)
+    - I14 Integrity Checkpoint & Evidence Verification (tampered hash detection)
+    - I19 Merchant Capability Graph (capability boundary and financial ceiling enforcement)
+  - 12 canonical threat vectors deterministically covered:
+    1. `PROMPT_INJECTION`: Untrusted prompts cannot mutate intent constraints (`max_total`, `currency`, `items`). Adversarial patterns isolated as data.
+    2. `AGENT_CAPABILITY_VIOLATION`: Unauthorized capabilities or proposed amounts exceeding capability limits are blocked.
+    3. `AGENT_ID_MISMATCH`: Unbound agent attempting transaction access is critically blocked.
+    4. `TRANSACTION_MISMATCH`: Evidence/payload referencing conflicting transaction IDs rejected.
+    5. `INTENT_MISMATCH`: Referenced intent differing from bound contract rejected.
+    6. `REPLAY_DETECTED`: Consumed attempt re-submission blocked without executing consequential action.
+    7. `STALE_MESSAGE`: Timestamps exceeding freshness window held/rejected.
+    8. `DUPLICATE_MESSAGE`: Duplicate message delivery distinguished from duplicate financial execution (INFO / CLEAR).
+    9. `EVIDENCE_INTEGRITY_FAILURE`: Evidence hash mismatch or broken checkpoint chain triggers HOLD.
+    10. `STATE_DESYNC`: Conflicting local and provider states trigger safe reconciliation hold.
+    11. `PROVIDER_STATE_UNKNOWN`: Missing webhook or unresolved state preserved as UNKNOWN (never forced PASS).
+    12. `AUTHORIZATION_EXPIRED`: Intent expired past reference time blocked without silent renewal.
+- **Files Created**:
+  - `backend/app/domain/security_guard/__init__.py`
+  - `backend/app/domain/security_guard/contracts.py`
+  - `backend/app/domain/security_guard/evaluator.py`
+  - `backend/app/services/security_guard/__init__.py`
+  - `backend/app/services/security_guard/guard.py`
+  - `testing/unit/test_security_guard_contracts.py`
+  - `testing/unit/test_security_guard_adversarial.py`
+  - `testing/unit/test_security_guard_composition.py`
+- **Files Modified**:
+  - `backend/app/services/__init__.py` (re-exported SecurityGuardService)
+- **Tests Added**: 27 focused tests covering contract immutability, deterministic hash reproducibility, all 12 canonical threat vectors + 4 prompt injection cases, I9 kill switch activation, and replay mode compatibility.
+- **Regression Count**: 804 passed, 2 warnings in 39.08s (777 baseline + 27 new E4 tests).
+- **Core Invariant Verification**:
+  - `make test-bootstrap`: PASS
+  - `make test-env`: PASS (including Next.js production build)

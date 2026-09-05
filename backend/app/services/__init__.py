@@ -15,6 +15,7 @@ from .integration import (
     IntegrationBoundaryError,
     IntegrationService,
 )
+from .security_guard import SecurityGuardService
 
 __all__ = [
     "evaluate_integrity",
@@ -31,6 +32,7 @@ __all__ = [
     "IntegrationService",
     "IntegrationBoundaryError",
     "ContextBindingMismatchError",
+    "SecurityGuardService",
 ]
 
 
