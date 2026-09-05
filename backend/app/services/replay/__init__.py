@@ -22,6 +22,11 @@ from backend.app.services.replay.reconstructor import (
     replay_state_transitions,
 )
 
+from backend.app.services.replay.governance_replay import (
+    GovernedReplayResult,
+    GovernedReplayService,
+)
+
 __all__ = [
     "REPLAY_PROTOCOL_VERSION",
     "RULES_VERSION_DEFAULT",
@@ -37,4 +42,6 @@ __all__ = [
     "order_evidence_records",
     "StateReplayOutcome",
     "replay_state_transitions",
+    "GovernedReplayResult",
+    "GovernedReplayService",
 ]
