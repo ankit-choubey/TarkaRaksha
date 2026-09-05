@@ -19,6 +19,10 @@ from .provider import (
     GroqAIProvider,
     FakeAIProvider,
 )
+from .intent_parser import (
+    parse_intent,
+    INTENT_PARSER_SYSTEM_PROMPT,
+)
 
 __all__ = [
     "AIIntentExtraction",
@@ -34,4 +38,6 @@ __all__ = [
     "AIProvider",
     "GroqAIProvider",
     "FakeAIProvider",
+    "parse_intent",
+    "INTENT_PARSER_SYSTEM_PROMPT",
 ]
