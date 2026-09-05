@@ -75,7 +75,8 @@ None
 `main`
 
 ## Last Verified Remote Commit
-2d59ea8 (test: add adversarial, safety boundary, prompt injection, and round-trip tests for MRDP)
+9bb77c9 (docs: synchronize persistent brain and handoff for T07 completion)
+Prior Remote Commits: 2d59ea8, 0e5001a, ef1c7ff, b1415ee, f8d85b5, 5ea1c53, ...
 
 ## Next Task
 **T08 — Groq AI** (Intent Parser & Advisory Recovery Agent: untrusted natural-language parsing, bounded recovery suggestions, strictly downstream of verifier)
