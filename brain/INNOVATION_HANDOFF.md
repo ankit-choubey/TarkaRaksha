@@ -655,3 +655,129 @@
   - Zero Secret Leakage: Credentials, tokens, and authorization headers redacted.
   - Historical Truth Preservation: Original DRIFT, MRDP, and evidence preserved in history.
   - AI Advisory Boundary: LLM cannot declare PASS or bypass revalidation.
+
+---
+
+## E-Series Final Extension: E0 — Final Baseline & Contract Freeze
+
+### Baseline Verification Record (E0 Baseline Freeze)
+
+```text
+E-SERIES:
+E0
+
+STATUS:
+COMPLETE
+
+BASELINE_COMMIT:
+fef0ed69dfc61ff219b9a3389626a09fbe340171
+
+REMOTE_COMMIT:
+fef0ed69dfc61ff219b9a3389626a09fbe340171
+
+WORKING_TREE:
+CLEAN
+
+TEST_COUNT:
+764 passed (0 failed, 2 warnings in 36.44s)
+
+TEST_RESULT:
+PASS (make test-bootstrap PASS, make test-env PASS, pytest PASS, verify_api_smoke PASS)
+
+API_SURFACE:
+27 routes registered and operational across health, intent, transactions, mrdp, replay, scenarios, certifications, explanation, trace, checkpoints, sla, and hero-transaction
+
+MODEL_SURFACE:
+Immutable Pydantic domain models across Money, IntentContract, Authorization, CanonicalEvent, Evidence, EvidenceBundle, Transaction, TransactionState, Decision, IntegrityResult, MRDP, RecoveryProposal, ActionRequest, ReplaySnapshot, ReplayResult, TIX messages, Buyer Agent contracts, Merchant Agent contracts, Binding contracts, KillSwitch contracts, OperationalMode contracts, CapabilityGraph contracts, Scenario contracts, Certification contracts, IntegrityTrace contracts, Checkpoint contracts, SLAMetrics contracts, HeroTransaction contracts
+
+RAZORPAY_VERIFICATION:
+SDK/API adapter implemented (RazorpayAdapter); order creation implemented; test mode live signature verification verified; real test mode transaction verified (clean skip if live credentials unset; passing live boundary smoke test); zero float math (integer paise minor units)
+
+FRONTEND_BUILD:
+PASS (Next.js 15.5.25 Turbopack production build clean, TypeScript valid, static pages generated)
+
+EXISTING_FEATURES:
+- Core: deterministic integrity (PASS/DRIFT/UNKNOWN), evidence hierarchy, state machine, MRDP, recovery, UNKNOWN resolution, replay (IMPLEMENTED)
+- I-series: evidence freshness, integrity deltas, agent/transaction binding, merchant agent, buyer agent, TIX, bounded negotiation/replanning, kill switch, scenario lab, ground-truth certification, trace/fault localization, integrity checkpoints, SLA metrics, complete hero transaction (IMPLEMENTED)
+
+KNOWN_LIMITATIONS:
+- Live external network calls (Groq, Razorpay) are decoupled and optional in CI/offline test suites; tests use verified synthetic/reference providers unless live credentials are intentionally injected in environment.
+- Starlette DeprecationWarning for TestClient httpx2 / anyio BlockingPortal (benign upstream deprecation notices, zero functional failures).
+
+NEXT:
+E1 — Integration Boundary
+```
+
+### E0 API Surface Inventory
+
+| Method | Path | Purpose | Request Model | Response Model | Current Status |
+|---|---|---|---|---|---|
+| `GET` | `/health` | Control plane health & toolchains | None | JSON Dict (`status`, `service`, `version`, `has_groq`, `has_razorpay`) | OPERATIONAL |
+| `GET` | `/api/v1/health` | Control plane v1 health alias | None | JSON Dict | OPERATIONAL |
+| `POST` | `/api/v1/intent/parse` | Natural language intent parsing | Dict (`prompt`, `issued_by`) | `IntentContract` | OPERATIONAL |
+| `POST` | `/api/v1/transaction/create` | Protected order creation & binding | `CreateTransactionRequest` | `CreateTransactionResponse` | OPERATIONAL |
+| `POST` | `/api/v1/transaction/complete` | Server-side verification & lifecycle progression | `CompleteTransactionRequest` | `CompleteTransactionResponse` | OPERATIONAL |
+| `POST` | `/api/v1/transaction/recover` | Bounded compensatory recovery loop | `RecoverTransactionRequest` | `RecoverTransactionResponse` | OPERATIONAL |
+| `POST` | `/api/v1/transaction/resolve` | Safe, bounded observation for UNKNOWN state | `ResolveTransactionRequest` | `ResolveTransactionResponse` | OPERATIONAL |
+| `GET` | `/api/v1/transaction/{transaction_id}` | Transaction session inspection | None (Path param) | `TransactionSessionResponse` | OPERATIONAL |
+| `GET` | `/api/v1/transaction/{transaction_id}/mrdp` | Machine-Readable Drift Proof retrieval | None (Path param) | `MRDP` | OPERATIONAL |
+| `POST` | `/api/v1/replay` | Deterministic CPU replay & audit comparison | `ReplaySnapshot` | `ReplayResult` | OPERATIONAL |
+| `GET` | `/api/v1/scenarios` | List 12 canonical test scenarios | Optional Query (`category`) | `List[ScenarioDefinition]` | OPERATIONAL |
+| `POST` | `/api/v1/scenarios/{scenario_id}/run` | Execute scenario through production engine | None (Path param) | `ScenarioResult` | OPERATIONAL |
+| `POST` | `/api/v1/scenarios/run-all` | Execute all 12 canonical scenarios | Optional Query (`category`) | `ScenarioSuiteResult` | OPERATIONAL |
+| `GET` | `/api/v1/certifications` | List ground truth certification definitions | None | `List[GroundTruthDefinition]` | OPERATIONAL |
+| `POST` | `/api/v1/certifications/{scenario_id}/run` | Run scenario and evaluate certification | None (Path param) | `CertificationResult` | OPERATIONAL |
+| `POST` | `/api/v1/certifications/run-all` | Run all scenarios and certify against ground truth | None | `CertificationSuiteResult` | OPERATIONAL |
+| `GET` | `/api/v1/transactions/{transaction_id}/explanation` | Evidence-aware explanation retrieval | None (Path param) | `ExplanationResult` | OPERATIONAL |
+| `GET` | `/api/v1/transactions/{transaction_id}/integrity-trace` | 8-stage lifecycle fault localization trace | None (Path param) | `IntegrityTrace` | OPERATIONAL |
+| `GET` | `/api/v1/transactions/{transaction_id}/integrity-checkpoints` | Cryptographic checkpoint timeline retrieval | None (Path param) | `IntegrityCheckpointTimeline` | OPERATIONAL |
+| `GET` | `/api/v1/transactions/{transaction_id}/integrity-sla` | Deterministic 9-metric SLA report retrieval | None (Path param) | `IntegritySLAMetricsReport` | OPERATIONAL |
+| `POST` | `/api/v1/hero-transaction/run` | Execute complete hero commerce journey | `RunHeroTransactionRequest` | `HeroTransactionRecord` | OPERATIONAL |
+| `GET` | `/api/v1/hero-transaction/{hero_transaction_id}` | Retrieve executed hero transaction record | None (Path param) | `HeroTransactionRecord` | OPERATIONAL |
+| `POST` | `/api/v1/webhook/razorpay` | Ingest and verify Razorpay webhook | Raw Body + Signature Header | JSON Dict | OPERATIONAL |
+
+### E0 Domain Model Surface Inventory
+
+1. **Monetary & Foundation Models** (`backend/app/domain/models/`):
+   - `Money`: Integer minor units (paise), ISO 4217 currency validation, strict float rejection.
+   - `IntentItem`, `IntentContract`: Immutable authorized specification with budget ceiling, SKUs, substitutions.
+   - `Authorization`: Temporal validity bounds (`issued_at`, `expires_at`), max amount, signature.
+   - `CanonicalEvent`: Chronologically sequenced lifecycle event with deterministic tie-breaking.
+   - `Evidence`, `EvidenceBundle`: Multi-tiered evidence with strict authority rankings (`AUTHORITATIVE` 100 > `PROTOCOL_TRUSTED` 90 > `MERCHANT_ATTESTED` 70 > `REPLAY_OBSERVED` 60 > `SYSTEM_DERIVED` 50 > `ADVISORY` 20).
+   - `RuleResult`, `IntegrityResult`: Deterministic verdict (`PASS`, `DRIFT`, `UNKNOWN`) with violations list.
+   - `MRDP`: Cryptographic Machine-Readable Drift Proof with SHA-256 digest over discrepancy and rules.
+   - `RecoveryProposal`, `ActionRequest`: Bounded compensatory action contracts.
+   - `ProviderOrder`, `ProviderPayment`, `ProviderWebhookEvent`: Razorpay gateway representations.
+   - `CreateTransactionRequest`, `CreateTransactionResponse`, `CompleteTransactionRequest`, `CompleteTransactionResponse`, `RecoverTransactionRequest`, `RecoverTransactionResponse`, `ResolveTransactionRequest`, `ResolveTransactionResponse`: API slice models.
+
+2. **Protocol Security & Binding Models** (`backend/app/domain/security/`, `backend/app/domain/binding/`):
+   - `AgentTransactionMessage`: Cryptographic SHA-256 chained inter-agent protocol message.
+   - `ProtocolVerificationOutcome`: Protocol validation status with tamper/replay detection.
+   - `TransactionBindingContext`: Immutable 7-tuple context binding (`intent_id`, `agent_id`, `merchant_id`, `transaction_id`, `order_id`, `payment_id`, `attempt_id`).
+   - `TransactionBindingOutcome`: Authoritative binding evaluation result.
+
+3. **Governance & Replay Models** (`backend/app/domain/governance/`, `backend/app/services/replay/contracts.py`):
+   - `GovernanceVersion`: Explicit immutable `rules_version` and `policy_version`.
+   - `ReproducibilityRecord`: Canonical cryptographic snapshot record for audit reproducibility.
+   - `DecisionReproducibilityCertificate`: Tamper-detectable digital certificate binding decisions to component digests.
+   - `ReplaySnapshot`, `ReplayResult`, `ReplayDiscrepancy`: Full state reconstruction and 3-way verdict (`MATCH`, `MISMATCH`, `INVALID_REPLAY`).
+
+4. **Agent & Commerce Models** (`backend/app/domain/merchant/`, `backend/app/domain/buyer/`, `backend/app/domain/tix/`, `backend/app/domain/negotiation/`):
+   - `CatalogItem`, `InventoryRecord`, `ShippingOption`, `TaxEstimate`, `BuyerCommerceRequest`, `MerchantOfferItem`, `MerchantResponse`, `MerchantCapabilityDeclaration`, `MerchantPolicyAsCode`: Merchant domain and policies.
+   - `BuyerTransactionProposal`, `BuyerClarification`, `BuyerReplanRequest`, `BuyerReplanResult`, `BuyerAgentDecision`: Buyer agent constrained proposals and replanning.
+   - `TIXMessage`, `TIXMessageHeader`, `TIXIntegrityCheckPayload`, `TIXDriftNoticePayload`, `TIXRemediationRequestPayload`, `TIXExchangeSession`: Cryptographic internal exchange protocol messages across 12 canonical types.
+   - `NegotiationPolicy`, `NegotiationRoundRecord`, `NegotiationSession`: Bounded remediation session contracts.
+
+5. **Execution Safety & Operational Models** (`backend/app/domain/kill_switch/`, `backend/app/domain/operational_mode/`, `backend/app/domain/capability/`):
+   - `KillSwitchState`, `KillSwitchPolicy`, `ExecutionSafetyDecision`, `KillSwitchAuditRecord`: 4-state execution gating (`RUNNING`, `PAUSED`, `REQUIRES_REVALIDATION`, `KILLED`).
+   - `OperationalModePolicy`, `HumanReviewRequirement`, `HumanReviewDecision`, `OperationalEvaluationResult`: Deployment modes (`SHADOW`, `GUARDED`, `HUMAN_REVIEW`).
+   - `CapabilityNode`, `CapabilityEdge`, `MerchantCapabilityGraph`, `CapabilityEvaluationResult`, `CapabilityGraphSnapshot`: Merchant capability graph contracts (zero reputation/trust scores).
+
+6. **Observability, Audit & Hero Integration Models** (`backend/app/domain/trace/`, `backend/app/domain/checkpoint/`, `backend/app/domain/sla/`, `backend/app/domain/explanation/`, `backend/app/domain/scenario/`, `backend/app/domain/certification/`, `backend/app/domain/hero/`):
+   - `IntegrityTrace`, `LifecycleStep`, `FieldDiscrepancy`: Chronological 8-stage fault localization trace.
+   - `IntegrityCheckpoint`, `IntegrityCheckpointTimeline`: 8-checkpoint cryptographic fingerprint chain.
+   - `IntegritySLAMetric`, `IntegritySLAMetricsReport`: Deterministic 9-metric SLA report.
+   - `ExplanationClaim`, `ExplanationContext`, `ExplanationResult`: Evidence-grounded non-authoritative AI explanation.
+   - `ScenarioDefinition`, `ScenarioResult`, `ScenarioSuiteResult`: 12 canonical scenario definitions and results.
+   - `GroundTruthDefinition`, `CertificationResult`, `CertificationMatrixRow`, `CertificationSuiteResult`: Ground-truth certification matrix.
+   - `HeroTransactionRecord`, `HeroDriftNotice`, `HeroRemediationProposal`: End-to-end hero transaction orchestration record.
