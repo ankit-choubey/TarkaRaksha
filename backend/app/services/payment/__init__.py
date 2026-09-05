@@ -33,6 +33,8 @@ from .normalization import (
     payment_to_evidence,
     webhook_to_event_and_evidence,
 )
+from .razorpay_adapter import RazorpayAdapter
+from .fake_provider import FakePaymentProvider
 
 __all__ = [
     "ProviderOrder",
@@ -58,4 +60,6 @@ __all__ = [
     "parse_raw_webhook_payload",
     "payment_to_evidence",
     "webhook_to_event_and_evidence",
+    "RazorpayAdapter",
+    "FakePaymentProvider",
 ]
