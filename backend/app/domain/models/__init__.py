@@ -17,6 +17,7 @@ from .evidence import CanonicalEvent, Evidence, EvidenceBundle
 from .integrity import IntegrityResult, Decision, MRDP, MRDPErrorCode
 from .recovery import RecoveryProposal, ActionRequest
 from .transaction import Transaction
+from .payment import ProviderOrder, ProviderPayment, ProviderWebhookEvent
 
 __all__ = [
     "ActionType",
@@ -39,4 +40,7 @@ __all__ = [
     "RecoveryProposal",
     "ActionRequest",
     "Transaction",
+    "ProviderOrder",
+    "ProviderPayment",
+    "ProviderWebhookEvent",
 ]
