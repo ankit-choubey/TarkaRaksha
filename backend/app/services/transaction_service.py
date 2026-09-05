@@ -871,29 +871,25 @@ class TransactionService:
         provider = self.get_provider(provider_override)
 
         # 4. Execute Safe Observation via UnknownObserver
-        strategy_enum = None
-        if request.strategy:
-            try:
-                strategy_enum = ResolutionStrategy(request.strategy)
-            except ValueError:
-                pass
+        prior_evidence = list(session.evidence_bundle.records) if session.evidence_bundle else []
+        prior_events = list(session.events)
+        curr_mrdp = session.completed_response.mrdp if session.completed_response else None
 
         res_result = self._unknown_observer.resolve(
-            transaction_id=session.transaction_id,
-            intent=session.intent,
+            contract=session.intent,
             order=session.order,
-            known_payment=session.payment,
-            prior_bundle=session.evidence_bundle,
-            prior_events=session.events,
-            prior_integrity=session.integrity_result,
+            payment_id=session.payment.payment_id if session.payment else None,
             provider=provider,
-            reference_time=t_resolving,
-            strategy_override=strategy_enum,
+            current_state=TransactionState.RESOLVING,
+            prior_evidence=prior_evidence,
+            prior_events=prior_events,
+            mrdp=curr_mrdp,
             idempotency_key=request.idempotency_key,
+            now=t_resolving,
         )
 
         # 5. Transition: RESOLVING -> REVALIDATING (§14)
-        t_reval = max(res_result.evaluated_at, session.state_machine.updated_at + timedelta(milliseconds=10))
+        t_reval = max(res_result.resolved_at, session.state_machine.updated_at + timedelta(milliseconds=10))
         session.state_machine.transition_to(
             TransactionState.REVALIDATING,
             timestamp=t_reval,
@@ -905,25 +901,35 @@ class TransactionService:
         session.state_machine.apply_integrity_result(res_result.integrity_result, timestamp=t_final)
 
         # 7. Update Session State with Fresh Evidence and Provider Data
-        if res_result.provider_payment:
-            session.payment = res_result.provider_payment
+        if res_result.new_evidence:
+            merged_records = prior_evidence + res_result.new_evidence
+            session.evidence_bundle = EvidenceBundle(
+                bundle_id=f"b_{session.intent.intent_id}_res",
+                intent_id=session.intent.intent_id,
+                created_at=t_final,
+                records=merged_records,
+            )
 
-        if res_result.evidence_bundle:
-            session.evidence_bundle = res_result.evidence_bundle
-
-        if res_result.canonical_events:
-            # Deduplicate events by event_id
+        if res_result.new_events:
             existing_event_ids = {e.event_id for e in session.events}
-            for ev in res_result.canonical_events:
+            for ev in res_result.new_events:
                 if ev.event_id not in existing_event_ids:
                     session.events.append(ev)
                     existing_event_ids.add(ev.event_id)
 
+
         session.integrity_result = res_result.integrity_result
 
         # 8. Build MRDP if outcome is DRIFT or UNKNOWN
-        updated_mrdp = res_result.mrdp
-        if updated_mrdp is None and res_result.status in (IntegrityStatus.DRIFT, IntegrityStatus.UNKNOWN):
+        updated_mrdp = None
+        if res_result.integrity_result.status in (IntegrityStatus.DRIFT, IntegrityStatus.UNKNOWN):
+            if session.evidence_bundle is None:
+                session.evidence_bundle = EvidenceBundle(
+                    bundle_id=f"b_{session.intent.intent_id}_res_init",
+                    intent_id=session.intent.intent_id,
+                    created_at=t_final,
+                    records=[],
+                )
             updated_mrdp = build_mrdp(
                 contract=session.intent,
                 integrity_result=res_result.integrity_result,
@@ -931,13 +937,14 @@ class TransactionService:
                 generated_at=t_final,
             )
 
+
         response = CompleteTransactionResponse(
             transaction_id=session.transaction_id,
             intent_id=session.intent.intent_id,
             order_id=session.order.order_id,
             payment_id=session.payment.payment_id if session.payment else "unresolved",
             state=session.state_machine.current_state,
-            integrity_status=res_result.status,
+            integrity_status=res_result.integrity_result.status,
             rule_results=res_result.integrity_result.rule_results,
             violations=res_result.integrity_result.violations,
             evidence_ids=res_result.integrity_result.evidence_ids,
