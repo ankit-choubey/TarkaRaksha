@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I14 — Integrity Checkpoints
+I15 — Integrity SLA Metrics
 
 ## Task Status
-COMPLETE (C_I14 PASS)
+COMPLETE (C_I15 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -43,14 +43,15 @@ COMPLETE (C_I14 PASS)
 - [x] **I12 — Ground-Truth Certification** (Completed 2026-09-06)
 - [x] **I13 — Integrity Trace / Fault Localization** (Completed 2026-09-06)
 - [x] **I14 — Integrity Checkpoints** (Completed 2026-09-06)
+- [x] **I15 — Integrity SLA Metrics** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T02:07:00+05:30 — I14 checkpoint
+2026-09-06T02:22:00+05:30 — I15 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (720 passed in 11.81s across all unit, integration, and adversarial suites: 693 baseline + 27 I14 tests)
+- `pytest` (747 passed in 18.33s across all unit, integration, and adversarial suites: 720 baseline + 27 I15 tests)
 
 
 ## Environment & Toolchains Verified
@@ -124,9 +125,13 @@ COMPLETE (C_I14 PASS)
 - **Checkpoint Non-Authoritative Boundary Invariant**: Checkpoint timelines record facts (`last_valid_checkpoint`, `first_invalid_checkpoint`) and never override or modify T04 decisions, I8 bindings, I9 kill switch states, or transaction state machine states.
 - **UNKNOWN State Non-Degradation Invariant**: `UNKNOWN` is never coerced or converted to `VALID`, nor confused with `NOT_REACHED` or `INVALID`.
 - **Checkpoint Explanation Grounding Invariant**: I21 explanations consume verified checkpoint data as evidence references without AI becoming an authority over checkpoint integrity.
+- **Deterministic SLA Measurement Invariant**: I15 is strictly an operational measurement and observability layer. It computes 9 canonical metrics (`TIME_TO_DETECT`, `TIME_TO_PROVE`, `TIME_TO_INTERVENE`, `TIME_TO_REVALIDATE`, `TIME_TO_FINAL_DECISION`, `UNKNOWN_EXPOSURE_DURATION`, `CHECKPOINT_COVERAGE_RATIO`, `CHECKPOINT_VALID_RATIO`, `TRACE_COMPLETENESS_RATIO`) deterministically from authoritative evidence without wall-clock fabrication.
+- **Non-Authoritative Measurement Boundary**: I15 never modifies or overrides transaction decisions (`PASS`/`DRIFT`/`UNKNOWN`), I9 kill switch states (`RUNNING`/`KILLED`/`PAUSED`), or I8 binding verifications.
+- **Strict Metric Status Semantics**: Distinguishes `MEASURABLE`, `UNKNOWN`, `NOT_APPLICABLE`, and `INVALID`. Missing timestamps produce `UNKNOWN`; clock anomalies / reversed timestamps produce `INVALID`; clean non-drift paths produce `NOT_APPLICABLE`. Favorable metrics are never fabricated from missing data.
+- **SLA Explanation Grounding**: I21 explanations consume verified SLA metrics as factual `EvidenceReference` records; LLMs cannot calculate or alter authoritative metrics.
 
 ## Next Task
-I15 (Await user instruction)
+I16 / I19 (Await user instruction)
 
 
 

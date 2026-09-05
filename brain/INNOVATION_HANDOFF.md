@@ -66,6 +66,7 @@
 - [x] **I12 — Ground-Truth Certification** (Verified Green, 668/668 tests passing)
 - [x] **I13 — Integrity Trace / Fault Localization** (Verified Green, 693/693 tests passing)
 - [x] **I14 — Integrity Checkpoints** (Verified Green, 720/720 tests passing)
+- [x] **I15 — Integrity SLA Metrics** (Verified Green, 747/747 tests passing)
 
 
 ---
@@ -567,5 +568,45 @@
   - Non-Authoritative Boundary: Checkpoints record boundaries and facts; never override T04 integrity decisions or I9 kill switch states.
   - Cryptographic Chain Integrity: Sequence 1..N order, no gaps, no duplicates, valid parent fingerprint links.
   - Secret Protection: Zero credentials or private tokens exposed in checkpoints.
+
+---
+
+## I15 Verification Record
+- **Implementation Scope**: Integrity SLA Metrics Layer.
+  - Deterministic 9-Metric Measurement: Computes `TIME_TO_DETECT`, `TIME_TO_PROVE`, `TIME_TO_INTERVENE`, `TIME_TO_REVALIDATE`, `TIME_TO_FINAL_DECISION`, `UNKNOWN_EXPOSURE_DURATION`, `CHECKPOINT_COVERAGE_RATIO`, `CHECKPOINT_VALID_RATIO`, and `TRACE_COMPLETENESS_RATIO` deterministically from authoritative evidence without wall-clock fabrication.
+  - Strict 4-Status Metric Semantics: `MEASURABLE`, `UNKNOWN`, `NOT_APPLICABLE`, `INVALID`. Missing timestamps produce `UNKNOWN`; clock anomalies / reversed timestamps produce `INVALID`; clean non-drift paths produce `NOT_APPLICABLE`.
+  - Non-Authoritative Measurement Boundary: I15 does not modify or override transaction decisions (`PASS`/`DRIFT`/`UNKNOWN`), I9 kill switch states (`RUNNING`/`KILLED`/`PAUSED`), or I8 binding verifications.
+  - Sensitive Data Sanitization: All secret keys, authorization tokens, passwords, and webhook secrets are sanitized from metric details and calculation reasons.
+  - Control Plane API Endpoint: Read-only `GET /api/v1/transactions/{transaction_id}/integrity-sla` returning structured SLA report JSON.
+  - Explanation Layer Integration (I21): Transparently consumed into `ExplanationContextBuilder.build_context(...)` as verified evidence references so AI explanations can cite authoritative metrics without hallucinating numbers.
+- **Files Created**:
+  - `backend/app/domain/sla/contracts.py`
+  - `backend/app/domain/sla/engine.py`
+  - `backend/app/domain/sla/__init__.py`
+  - `backend/app/services/sla/service.py`
+  - `backend/app/services/sla/__init__.py`
+  - `testing/unit/test_sla_contracts.py`
+  - `testing/unit/test_sla_engine.py`
+  - `testing/unit/test_sla_integration.py`
+  - `testing/unit/test_sla_adversarial.py`
+- **Files Modified**:
+  - `backend/app/services/__init__.py`
+  - `backend/app/services/explanation/context_builder.py`
+  - `backend/app/services/transaction_service.py`
+  - `backend/app/main.py`
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 27 focused tests across 4 test suites:
+  - 6 domain contract tests (`test_sla_contracts.py`)
+  - 5 SLA engine tests (`test_sla_engine.py`)
+  - 4 service & API integration tests (`test_sla_integration.py`)
+  - 12 adversarial security & metric integrity tests (`test_sla_adversarial.py`)
+- **Regression Count**: 747 passed, 0 failed in 18.33s (720 baseline + 27 I15 tests).
+- **Invariants Preserved**:
+  - `AI proposes -> evidence proves -> deterministic logic decides`: Zero LLM decision logic in I15.
+  - Non-Authoritative Boundary: Metrics observe and measure facts; never override T04 integrity decisions or I9 kill switch states.
+  - Strict Timestamp Integrity: No fabricated `now()` latency; reversed timestamps rejected as `INVALID`.
+  - Secret Protection: Zero credentials or private tokens exposed in SLA metrics reports.
+
 
 
