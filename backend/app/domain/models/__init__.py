@@ -13,7 +13,7 @@ from .enums import (
 from .money import Money
 from .intent import IntentItem, IntentContract
 from .authorization import Authorization
-from .evidence import CanonicalEvent, Evidence
+from .evidence import CanonicalEvent, Evidence, EvidenceBundle
 from .integrity import IntegrityResult, Decision, MRDP
 from .recovery import RecoveryProposal, ActionRequest
 from .transaction import Transaction
@@ -31,6 +31,7 @@ __all__ = [
     "Authorization",
     "CanonicalEvent",
     "Evidence",
+    "EvidenceBundle",
     "IntegrityResult",
     "Decision",
     "MRDP",
