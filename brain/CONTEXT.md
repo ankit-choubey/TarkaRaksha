@@ -25,11 +25,11 @@
 
 ---
 
-## Implemented Domain & Integrity Foundations (T01–T04)
-1. **Domain Contracts (`backend/app/domain/models.py`)**:
+## Implemented Domain & Integrity Foundations (T01–T07)
+1. **Domain Contracts (`backend/app/domain/models/`)**:
    - `Money`: Immutable integer minor unit representation (paise, cents) with ISO 4217 validation, rejecting float/bool.
-   - Enums: `IntegrityStatus` (PASS, DRIFT, UNKNOWN), `DriftDomain` (ECONOMIC, SEMANTIC, TEMPORAL), `EvidenceAuthority` (RAZORPAY, INTENT, MERCHANT, REPLAY, AGENT, SYNTHETIC), `TransactionStatus`.
-   - Frozen immutable Pydantic v2 models: `IntentContract`, `ItemSpec`, `AllowedSubstitution`, `EvidenceBundle`, `IntegrityResult`, `RuleResult`, `RecoveryPlan`, `EvidenceRecord`.
+   - Enums: `IntegrityStatus` (PASS, DRIFT, UNKNOWN), `DriftDomain` (ECONOMIC, SEMANTIC, TEMPORAL), `EvidenceSource`, `EvidenceAuthority`, `TransactionStatus`, `MRDPErrorCode`.
+   - Frozen immutable Pydantic v2 models: `IntentContract`, `ItemSpec`, `AllowedSubstitution`, `Evidence`, `EvidenceBundle`, `IntegrityResult`, `RuleResult`, `RecoveryProposal`, `MRDP`.
 2. **Deterministic Integrity Engine (`backend/app/domain/rules/` & `backend/app/services/evaluation.py`)**:
    - **Economic Rule (`check_economic`)**: Verifies authorized amount bounds (e.g. ₹50,000 threshold: 49999 PASS, 50000 PASS, 50001 DRIFT), currency match, missing/malformed amounts (`UNKNOWN`), and authority-tier conflict resolution.
    - **Semantic Rule (`check_semantic`)**: Checks SKU matching, quantity bounds, explicitly authorized substitutions (`AllowedSubstitution`), and missing attribute (`UNKNOWN`).
@@ -50,16 +50,25 @@
    - **Conflict Resolution Engine**: Deterministically resolves contradictions across authority tiers in favor of higher rank (storing lower rank in `conflicting_records` for provenance); leaves contradictory top-tier evidence unresolved (`is_resolved = False`) to preserve `UNKNOWN` ambiguity.
    - **Deterministic Normalization & Deduplication**: Provider-neutral normalizer converting monetary fields to integer-minor-unit `Money` value objects, validating timezone-aware timestamps, and deduplicating deliveries idempotently.
 
+5. **Machine-Readable Drift Proof Layer (T07) (`backend/app/domain/models/integrity.py`, `backend/app/services/mrdp.py`, `backend/app/services/canonicalization.py`)**:
+   - **Protocol Designation**: MRDP is strictly TarkaRaksha's proposed "Machine-Readable Drift Proof", NOT an industry standard, NOT a payment standard, and NOT an official Razorpay protocol.
+   - **Deterministic Consumption & Chain**: Consumes `IntentContract` + `IntegrityResult` + `EvidenceBundle` to produce an immutable `MRDP` proof answering "what drifted?", with traceable baseline, observed evidence, rule results, and permissible advisory remediation.
+   - **Canonicalization & SHA-256 Digest**: Stable JSON canonicalization with sorted keys, compact separators, normalized Money integers, and ISO-8601 datetimes. Hashed via SHA-256 (`proof_digest`). Guarantees tamper-evident integrity of the proof representation (does not claim author identity or non-repudiation without PKI).
+   - **Tamper Verification**: `verify_mrdp_integrity()` verifies whether any serialized or model field was tampered with post-creation.
+   - **Safety Boundaries**: Remediation hints are strictly advisory guidance; `validate_remediation_safety()` forbids instructions that suggest budget increases, constraint bypasses, or authorization alterations. Prompt injection in violation/payload fields is treated strictly as inert text.
+
 ---
 
-## Repository State (End of T06)
-- **Current Phase**: Evidence Normalization Layer (`T06`)
+## Repository State (End of T07)
+- **Current Phase**: Machine-Readable Drift Proof Layer (`T07`)
 - **Active Branch**: `main`
 - **Core Modules**:
-  - `backend/app/domain/models/`: Immutable contracts, financial math, enums, evidence models, bundle.
+  - `backend/app/domain/models/`: Immutable contracts, financial math, enums, evidence models, MRDP model, bundle.
   - `backend/app/domain/rules/`: Deterministic economic, semantic, and temporal rule engines.
   - `backend/app/domain/states/`: Lifecycle state machine, transitions, invariants, and audit history.
   - `backend/app/domain/evidence/`: Provider-neutral evidence normalizers, conflict resolution, deduplication.
+  - `backend/app/services/canonicalization.py`: Deterministic canonical serialization and SHA-256 digest computation.
+  - `backend/app/services/mrdp.py`: Pure deterministic MRDP builder and tamper-evident verification.
   - `backend/app/services/evaluation.py`: Deterministic integrity orchestration.
-  - `testing/unit/`: Comprehensive test suites covering environment, models, money, engine, state machine, and evidence normalization (88 passing tests).
+  - `testing/unit/`: Comprehensive test suites covering environment, models, money, engine, state machine, evidence normalization, and MRDP (98 passing tests).
   - `frontend/`: Next.js 15 App Router scaffold verified and build-ready.

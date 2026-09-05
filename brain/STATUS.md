@@ -4,10 +4,10 @@
 **TarkaRaksha** — Agentic Transaction Integrity & Recovery Control Plane
 
 ## Current Phase
-Evidence Normalization Layer
+Machine-Readable Drift Proof Layer
 
 ## Current Task
-T06 — Evidence
+T07 — MRDP
 
 ## Task Status
 COMPLETE
@@ -19,14 +19,17 @@ COMPLETE
 - [x] **T04 — Deterministic Engine** (Completed 2026-09-05)
 - [x] **T05 — State Machine** (Completed 2026-09-05)
 - [x] **T06 — Evidence** (Completed 2026-09-05)
+- [x] **T07 — MRDP** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T14:46:00+05:30
+2026-09-05T14:55:00+05:30
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (88 passed in 0.19s):
+- `pytest` (98 passed in 0.18s):
+  - `testing/unit/test_mrdp.py` (5 tests): valid DRIFT proof generation from IntegrityResult and EvidenceBundle, canonical fields and aliases (`expected`, `observed`, `evidence_refs`, `remediation_hint`), stable error code taxonomy (`ECONOMIC_DRIFT_CEILING_EXCEEDED`, etc.), UNKNOWN diagnostic proofs, and 100x identical deterministic digest stability.
+  - `testing/unit/test_mrdp_adversarial.py` (5 tests): safety boundary blocking budget increases / verifier bypass in remediation, tamper detection catching payload field mutation via SHA-256 digest invalidation, prompt injection payloads treated strictly as inert strings, Pydantic immutability enforcement, and round-trip intent preservation (DRIFT -> MRDP -> RecoveryProposal).
   - `testing/unit/test_evidence.py` (9 tests): source taxonomy validation, explicit authority tiers and ranking, timezone-aware timestamp validation, monetary value normalization into Money, conflict resolution via authority dominance, irreconcilable tie at top tier (UNKNOWN), evidence deduplication, immutability, 100x repeated determinism
   - `testing/unit/test_evidence_adversarial.py` (6 tests): prompt injection in evidence payloads as inert data, fake claims cannot override gateway truth, extra unexpected fields rejected by strict schema, float financial injection rejected, temporal anomalies (naive/unparseable) rejected, deeply nested JSON treated as inert dict
   - `testing/unit/test_state_machine.py` (10 tests): normal lifecycle, drift recovery, unknown resolution, abstain branches, invalid transitions, intent immutability, and determinism
@@ -51,40 +54,45 @@ None
 None
 
 ## Important Decisions
-1. **Source vs Authority Decoupling**:
-   - `EvidenceSource` represents the origin channel (`INTENT`, `USER_INTENT`, `AGENT`, `MERCHANT`, `RAZORPAY`, `SYSTEM`, `REPLAY`, `SYNTHETIC`).
-   - `EvidenceAuthority` represents the authoritative weighting tier (`AUTHORITATIVE`: 100 > `PROTOCOL_TRUSTED`: 90 > `MERCHANT_ATTESTED`: 70 > `REPLAY_OBSERVED`: 60 > `SYSTEM_DERIVED`: 50 > `ADVISORY`: 20).
-   - Reconciled terminology: `USER_INTENT` is supported as canonical alias for `INTENT`; `SYSTEM` represents control plane/internal observations, distinct from `SYNTHETIC` mock data.
-2. **Provider-Neutral Normalization**: The normalization layer converts observed payloads into canonical `Evidence` items without leaking gateway-specific schema dependencies into generic domain logic.
-3. **Deterministic Conflict Resolution**:
-   - Conflicts between differing authority tiers are resolved strictly in favor of the higher tier (e.g. `RAZORPAY` overrides `AGENT`), while preserving the lower tier in `conflicting_records` for provenance.
-   - Contradictions at the identical top authority tier remain unresolved (`is_resolved = False`), preserving ambiguity to feed `UNKNOWN` into downstream engines.
-4. **Idempotent Deduplication**: Duplicate deliveries sharing exact IDs or semantic content keys are deterministically deduplicated while maintaining relative order.
-5. **Inert Data Guarantee**: All payload contents and strings are treated strictly as inert data; prompt injection instructions are never executed.
+1. **MRDP Protocol Status**:
+   - Machine-Readable Drift Proof (MRDP) is strictly **TarkaRaksha's proposed protocol/artifact**, NOT an industry standard, NOT a payment standard, and NOT an official Razorpay or universal specification.
+2. **Deterministic & Downstream of Verifier**:
+   - The architecture remains `Evidence -> Deterministic Engine -> IntegrityResult -> MRDP -> Recovery Agent`.
+   - AI is strictly advisory and is not introduced into proof generation.
+   - Given identical inputs (`IntentContract`, `IntegrityResult`, `EvidenceBundle`), `build_mrdp()` produces bit-for-bit identical proofs and canonical digests across 100x runs.
+3. **Cryptographic / Tamper-Evidence Specification**:
+   - Defined deterministic canonical JSON serialization (`canonicalize_mrdp_payload`) with sorted keys, compact separators, explicit ISO-8601 strings, and integer minor units.
+   - Hashed using standard SHA-256 (`proof_digest`).
+   - `verify_mrdp_integrity()` detects any post-creation mutation or tampering.
+   - Explicitly documented that this proves **tamper-evident integrity of the canonicalized proof representation** under SHA-256, and does NOT claim digital signatures, author authenticity, or non-repudiation without PKI/asymmetric signing keys.
+4. **Safety Boundaries & Inert Data**:
+   - Remediation hints are strictly advisory guidance for downstream recovery; `validate_remediation_safety()` blocks any attempt to instruct budget increases, constraint bypasses, or authorization changes.
+   - Malicious prompt injections inside violation strings, evidence payloads, or remediation text are treated strictly as inert data.
+5. **Canonical Aliases and Backward Compatibility**:
+   - Preserved canonical aliases (`expected` -> `expected_value`, `observed` -> `observed_value`, `evidence_refs` -> `evidence_references`, `remediation_hint` -> `remediation`) in `MRDP` to guarantee complete compatibility across T03 models and T07 execution specifications.
 
 ## Active Branch
 `main`
 
 ## Last Verified Remote Commit
-5ea1c53 (docs: synchronize persistent brain and handoff for T06 completion)
-Prior Remote Commits: 3c93250, 898edc3, 3da5b7f, 855af66, de72092, 4ac842d, 38e0658, cd6af7c, ...
+2d59ea8 (test: add adversarial, safety boundary, prompt injection, and round-trip tests for MRDP)
 
 ## Next Task
-**T07 — MRDP** (Machine-Readable Drift Proof: generate cryptographic/tamper-evident drift proofs containing contract baseline, observed evidence, rule results, and explanations)
+**T08 — Groq AI** (Intent Parser & Advisory Recovery Agent: untrusted natural-language parsing, bounded recovery suggestions, strictly downstream of verifier)
 
 ## Parallel Candidates
-With T06 complete, the evidence normalization pipeline is verified. T07 (MRDP) consumes the verified `IntegrityResult` (T04) and `EvidenceBundle` (T06) to generate machine-readable proofs, so work proceeds sequentially.
+With T07 complete, the MRDP proof generation layer is verified. T08 (Groq AI) consumes intent specs and MRDP proofs to propose recovery actions, operating strictly within advisory bounds.
 
 ## Source Documents Consulted
 - `brain/TarkaRaksha_IDEA.md` (§31, §34)
-- `brain/TarkaRaksha_Execution.md` (§7.23–§7.24, §8.26–§8.27)
-- `brain/TarkaRaksha_TESTING.md` (§9.22–§9.24)
+- `brain/TarkaRaksha_Execution.md` (§7.25, §8.28)
+- `brain/TarkaRaksha_TESTING.md` (§9.25–§9.29)
 - `brain/CONTEXT.md`
 - `brain/HANDOFF.md`
 
 ## External Sources Consulted
-- Pydantic v2 documentation on `ConfigDict(frozen=True, extra='forbid', strict=True)`
-- ISO-8601 datetime specification for timezone offset representation
+- hashlib (Python standard library SHA-256 implementation)
+- RFC 8785 (JSON Canonicalization Scheme reference principles)
 
 ## Open Questions
 None
