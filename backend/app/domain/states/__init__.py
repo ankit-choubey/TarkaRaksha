@@ -14,6 +14,12 @@ from .transitions import (
     can_transition,
     validate_transition,
 )
+from .invariants import (
+    FINANCIAL_ACTIONS,
+    assert_financial_action_permitted,
+    assert_ai_proposal_safety,
+    assert_intent_immutability,
+)
 
 __all__ = [
     "StateMachineError",
@@ -24,4 +30,8 @@ __all__ = [
     "PERMITTED_TRANSITIONS",
     "can_transition",
     "validate_transition",
+    "FINANCIAL_ACTIONS",
+    "assert_financial_action_permitted",
+    "assert_ai_proposal_safety",
+    "assert_intent_immutability",
 ]
