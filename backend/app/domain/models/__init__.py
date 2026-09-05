@@ -5,6 +5,7 @@ Exposes canonical contracts established in T03.
 from .enums import (
     ActionType,
     DecisionAction,
+    EvidenceAuthority,
     EvidenceSource,
     IntegrityStatus,
     TransactionState,
@@ -20,6 +21,7 @@ from .transaction import Transaction
 __all__ = [
     "ActionType",
     "DecisionAction",
+    "EvidenceAuthority",
     "EvidenceSource",
     "IntegrityStatus",
     "TransactionState",
