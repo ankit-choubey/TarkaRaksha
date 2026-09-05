@@ -72,6 +72,17 @@ from backend.app.domain.binding import (
     PaymentBindingClaim,
 )
 from backend.app.services.binding import TransactionBindingService
+from backend.app.domain.kill_switch import (
+    ExecutionBlockedError,
+    ExecutionDecision,
+    KillSwitchRecord,
+    KillSwitchState,
+    KillTrigger,
+    RevalidationOutcome,
+    RevalidationRequest,
+    UnauthorizedResumeError,
+)
+from backend.app.services.kill_switch import KillSwitchService
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +113,7 @@ class TransactionSession:
         self.resolution_attempts: int = 0
         self.binding_context = binding_context
         self.binding_outcome: Optional[BindingVerificationOutcome] = None
+        self.kill_switch_record: Optional[KillSwitchRecord] = None
 
 
 class TransactionService:
@@ -115,9 +127,11 @@ class TransactionService:
         self,
         default_provider: Optional[PaymentProvider] = None,
         binding_service: Optional[TransactionBindingService] = None,
+        kill_switch_service: Optional[KillSwitchService] = None,
     ):
         self._default_provider = default_provider
         self._binding_service = binding_service or TransactionBindingService()
+        self._kill_switch_service = kill_switch_service or KillSwitchService()
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
         self._recovery_executor = RecoveryExecutor()
@@ -128,12 +142,72 @@ class TransactionService:
         return self._binding_service
 
     @property
+    def kill_switch_service(self) -> KillSwitchService:
+        return self._kill_switch_service
+
+    @property
     def recovery_executor(self) -> RecoveryExecutor:
         return self._recovery_executor
 
     @property
     def unknown_observer(self) -> UnknownObserver:
         return self._unknown_observer
+
+    def get_kill_switch_state(self, transaction_id: str) -> KillSwitchState:
+        return self._kill_switch_service.get_state(transaction_id)
+
+    def get_kill_switch_history(self, transaction_id: str) -> List[KillSwitchRecord]:
+        return self._kill_switch_service.get_history(transaction_id)
+
+    def kill_transaction(
+        self,
+        transaction_id: str,
+        trigger: KillTrigger = KillTrigger.ADMINISTRATIVE_KILL,
+        reason: str = "Administrative kill switch triggered",
+        actor: str = "CONTROL_PLANE",
+    ) -> KillSwitchRecord:
+        return self._kill_switch_service.kill(
+            transaction_id=transaction_id,
+            trigger=trigger,
+            reason=reason,
+            actor=actor,
+        )
+
+    def pause_transaction(
+        self,
+        transaction_id: str,
+        reason: str = "Administrative pause",
+        actor: str = "CONTROL_PLANE",
+    ) -> KillSwitchRecord:
+        return self._kill_switch_service.pause(
+            transaction_id=transaction_id,
+            reason=reason,
+            actor=actor,
+        )
+
+    def unpause_transaction(
+        self,
+        transaction_id: str,
+        reason: str = "Administrative unpause",
+        actor: str = "CONTROL_PLANE",
+    ) -> KillSwitchRecord:
+        return self._kill_switch_service.unpause(
+            transaction_id=transaction_id,
+            reason=reason,
+            actor=actor,
+        )
+
+    def revalidate_transaction(
+        self,
+        transaction_id: str,
+        request: RevalidationRequest,
+        reference_time: Optional[datetime] = None,
+    ) -> RevalidationOutcome:
+        return self._kill_switch_service.revalidate(
+            transaction_id=transaction_id,
+            request=request,
+            reference_time=reference_time,
+        )
 
 
     def get_provider(self, provider_override: Optional[PaymentProvider] = None) -> PaymentProvider:
@@ -206,6 +280,18 @@ class TransactionService:
             created_at=ts,
         )
 
+        # 3.5 Register and gate with Execution Safety Control (I9)
+        agent_id = getattr(request, "agent_id", None) or getattr(intent, "issued_by", None) or getattr(request, "issued_by", "user_default")
+        merchant_id = getattr(request, "merchant_id", None) or "merchant_default"
+        self._kill_switch_service.register_transaction(
+            transaction_id=transaction_id,
+            intent_id=intent.intent_id,
+            agent_id=agent_id,
+            merchant_id=merchant_id,
+            created_at=ts,
+        )
+        self._kill_switch_service.assert_can_execute(transaction_id, operation_name="create_order")
+
         # 4. Create bound gateway order using integer minor units
         order_receipt = intent.intent_id
         order_notes = {
@@ -231,8 +317,6 @@ class TransactionService:
         )
 
         # 5.5 Register authoritative binding (I8)
-        agent_id = getattr(request, "agent_id", None) or getattr(request, "issued_by", "user_default")
-        merchant_id = getattr(request, "merchant_id", None) or "merchant_default"
         binding = self._binding_service.register_binding(
             intent_id=intent.intent_id,
             agent_id=agent_id,
@@ -280,6 +364,12 @@ class TransactionService:
         session = self.get_session(request.transaction_id)
         if not session:
             raise KeyError(f"Transaction '{request.transaction_id}' not found")
+
+        # Invariant (I9): Verify execution safety control gate before executing completion
+        self._kill_switch_service.assert_can_execute(
+            transaction_id=request.transaction_id,
+            operation_name="complete_transaction",
+        )
 
         # Idempotent return if already evaluated
         if session.completed_response is not None:
@@ -523,6 +613,16 @@ class TransactionService:
         # 8. Apply Deterministic Result to State Machine
         eval_ts = verif_ts + timedelta(milliseconds=10)
         session.state_machine.apply_integrity_result(eval_result, timestamp=eval_ts)
+
+        # 8.5 Deterministic Execution Safety Enforcement (I9)
+        ks_rec = self._kill_switch_service.evaluate_and_enforce(
+            transaction_id=session.transaction_id,
+            intent=session.intent,
+            integrity_result=eval_result,
+            binding_outcome=binding_outcome,
+            reference_time=eval_ts,
+        )
+        session.kill_switch_record = ks_rec
 
         # 9. If DRIFT or UNKNOWN, generate Machine-Readable Drift Proof (MRDP)
         mrdp_proof: Optional[MRDP] = None

@@ -57,6 +57,7 @@
 - [x] **I5 — Buyer Agent** (Verified Green, 359/359 tests passing)
 - [x] **I8 — Agent / Transaction / Payment Binding** (Verified Green, 385/385 tests passing)
 - [x] **I6 — TIX: TarkaRaksha Integrity Exchange** (Verified Green, 426/426 tests passing)
+- [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Verified Green, 464/464 tests passing)
 - [ ] **I7 — Bounded Agentic Negotiation / Replanning** (Next task — await explicit user prompt)
 
 ---
@@ -215,3 +216,32 @@
   - Cryptographic Hash Chain Continuity: Sequential messages within a transaction exchange are deterministically hashed (SHA-256) and chained via `previous_message_hash`; any in-transit payload tampering or insertion breaks the chain and is rejected.
   - Anti-Spoofing & Authority Invariant: Non-TarkaRaksha participants (buyer_agent, merchant_agent) cannot emit `AUTHORIZATION` messages, claim authoritative `OUTCOME`, or embed rogue payment authorizations.
   - Deterministic Evaluation Unmodified: TIX cannot convert `UNKNOWN` or `DRIFT` to `PASS`; deterministic verdicts and violation descriptions pass through faithfully.
+
+---
+
+## I9 Verification Record
+- **Implementation Scope**: Pure deterministic Execution Safety Control / Kill Switch. Provides four gating states (`RUNNING`, `PAUSED`, `REQUIRES_REVALIDATION`, `KILLED`), fail-closed execution gating, strict state transition validation, integration with deterministic integrity evaluation (T04) and 7-tuple binding (I8), authenticated revalidation lifecycles, and `TransactionService` execution gate enforcement.
+- **Files Created**:
+  - `backend/app/domain/kill_switch/contracts.py`
+  - `backend/app/domain/kill_switch/policy.py`
+  - `backend/app/domain/kill_switch/__init__.py`
+  - `backend/app/services/kill_switch/service.py`
+  - `backend/app/services/kill_switch/__init__.py`
+  - `testing/unit/test_kill_switch_contracts.py`
+  - `testing/unit/test_kill_switch_policy.py`
+  - `testing/unit/test_kill_switch_service.py`
+  - `testing/unit/test_kill_switch_integration.py`
+  - `testing/unit/test_kill_switch_adversarial.py`
+- **Files Modified**:
+  - `backend/app/services/transaction_service.py`
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 38 focused tests (7 domain contract tests, 8 policy tests, 11 service tests, 5 lifecycle integration tests, 7 adversarial non-bypassability tests).
+- **Regression Count**: 464 passed, 0 failed in 3.60s (426 baseline + 38 new).
+- **Invariants Preserved**:
+  - Execution Control Separation: Detects facts through pure deterministic engines (T04, I8, TIX); gating of financial actions is enforced strictly through `KillSwitchState` boundaries.
+  - Zero LLM Involvement in Safety Gating: Safety states and revalidation decisions are computed purely deterministically. AI proposals possess zero authority to pause, kill, or resume execution.
+  - Forbidden Direct Resume: Direct transition `KILLED -> RUNNING` is strictly blocked with `UnauthorizedResumeError`; resumption unconditionally requires passing through authoritative revalidation.
+  - Authoritative Revalidation: Resuming requires matching registered context (`transaction_id`, `intent_id`, `agent_id`, `merchant_id`) and at least one `AUTHORITATIVE` or `PROTOCOL_TRUSTED` evidence record.
+  - Fail-Closed Execution: Unregistered transactions, repeated UNKNOWN states above tolerance, or missing evidence fail-closed by blocking execution.
+

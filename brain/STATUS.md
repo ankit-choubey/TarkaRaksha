@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I6 — TIX: TarkaRaksha Integrity Exchange
+I9 — Deterministic Kill Switch / Execution Safety Control
 
 ## Task Status
-COMPLETE (C_I6 PASS)
+COMPLETE (C_I9 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -34,14 +34,15 @@ COMPLETE (C_I6 PASS)
 - [x] **I5 — Buyer Agent** (Completed 2026-09-05)
 - [x] **I8 — Agent / Transaction / Payment Binding** (Completed 2026-09-05)
 - [x] **I6 — TIX: TarkaRaksha Integrity Exchange** (Completed 2026-09-05)
+- [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T22:15:00+05:30 — I6 checkpoint
+2026-09-05T22:30:00+05:30 — I9 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (426 passed in 2.98s across all unit, integration, and adversarial suites: 385 baseline + 41 I6 tests)
+- `pytest` (464 passed in 3.60s across all unit, integration, and adversarial suites: 426 baseline + 38 I9 tests)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -72,7 +73,11 @@ COMPLETE (C_I6 PASS)
 - **TIX Advisory Transport Invariant**: TIX transports claims across buyer, merchant, and control plane; TarkaRaksha deterministic logic verifies claims; zero payment authorization authority resides in TIX.
 - **TIX Cryptographic Chain Continuity**: Sequential messages within a transaction exchange are deterministically hashed (SHA-256) and chained via previous_message_hash; any in-transit payload tampering or insertion is deterministically detected and rejected.
 - **TIX Anti-Spoofing & Authority Invariant**: Non-TarkaRaksha participants (buyer_agent, merchant_agent) cannot emit AUTHORIZATION messages, claim authoritative OUTCOME, or embed rogue payment authorizations.
+- **Kill Switch Execution Gating Invariant**: Safety states (RUNNING, PAUSED, REQUIRES_REVALIDATION, KILLED) deterministically gate financial actions; execution control is strictly separated from fact detection.
+- **Forbidden Direct Resume Invariant**: Direct transition from KILLED to RUNNING is strictly prohibited; resuming a killed transaction unconditionally requires passing through authoritative revalidation.
+- **Authoritative Revalidation Invariant**: Revalidation requires verified registered context matching (transaction_id, intent_id, agent_id, merchant_id) and at least one AUTHORITATIVE or PROTOCOL_TRUSTED evidence record; advisory LLM/agent claims are rejected.
+- **Fail-Closed Execution Gate Invariant**: Unknown transactions, missing evidence, uninitialized context, or repeated UNKNOWNs above tolerance fail-closed by blocking execution.
 
 ## Next Task
-**I7 — Bounded Agentic Negotiation / Replanning** (STOP — await explicit user prompt before starting I7)
+**I7 — Bounded Agentic Negotiation / Replanning** (or next approved innovation task — await explicit user prompt)
 
