@@ -16,6 +16,11 @@ from .integration import (
     IntegrationService,
 )
 from .security_guard import SecurityGuardService
+from .gates import (
+    ConsumerGate,
+    GateCompositionService,
+    MerchantGate,
+)
 
 __all__ = [
     "evaluate_integrity",
@@ -33,6 +38,9 @@ __all__ = [
     "IntegrationBoundaryError",
     "ContextBindingMismatchError",
     "SecurityGuardService",
+    "ConsumerGate",
+    "MerchantGate",
+    "GateCompositionService",
 ]
 
 

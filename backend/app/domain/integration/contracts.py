@@ -30,12 +30,15 @@ from backend.app.domain.models.intent import IntentContract
 from backend.app.domain.models.money import Money
 from backend.app.domain.models.payment import ProviderOrder, ProviderPayment
 from backend.app.domain.tix.contracts import TIXMessage
+from backend.app.domain.gates.contracts import ConsumerGateResult, MerchantGateResult
 
 
 class IntegrationBoundaryStage(str, Enum):
     """Lifecycle progression stages of an orchestrated integration boundary transaction."""
     INITIALIZED = "INITIALIZED"
     INTENT_BOUND = "INTENT_BOUND"
+    CONSUMER_GATE_VALIDATED = "CONSUMER_GATE_VALIDATED"
+    MERCHANT_GATE_VALIDATED = "MERCHANT_GATE_VALIDATED"
     OFFER_RECEIVED = "OFFER_RECEIVED"
     TIX_COMMITTED = "TIX_COMMITTED"
     EVALUATED = "EVALUATED"
@@ -143,6 +146,8 @@ class IntegrationExecutionRecord(BaseModel):
     intent: Optional[IntentContract] = None
     buyer_proposal: Optional[BuyerTransactionProposal] = None
     merchant_response: Optional[MerchantResponse] = None
+    consumer_gate_result: Optional[ConsumerGateResult] = None
+    merchant_gate_result: Optional[MerchantGateResult] = None
     tix_messages: List[TIXMessage] = Field(default_factory=list)
     binding_outcome: Optional[BindingVerificationOutcome] = None
     integrity_result: Optional[IntegrityResult] = None

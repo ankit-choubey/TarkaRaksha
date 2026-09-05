@@ -38,6 +38,9 @@ from backend.app.domain.integration.contracts import (
     IntegrationExecutionRecord,
     IntegrationTransactionContext,
 )
+from backend.app.domain.gates.contracts import ConsumerGateResult, MerchantGateResult
+from backend.app.services.gates.consumer_gate import ConsumerGate
+from backend.app.services.gates.merchant_gate import MerchantGate
 from backend.app.domain.merchant.contracts import BuyerCommerceRequest, MerchantResponse
 from backend.app.domain.models import (
     ActionRequest,
@@ -261,6 +264,86 @@ class IntegrationService:
         )
         self._records[transaction_id] = record
         return record
+
+    def validate_consumer_gate(
+        self,
+        transaction_id: str,
+        proposal: BuyerTransactionProposal,
+        reference_time: Optional[datetime] = None,
+    ) -> Tuple[ConsumerGateResult, IntegrationExecutionRecord]:
+        """
+        Runs Consumer Gate validation on the transaction proposal.
+        Feeds structured validation facts into the transaction evidence store.
+        Does NOT declare an authoritative financial PASS.
+        """
+        record = self._get_record(transaction_id)
+        if not record.intent:
+            raise IntegrationBoundaryError("Cannot validate consumer gate without bound IntentContract")
+
+        ref_time = reference_time or datetime.now(timezone.utc)
+        result = ConsumerGate.validate(
+            context=record.context,
+            proposal=proposal,
+            intent=record.intent,
+            reference_time=ref_time,
+        )
+
+        # Feed advisory validation facts into evidence store
+        ev = result.to_evidence()
+        self._evidence_store[transaction_id].append(ev)
+
+        record = record.model_copy(
+            update={
+                "buyer_proposal": proposal,
+                "consumer_gate_result": result,
+                "stage": IntegrationBoundaryStage.CONSUMER_GATE_VALIDATED if result.is_valid else record.stage,
+                "history": record.history + [f"{ref_time.isoformat()}: Consumer gate validated -> {result.status.value}"],
+                "updated_at": ref_time,
+            }
+        )
+        self._records[transaction_id] = record
+        return result, record
+
+    def validate_merchant_gate(
+        self,
+        transaction_id: str,
+        merchant_response: MerchantResponse,
+        requested_sku: Optional[str] = None,
+        requested_quantity: int = 1,
+        reference_time: Optional[datetime] = None,
+    ) -> Tuple[MerchantGateResult, IntegrationExecutionRecord]:
+        """
+        Runs Merchant Gate validation on the merchant offer.
+        Feeds structured validation facts into the transaction evidence store.
+        Does NOT declare an authoritative financial PASS.
+        """
+        record = self._get_record(transaction_id)
+        ref_time = reference_time or datetime.now(timezone.utc)
+        result = MerchantGate.validate(
+            context=record.context,
+            merchant_response=merchant_response,
+            catalog_service=self.merchant_service,
+            intent=record.intent,
+            requested_sku=requested_sku,
+            requested_quantity=requested_quantity,
+            reference_time=ref_time,
+        )
+
+        # Feed merchant-attested validation facts into evidence store
+        ev = result.to_evidence(intent_id=record.context.intent_id)
+        self._evidence_store[transaction_id].append(ev)
+
+        record = record.model_copy(
+            update={
+                "merchant_response": merchant_response,
+                "merchant_gate_result": result,
+                "stage": IntegrationBoundaryStage.MERCHANT_GATE_VALIDATED if result.is_valid else record.stage,
+                "history": record.history + [f"{ref_time.isoformat()}: Merchant gate validated -> {result.status.value}"],
+                "updated_at": ref_time,
+            }
+        )
+        self._records[transaction_id] = record
+        return result, record
 
     def append_tix_message(
         self,
