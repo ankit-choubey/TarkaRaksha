@@ -15,6 +15,7 @@ from .contracts import (
     RecoveryIdempotencyError,
     UnsafeActionRequestError,
 )
+from .executor import RecoveryExecutor
 from .policy import classify_recovery
 from .validator import PERMISSIBLE_RECOVERY_ACTIONS, validate_action_request
 
@@ -27,6 +28,7 @@ __all__ = [
     "RecoveryClassification",
     "RecoveryError",
     "RecoveryExecutionResult",
+    "RecoveryExecutor",
     "RecoveryExhaustedError",
     "RecoveryIdempotencyError",
     "UnsafeActionRequestError",
