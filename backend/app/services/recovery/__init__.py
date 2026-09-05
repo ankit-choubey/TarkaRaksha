@@ -15,6 +15,7 @@ from .contracts import (
     RecoveryIdempotencyError,
     UnsafeActionRequestError,
 )
+from .policy import classify_recovery
 
 __all__ = [
     "MAX_RECOVERY_ATTEMPTS",
@@ -27,4 +28,5 @@ __all__ = [
     "RecoveryExhaustedError",
     "RecoveryIdempotencyError",
     "UnsafeActionRequestError",
+    "classify_recovery",
 ]
