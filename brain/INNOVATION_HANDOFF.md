@@ -781,3 +781,44 @@ E1 — Integration Boundary
    - `ScenarioDefinition`, `ScenarioResult`, `ScenarioSuiteResult`: 12 canonical scenario definitions and results.
    - `GroundTruthDefinition`, `CertificationResult`, `CertificationMatrixRow`, `CertificationSuiteResult`: Ground-truth certification matrix.
    - `HeroTransactionRecord`, `HeroDriftNotice`, `HeroRemediationProposal`: End-to-end hero transaction orchestration record.
+
+7. **Integration & Composition Boundary Models** (`backend/app/domain/integration/contracts.py`):
+   - `IntegrationBoundaryStage`: Explicit lifecycle stage tracking (`INITIALIZED`, `INTENT_BOUND`, `OFFER_RECEIVED`, `TIX_COMMITTED`, `PAYMENT_BOUND`, `EVALUATED`, `RECOVERED`, `COMPLETED`).
+   - `IntegrationTransactionContext`: Pure 7-tuple context binding (`intent_id`, `agent_id`, `merchant_id`, `transaction_id`, `order_id`, `payment_id`, `attempt_id`).
+   - `IntegrationExecutionRecord`: Immutable execution snapshot recording all ingested domain objects, TIX messages, binding outcomes, integrity evaluations, MRDP proofs, and compensatory actions.
+   - `IntegrationEvaluationResponse`: Typed evaluation outcome exposing rule results, state machine progression, and MRDP proof.
+
+---
+
+## E1 Verification Record (Integration Boundary)
+
+- **Implementation Scope**:
+  - Single stable application-facing integration and composition boundary (`IntegrationService`) around all existing components (Buyer Agent, Merchant Agent, TIX, Intent, Transaction, Payment, Integrity, Recovery, Replay).
+  - Preserved existing authority hierarchy: AI is advisory; evidence proves; deterministic logic decides.
+  - Composed existing implementations directly without rewriting or introducing duplicate engines:
+    - I8 `TransactionBindingService` for agent/merchant/transaction/payment binding
+    - I9 `KillSwitchService` for execution safety gating
+    - I6 `TIXExchangeService` for inter-agent communication
+    - I4 `MerchantCatalogService` & I5 `BuyerAgentService` for commercial proposals
+    - T04 `evaluate_integrity` for deterministic evaluation
+    - T05 `TransactionStateMachine` for lifecycle state progression
+    - T07 `build_mrdp` for cryptographic drift proofs
+    - T11 `RecoveryExecutor` for bounded compensatory recovery
+    - T13 `ReplayEngine` for side-effect-free historical replay
+    - T09 `RazorpayAdapter` for payment provider operations
+  - Exposed narrow, additive REST endpoints: `POST /api/v1/integration/context` and `GET /api/v1/integration/{transaction_id}`.
+- **Files Created**:
+  - `backend/app/domain/integration/__init__.py`
+  - `backend/app/domain/integration/contracts.py`
+  - `backend/app/services/integration/__init__.py`
+  - `backend/app/services/integration/service.py`
+  - `testing/unit/test_integration_boundary.py`
+- **Files Modified**:
+  - `backend/app/services/__init__.py` (re-exported IntegrationService and error classes)
+  - `backend/app/main.py` (added integration endpoints, exception handlers, and dependency provider)
+- **Tests Added**: 13 focused tests in `test_integration_boundary.py` covering binding enforcement, cross-context isolation, authority invariants, deterministic drift/MRDP, clean pass, recovery, pure CPU replay, and API contracts.
+- **Regression Count**: 777 passed, 2 warnings in 36.41s (764 baseline + 13 new E1 tests).
+- **Core Invariant Verification**:
+  - `make test-bootstrap`: PASS
+  - `make test-env`: PASS (including Next.js production build)
+  - `scripts/verify_api_smoke.py`: PASS

@@ -7,10 +7,10 @@
 E-Series Final Extension
 
 ## Current Task
-E0 — Final Baseline & Contract Freeze
+E1 — Integration Boundary
 
 ## Task Status
-COMPLETE (C_E0 PASS)
+COMPLETE (C_E1 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -46,14 +46,15 @@ COMPLETE (C_E0 PASS)
 - [x] **I15 — Integrity SLA Metrics** (Completed 2026-09-06)
 - [x] **I22 — Complete Hero Transaction** (Completed 2026-09-06)
 - [x] **E0 — Final Baseline & Contract Freeze** (Completed 2026-09-06)
+- [x] **E1 — Integration Boundary** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T03:15:00+05:30 — E0 checkpoint
+2026-09-06T03:30:00+05:30 — E1 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (764 passed, 2 warnings in 36.44s across all unit, integration, and adversarial suites: 747 baseline + 17 I22 tests)
+- `pytest` (777 passed, 2 warnings in 36.41s across all unit, integration, and adversarial suites: 764 baseline + 13 E1 tests)
 - `scripts/verify_api_smoke.py`: PASS (FastAPI routes, scenarios, certifications, replay validation, hero-transaction, and intent parsing verified)
 - `npm run build` (frontend): PASS (Next.js 15.5.25 Turbopack production build clean)
 
@@ -138,6 +139,9 @@ COMPLETE (C_E0 PASS)
 - **Real vs Synthetic Boundary Invariant**: Strictly labels and separates `SYNTHETIC_OFFLINE_HERO_RUN` (when sandbox credentials are unconfigured/placeholders) from `REAL_RAZORPAY_TEST_MODE` (when real live sandbox credentials exist); never fakes gateway success.
 - **Historical Drift Truth Invariant**: Original DRIFT, MRDP, and mutated evidence remain immutably preserved in `HeroTransactionRecord` history alongside remediated offer and revalidated PASS.
 - **Additive Productization Boundary Invariant**: E-Series final productization strictly sits atop verified T01–T13 and I-series foundations without modifying authoritative integrity rules or payment safety boundaries.
+- **E1 Single Composition Boundary Invariant**: E1 provides a single application-facing orchestrator (`IntegrationService`) that binds Buyer Agent, Merchant Agent, TIX, Intent, Transaction, Payment, Integrity, Recovery, and Replay without creating a second decision engine, second payment authority, or second TIX.
+- **E1 Authority Preservation Invariant**: Orchestration is not authority. Neither Buyer Agent proposals, Merchant offers, nor TIX messages can declare PASS. Only the deterministic engine over authoritative evidence decides.
+- **E1 Cross-Context Isolation Invariant**: All operations strictly enforce the 7-tuple binding (`intent_id`, `agent_id`, `merchant_id`, `transaction_id`, `order_id`, `payment_id`, `attempt_id`). Mismatched agents, intents, or merchants are unconditionally rejected with `ContextBindingMismatchError`.
 
 ## Next Task
-E1 — Integration Boundary (Await user instruction / human approval).
+E2 — Consumer + Merchant Gate Composition (Await user instruction / human approval).
