@@ -102,3 +102,25 @@ class CompleteTransactionResponse(BaseModel):
         extra="forbid",
         strict=True,
     )
+
+
+class RecoverTransactionRequest(BaseModel):
+    """
+    Request payload submitted to trigger the recovery loop for a drifted or unresolved transaction.
+    """
+    transaction_id: str
+    action_request: Optional[Any] = None  # ActionRequest
+    use_ai: bool = False
+
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        strict=True,
+    )
+
+    @field_validator("transaction_id")
+    @classmethod
+    def validate_transaction_id(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("transaction_id cannot be empty or whitespace")
+        return v.strip()

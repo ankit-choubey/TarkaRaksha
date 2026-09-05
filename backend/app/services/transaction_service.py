@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional
 
 from backend.app.core.config import settings
 from backend.app.domain.models import (
+    ActionRequest,
+    ActionType,
     CanonicalEvent,
     Evidence,
     EvidenceAuthority,
@@ -28,6 +30,7 @@ from backend.app.domain.models import (
     CreateTransactionResponse,
     CompleteTransactionRequest,
     CompleteTransactionResponse,
+    RecoverTransactionRequest,
 )
 from backend.app.domain.states import TransactionStateMachine
 from backend.app.services.ai import parse_intent, AIProvider
@@ -39,6 +42,17 @@ from backend.app.services.payment import (
     PaymentSignatureError,
     PaymentTimeoutError,
     RazorpayAdapter,
+)
+from backend.app.services.recovery import (
+    MAX_RECOVERY_ATTEMPTS,
+    InvalidRecoveryStateError,
+    RecoverabilityStatus,
+    RecoveryExhaustedError,
+    RecoveryExecutor,
+    UnsafeActionRequestError,
+    classify_recovery,
+    revalidate_recovery,
+    validate_action_request,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,6 +78,8 @@ class TransactionSession:
         self.completed_response: Optional[CompleteTransactionResponse] = None
         self.evidence_bundle: Optional[EvidenceBundle] = None
         self.integrity_result: Optional[IntegrityResult] = None
+        self.events: List[CanonicalEvent] = []
+        self.recovery_attempts: int = 0
 
 
 class TransactionService:
@@ -77,6 +93,11 @@ class TransactionService:
         self._default_provider = default_provider
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
+        self._recovery_executor = RecoveryExecutor()
+
+    @property
+    def recovery_executor(self) -> RecoveryExecutor:
+        return self._recovery_executor
 
     def get_provider(self, provider_override: Optional[PaymentProvider] = None) -> PaymentProvider:
         if provider_override is not None:
@@ -374,6 +395,7 @@ class TransactionService:
         ]
 
         # 7. Execute Pure Deterministic Integrity Verification
+        session.events = canonical_events
         eval_result = evaluate_integrity(
             contract=session.intent,
             evidence_list=evidence_list,
@@ -438,3 +460,315 @@ class TransactionService:
                 time.sleep(poll_delay_seconds)
 
         return None
+
+    def recover_transaction(
+        self,
+        request: RecoverTransactionRequest,
+        provider: Optional[PaymentProvider] = None,
+        ai_provider: Optional[AIProvider] = None,
+        now: Optional[datetime] = None,
+    ) -> CompleteTransactionResponse:
+        """
+        T11 Recovery Loop:
+        DRIFT / RECOVERABLE UNKNOWN -> MRDP / Evidence -> Recovery Proposal ->
+        Deterministic Safety Validation -> Bounded Recovery Action ->
+        Observe -> Revalidate -> PASS / DRIFT / UNKNOWN / ABSTAIN.
+        """
+        session = self.get_session(request.transaction_id)
+        if not session:
+            raise KeyError(f"Transaction '{request.transaction_id}' not found")
+
+        ts = now or datetime.now(timezone.utc)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+
+        # 1. State Guard: only DRIFT, UNKNOWN, RESOLVING, RECOVERING are legal
+        current_state = session.state_machine.current_state
+        if current_state == TransactionState.PASS:
+            logger.info("Transaction %s already in PASS status. No recovery required.", session.transaction_id)
+            return session.completed_response or CompleteTransactionResponse(
+                transaction_id=session.transaction_id,
+                intent_id=session.intent.intent_id,
+                order_id=session.order.order_id,
+                payment_id=session.payment.payment_id if session.payment else "N/A",
+                state=TransactionState.PASS,
+                integrity_status=IntegrityStatus.PASS,
+                rule_results={"economic": True, "semantic": True, "temporal": True},
+                violations=[],
+                evidence_ids=[],
+                mrdp=None,
+                verified_at=ts,
+            )
+
+        if current_state == TransactionState.ABSTAIN:
+            logger.info("Transaction %s is in terminal ABSTAIN state. No further actions.", session.transaction_id)
+            return session.completed_response
+
+        if current_state not in (
+            TransactionState.DRIFT,
+            TransactionState.UNKNOWN,
+            TransactionState.RESOLVING,
+            TransactionState.RECOVERING,
+        ):
+            raise InvalidRecoveryStateError(
+                f"Cannot initiate recovery from state '{current_state.value}'. "
+                "Recovery is permitted only from DRIFT, UNKNOWN, RESOLVING, or RECOVERING."
+            )
+
+        # 2. Recovery Attempts Limit Guard (§15)
+        # Bounded at MAX_RECOVERY_ATTEMPTS (3). Attempt 4 forces ABSTAIN.
+        if session.recovery_attempts >= MAX_RECOVERY_ATTEMPTS:
+            logger.warning(
+                "Transaction %s exceeded max recovery attempts (%d). Transitioning to ABSTAIN.",
+                session.transaction_id,
+                MAX_RECOVERY_ATTEMPTS,
+            )
+            if session.state_machine.current_state != TransactionState.ABSTAIN:
+                session.state_machine.transition_to(
+                    to_state=TransactionState.ABSTAIN,
+                    reason=f"Recovery attempt limit ({MAX_RECOVERY_ATTEMPTS}) reached. Escalating to ABSTAIN.",
+                    timestamp=ts,
+                    triggered_by="RECOVERY_POLICY",
+                    is_verified=True,
+                )
+            prior_rule_results = session.integrity_result.rule_results if session.integrity_result else {}
+            prior_violations = session.integrity_result.violations if session.integrity_result else []
+            prior_ev_ids = session.integrity_result.evidence_ids if session.integrity_result else []
+            response = CompleteTransactionResponse(
+                transaction_id=session.transaction_id,
+                intent_id=session.intent.intent_id,
+                order_id=session.order.order_id,
+                payment_id=session.payment.payment_id if session.payment else "unresolved",
+                state=TransactionState.ABSTAIN,
+                integrity_status=session.integrity_result.status if session.integrity_result else IntegrityStatus.DRIFT,
+                rule_results=prior_rule_results,
+                violations=[f"Recovery attempt limit ({MAX_RECOVERY_ATTEMPTS}) reached. Control plane escalated to ABSTAIN."] + prior_violations,
+                evidence_ids=prior_ev_ids,
+                mrdp=session.completed_response.mrdp if session.completed_response else None,
+                verified_at=ts,
+            )
+            session.completed_response = response
+            return response
+
+        # 3. Deterministic Recovery Policy Classification (§5, §6)
+        mrdp_obj = session.completed_response.mrdp if session.completed_response else None
+        classification = classify_recovery(
+            contract=session.intent,
+            integrity_result=session.integrity_result or IntegrityResult(
+                evaluation_id=f"eval_{session.intent.intent_id}",
+                intent_id=session.intent.intent_id,
+                status=IntegrityStatus.DRIFT,
+                evaluated_at=ts,
+                rule_results={},
+                violations=[],
+                evidence_ids=[],
+                confidence_score=0.0,
+            ),
+            mrdp=mrdp_obj,
+            current_attempt=session.recovery_attempts + 1,
+            reference_time=ts,
+        )
+
+        if classification.status in (RecoverabilityStatus.NON_RECOVERABLE, RecoverabilityStatus.ABSTAIN) or not classification.is_recoverable:
+            # Deterministically non-recoverable: transition directly to ABSTAIN (§5)
+            logger.warning(
+                "Transaction %s classified as %s: %s. Transitioning to ABSTAIN.",
+                session.transaction_id,
+                classification.status.value,
+                classification.reason,
+            )
+            session.state_machine.transition_to(
+                to_state=TransactionState.ABSTAIN,
+                reason=classification.reason,
+                timestamp=ts,
+                triggered_by="RECOVERY_POLICY",
+                is_verified=True,
+            )
+            response = CompleteTransactionResponse(
+                transaction_id=session.transaction_id,
+                intent_id=session.intent.intent_id,
+                order_id=session.order.order_id,
+                payment_id=session.payment.payment_id if session.payment else "unresolved",
+                state=TransactionState.ABSTAIN,
+                integrity_status=session.integrity_result.status if session.integrity_result else IntegrityStatus.DRIFT,
+                rule_results=session.integrity_result.rule_results if session.integrity_result else {},
+                violations=[classification.reason] + (session.integrity_result.violations if session.integrity_result else []),
+                evidence_ids=session.integrity_result.evidence_ids if session.integrity_result else [],
+                mrdp=mrdp_obj,
+                verified_at=ts,
+            )
+            session.completed_response = response
+            return response
+
+        # 4. Formulate ActionRequest (§8)
+        if request.action_request is not None:
+            if isinstance(request.action_request, ActionRequest):
+                action_req = request.action_request
+            elif isinstance(request.action_request, dict):
+                action_req = ActionRequest(**request.action_request)
+            else:
+                raise ValueError(f"Invalid action_request type: {type(request.action_request)}")
+        else:
+            # Deterministically synthesize compensatory ActionRequest
+            target_ref = session.payment.payment_id if session.payment else session.order.order_id
+            if classification.recommended_action == ActionType.REFUND and classification.max_allowed_amount:
+                action_req = ActionRequest(
+                    request_id=f"act_rec_{session.transaction_id}_{session.recovery_attempts + 1}",
+                    intent_id=session.intent.intent_id,
+                    action_type=ActionType.REFUND,
+                    amount=classification.max_allowed_amount,
+                    target_reference=target_ref,
+                    idempotency_key=f"idemp_rec_{session.transaction_id}_{session.recovery_attempts + 1}",
+                    requested_at=ts,
+                    requested_by="AI_RECOVERY_AGENT" if request.use_ai else "CONTROL_PLANE_POLICY",
+                )
+            elif classification.recommended_action == ActionType.CANCEL:
+                action_req = ActionRequest(
+                    request_id=f"act_rec_{session.transaction_id}_{session.recovery_attempts + 1}",
+                    intent_id=session.intent.intent_id,
+                    action_type=ActionType.CANCEL,
+                    amount=None,
+                    target_reference=session.order.order_id,
+                    idempotency_key=f"idemp_rec_{session.transaction_id}_{session.recovery_attempts + 1}",
+                    requested_at=ts,
+                    requested_by="CONTROL_PLANE_POLICY",
+                )
+            else:
+                action_req = ActionRequest(
+                    request_id=f"act_obs_{session.transaction_id}_{session.recovery_attempts + 1}",
+                    intent_id=session.intent.intent_id,
+                    action_type=ActionType.NOTIFY,
+                    amount=None,
+                    target_reference=target_ref,
+                    idempotency_key=f"idemp_obs_{session.transaction_id}_{session.recovery_attempts + 1}",
+                    requested_at=ts,
+                    requested_by="CONTROL_PLANE_POLICY",
+                )
+
+        # 5. Deterministic Safety Validation of ActionRequest (§8, §9)
+        try:
+            validated_req = validate_action_request(
+                action_request=action_req,
+                contract=session.intent,
+                mrdp=mrdp_obj,
+                current_state=session.state_machine.current_state,
+                attempt_count=session.recovery_attempts,
+            )
+        except (UnsafeActionRequestError, RecoveryExhaustedError, InvalidRecoveryStateError) as exc:
+            logger.error("ActionRequest safety validation failed for %s: %s", session.transaction_id, exc)
+            session.state_machine.transition_to(
+                to_state=TransactionState.ABSTAIN,
+                reason=f"ActionRequest safety validation failed: {exc}",
+                timestamp=ts,
+                triggered_by="SAFETY_VALIDATOR",
+                is_verified=True,
+            )
+            response = CompleteTransactionResponse(
+                transaction_id=session.transaction_id,
+                intent_id=session.intent.intent_id,
+                order_id=session.order.order_id,
+                payment_id=session.payment.payment_id if session.payment else "unresolved",
+                state=TransactionState.ABSTAIN,
+                integrity_status=session.integrity_result.status if session.integrity_result else IntegrityStatus.DRIFT,
+                rule_results=session.integrity_result.rule_results if session.integrity_result else {},
+                violations=[f"Unsafe action request rejected: {exc}"] + (session.integrity_result.violations if session.integrity_result else []),
+                evidence_ids=session.integrity_result.evidence_ids if session.integrity_result else [],
+                mrdp=mrdp_obj,
+                verified_at=ts,
+            )
+            session.completed_response = response
+            return response
+
+        # 6. State Machine: Enter RECOVERING or RESOLVING (§14)
+        rec_ts = ts + timedelta(milliseconds=5)
+        if session.state_machine.current_state == TransactionState.DRIFT:
+            session.state_machine.transition_to(
+                to_state=TransactionState.RECOVERING,
+                reason=f"Executing compensatory action {validated_req.action_type.value}",
+                timestamp=rec_ts,
+                triggered_by="RECOVERY_LOOP",
+                is_verified=True,
+                context={"action_type": validated_req.action_type.value},
+            )
+        elif session.state_machine.current_state == TransactionState.UNKNOWN:
+            session.state_machine.transition_to(
+                to_state=TransactionState.RESOLVING,
+                reason="Investigating unresolved transaction state via recovery query",
+                timestamp=rec_ts,
+                triggered_by="RESOLUTION_LOOP",
+                is_verified=True,
+            )
+
+        # 7. Bounded Recovery Execution (§11)
+        payment_gateway = self.get_provider(provider)
+        exec_result = self._recovery_executor.execute(
+            action_request=validated_req,
+            contract=session.intent,
+            provider=payment_gateway,
+            current_state=session.state_machine.current_state,
+            mrdp=mrdp_obj,
+            now=rec_ts,
+        )
+        session.recovery_attempts += 1
+
+        # 8. State Machine: Enter REVALIDATING (§12, §14)
+        reval_ts = rec_ts + timedelta(milliseconds=10)
+        session.state_machine.transition_to(
+            to_state=TransactionState.REVALIDATING,
+            reason="Recovery action executed. Running deterministic revalidation.",
+            timestamp=reval_ts,
+            triggered_by="REVALIDATOR",
+            is_verified=True,
+        )
+
+        # 9. Deterministic Revalidation (§12)
+        prior_evidence = session.evidence_bundle.records if session.evidence_bundle else []
+        reval_result = revalidate_recovery(
+            contract=session.intent,
+            prior_evidence=prior_evidence,
+            recovery_evidence=exec_result.evidence,
+            prior_events=session.events,
+            recovery_events=exec_result.events,
+            reference_time=reval_ts,
+        )
+        session.integrity_result = reval_result
+
+        # 10. Update Session Evidence and Events (§17)
+        merged_evidence = list(prior_evidence) + list(exec_result.evidence)
+        session.evidence_bundle = EvidenceBundle(
+            bundle_id=f"b_{session.intent.intent_id}_post_rec",
+            intent_id=session.intent.intent_id,
+            created_at=reval_ts,
+            records=merged_evidence,
+        )
+        session.events.extend(exec_result.events)
+
+        # 11. Apply Deterministic Result to State Machine (§12)
+        fin_ts = reval_ts + timedelta(milliseconds=10)
+        session.state_machine.apply_integrity_result(reval_result, timestamp=fin_ts)
+
+        # 12. Update MRDP if still DRIFT or UNKNOWN
+        updated_mrdp: Optional[MRDP] = None
+        if reval_result.status in (IntegrityStatus.DRIFT, IntegrityStatus.UNKNOWN):
+            updated_mrdp = build_mrdp(
+                contract=session.intent,
+                integrity_result=reval_result,
+                evidence_bundle=session.evidence_bundle,
+                generated_at=fin_ts,
+            )
+
+        response = CompleteTransactionResponse(
+            transaction_id=session.transaction_id,
+            intent_id=session.intent.intent_id,
+            order_id=session.order.order_id,
+            payment_id=session.payment.payment_id if session.payment else "unresolved",
+            state=session.state_machine.current_state,
+            integrity_status=reval_result.status,
+            rule_results=reval_result.rule_results,
+            violations=reval_result.violations,
+            evidence_ids=reval_result.evidence_ids,
+            mrdp=updated_mrdp,
+            verified_at=fin_ts,
+        )
+        session.completed_response = response
+        return response

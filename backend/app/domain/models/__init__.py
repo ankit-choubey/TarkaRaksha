@@ -23,6 +23,7 @@ from .slice import (
     CreateTransactionResponse,
     CompleteTransactionRequest,
     CompleteTransactionResponse,
+    RecoverTransactionRequest,
 )
 
 __all__ = [
@@ -53,4 +54,5 @@ __all__ = [
     "CreateTransactionResponse",
     "CompleteTransactionRequest",
     "CompleteTransactionResponse",
+    "RecoverTransactionRequest",
 ]
