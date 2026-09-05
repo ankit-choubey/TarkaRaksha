@@ -62,8 +62,8 @@ None
 `main`
 
 ## Last Verified Remote Commit
-812a1c4 (test: add adversarial tests and security invariant hardening)
-Prior Remote Commits: d271fec, 5be768a, 02f5789, 5f41a3c, c898ad8, 3d07dd1, 6ea3c9c, 84c7142, f9fa88c, 17e99c9, 1a740b0, beca9e8, 020cf38
+105dfd0 (docs: synchronize persistent brain and handoff for T05 completion)
+Prior Remote Commits: 812a1c4, d271fec, 5be768a, 02f5789, 5f41a3c, c898ad8, 3d07dd1, 6ea3c9c, 84c7142, f9fa88c, ...
 
 ## Next Task
 **T06 — Evidence** (Evidence normalization: USER_INTENT, AGENT, MERCHANT, RAZORPAY, SYSTEM, REPLAY into single canonical evidence bundle with authority tiers)
