@@ -71,6 +71,7 @@
 - [x] **E0 — Final Baseline & Contract Freeze** (Verified Green, 764/764 tests passing)
 - [x] **E1 — Integration Boundary** (Verified Green, 777/777 tests passing)
 - [x] **E2 — Consumer + Merchant Gate Composition** (Verified Green, 859/859 tests passing)
+- [x] **E3 — Agentic Transaction Lifecycle Orchestration** (Verified Green, 912/912 tests passing)
 
 ---
 
@@ -898,3 +899,39 @@ E1 — Integration Boundary
 - **Core Invariant Verification**:
   - `make test-bootstrap`: PASS
   - `make test-env`: PASS (including Next.js production build)
+
+---
+
+## E3 Verification Record (Agentic Transaction Lifecycle Orchestration)
+
+- **Implementation Scope**:
+  - Complete bounded agentic transaction lifecycle orchestrator (`AgenticLifecycleOrchestrator`) connecting Buyer Agent, Consumer Gate, Merchant Agent, Merchant Gate, TIX exchange, T04 deterministic integrity, MRDP, bounded replanning, UNKNOWN resolution, security guard composition, recovery executor, Razorpay payment adapter, and T13 pure CPU replay.
+  - Strict preservation of the governing authority model: "AI proposes. Evidence proves. Deterministic logic decides." The orchestrator has control-flow authority, NOT financial or truth authority.
+  - Domain contracts: `LifecycleStage`, `LifecyclePolicy`, `LifecycleStepRecord`, `LifecycleOutcome`, `LifecycleViolationError`.
+  - Bounded DRIFT replanning path: generates MRDP digest, invokes Buyer Agent proposal revision, generates Merchant counter-offer, enforces **mandatory revalidation** of revised proposals through E2 Consumer Gate and revised offers through E2 Merchant Gate, and deterministically re-evaluates through T04 engine.
+  - Authoritative UNKNOWN path: preserves UNKNOWN without guessing, triggers authoritative gateway polling up to budget limit, transitions to ABSTAIN if unresolved, and NEVER coerces UNKNOWN into PASS.
+  - Security guard integration (E4): passes transaction contexts and untrusted inputs through `SecurityGuardService` to detect injection attacks, capability abuse, and evidence tampering.
+  - Recovery integration (T11): invokes `RecoveryExecutor` within verified MRDP discrepancy bounds when replanning is exhausted or disabled.
+  - Replay boundary (T13): operates purely in-memory on CPU without live network, AI, or payment side-effects, guaranteeing historical reproducibility.
+  - Application-facing REST API: `POST /api/v1/integration/{transaction_id}/orchestrate` with clean status code mapping.
+- **Files Created**:
+  - `backend/app/domain/orchestration/__init__.py`
+  - `backend/app/domain/orchestration/contracts.py`
+  - `backend/app/services/orchestration/__init__.py`
+  - `backend/app/services/orchestration/lifecycle.py`
+  - `testing/unit/test_agentic_lifecycle_orchestration.py`
+- **Files Modified**:
+  - `backend/app/domain/gates/contracts.py` (added `message` alias on `GateValidationFinding`)
+  - `backend/app/domain/merchant/contracts.py` (added `price` and `total` convenience properties, added `mode="before"` validator for `inventory_status`)
+  - `backend/app/domain/integration/contracts.py` (added lifecycle stages and execution record fields)
+  - `backend/app/services/integration/service.py` (added `orchestrate_lifecycle` method delegating to orchestrator)
+  - `backend/app/services/merchant/catalog_service.py` (added `add_item` convenience method)
+  - `backend/app/services/__init__.py` (re-exported AgenticLifecycleOrchestrator)
+  - `backend/app/main.py` (registered `/api/v1/integration/{transaction_id}/orchestrate` endpoint)
+- **Tests Added**: 53 focused unit and adversarial tests in `testing/unit/test_agentic_lifecycle_orchestration.py` covering all 50 required scenarios plus API endpoints.
+- **Regression Count**: 912 passed, 2 warnings in 37.13s (859 baseline + 53 new E3 tests).
+- **Core Invariant Verification**:
+  - `make test-bootstrap`: PASS
+  - `make test-env`: PASS (including Next.js production build)
+  - `scripts/verify_api_smoke.py`: PASS
+  - `git diff --check`: PASS

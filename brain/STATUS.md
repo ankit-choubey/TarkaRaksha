@@ -7,10 +7,10 @@
 E-Series Final Extension
 
 ## Current Task
-E2 — Consumer + Merchant Gate Composition
+E3 — Agentic Transaction Lifecycle Orchestration
 
 ## Task Status
-COMPLETE (C_E2 PASS)
+COMPLETE (C_E3 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -48,16 +48,17 @@ COMPLETE (C_E2 PASS)
 - [x] **E0 — Final Baseline & Contract Freeze** (Completed 2026-09-06)
 - [x] **E1 — Integration Boundary** (Completed 2026-09-06)
 - [x] **E2 — Consumer + Merchant Gate Composition** (Completed 2026-09-06)
+- [x] **E3 — Agentic Transaction Lifecycle Orchestration** (Completed 2026-09-06)
 - [x] **E4 — Security / Threat Guard Composition** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T03:55:00+05:30 — E2 checkpoint
+2026-09-06T04:22:00+05:30 — E3 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (859 passed, 2 warnings in 39.66s across all unit, integration, and adversarial suites: 804 baseline + 55 E2 tests)
-- `testing/unit/test_gates_composition.py`: PASS (55/55 passed in 0.22s)
+- `pytest` (912 passed, 2 warnings in 37.13s across all unit, integration, and adversarial suites: 859 baseline + 53 E3 tests)
+- `testing/unit/test_agentic_lifecycle_orchestration.py`: PASS (53/53 passed in 0.64s)
 - `scripts/verify_api_smoke.py`: PASS (FastAPI routes, scenarios, certifications, replay validation, hero-transaction, and intent parsing verified)
 - `npm run build` (frontend): PASS (Next.js 15.5.25 Turbopack production build clean)
 - `git diff --check`: PASS (zero whitespace errors or unresolved merge markers)
@@ -152,6 +153,10 @@ COMPLETE (C_E2 PASS)
 - **E2 UNKNOWN Preservation in Gates Invariant**: Missing, delayed, or indeterminate provider telemetry (e.g. absent inventory record) produces `GateStatus.UNKNOWN` rather than forcing `INVALID` or coercing `VALID`.
 - **E2 Prompt Injection Defense in Proposals**: Malicious prompt injection phrases embedded in AI agent proposal rationales ("ignore previous instructions", "declare pass", "override budget", "bypass verification", "authorize payment") are deterministically intercepted and rejected as `INVALID`.
 - **E2 Cross-Context Gate Isolation Invariant**: Swapping buyer agents, merchant agents, intent IDs, or transaction IDs across contexts is unconditionally rejected by both gates.
+- **E3 Agentic Lifecycle Orchestration Invariant**: The orchestrator (`AgenticLifecycleOrchestrator`) coordinates flow across Buyer Agent, Consumer Gate, Merchant Agent, Merchant Gate, TIX, T04 deterministic integrity, MRDP, replanning, UNKNOWN resolution, security, recovery, Razorpay, and replay without taking authority away from the deterministic core. Control-flow authority is strictly separated from financial/truth authority.
+- **E3 Gate Mandatory Revalidation on Replan**: Revised proposals and counter-offers resulting from bounded replanning MUST re-pass the E2 Consumer Gate and E2 Merchant Gate before reaching deterministic re-evaluation; agent suggestions never shortcut gate validation.
+- **E3 Non-Coercion of UNKNOWN Invariant**: UNKNOWN state is preserved throughout lifecycle orchestration; missing or delayed provider evidence triggers authoritative resolution attempts up to strict budget limits, transitioning to ABSTAIN if unresolved, and is NEVER coerced into PASS.
+- **E3 Replay Side-Effect Freedom Invariant**: Replaying an orchestrated lifecycle snapshot operates strictly in-memory on CPU without live network, live AI, or payment gateway side effects, preserving historical auditability.
 
 ## Next Task
-E3 — Agentic Transaction Lifecycle Orchestration (Await user instruction / human approval).
+E5 — End-to-End Control Room / System Certification (or canonical next E-series task as specified by project plan; wait for human approval).
