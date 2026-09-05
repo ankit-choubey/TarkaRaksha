@@ -276,14 +276,20 @@ def webhook_to_event_and_evidence(
     if event.order:
         payload_summary["order_id"] = event.order.order_id
 
+    tx_id = event.payment.payment_id if event.payment else f"tx_{event.event_id}"
+    event_amount = event.payment.amount if event.payment else None
+
     canonical_event = CanonicalEvent(
         event_id=event.event_id,
+        transaction_id=tx_id,
         intent_id=intent_id,
         event_type=event.event_type,
+        timestamp=event.created_at,
+        occurred_at=event.created_at,
+        amount=event_amount,
         source=EvidenceSource.RAZORPAY,
         authority=EvidenceAuthority.AUTHORITATIVE,
-        occurred_at=event.created_at,
-        payload=payload_summary,
+        payload_summary=payload_summary,
     )
 
     evidence_records: List[Evidence] = []
