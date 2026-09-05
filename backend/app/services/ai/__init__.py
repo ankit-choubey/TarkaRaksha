@@ -23,6 +23,11 @@ from .intent_parser import (
     parse_intent,
     INTENT_PARSER_SYSTEM_PROMPT,
 )
+from .recovery_agent import (
+    propose_recovery,
+    validate_recovery_proposal_safety,
+    RECOVERY_AGENT_SYSTEM_PROMPT,
+)
 
 __all__ = [
     "AIIntentExtraction",
@@ -40,4 +45,7 @@ __all__ = [
     "FakeAIProvider",
     "parse_intent",
     "INTENT_PARSER_SYSTEM_PROMPT",
+    "propose_recovery",
+    "validate_recovery_proposal_safety",
+    "RECOVERY_AGENT_SYSTEM_PROMPT",
 ]

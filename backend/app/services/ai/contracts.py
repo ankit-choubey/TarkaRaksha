@@ -68,6 +68,18 @@ class AIRecoverySuggestion(BaseModel):
         strict=True,
     )
 
+    @field_validator("proposed_action", mode="before")
+    @classmethod
+    def validate_action_type(cls, v: Any) -> ActionType:
+        if isinstance(v, ActionType):
+            return v
+        if isinstance(v, str):
+            try:
+                return ActionType(v.upper().strip())
+            except ValueError:
+                raise ValueError(f"Invalid ActionType '{v}'. Must be one of {[a.value for a in ActionType]}")
+        raise TypeError(f"Expected string or ActionType, got {type(v).__name__}")
+
     @field_validator("suggested_amount_minor")
     @classmethod
     def validate_amount_minor(cls, v: Optional[int]) -> Optional[int]:
