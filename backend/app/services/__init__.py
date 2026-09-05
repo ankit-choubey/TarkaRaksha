@@ -10,6 +10,11 @@ from .trace import IntegrityTraceService
 from .checkpoint import IntegrityCheckpointService
 from .sla import IntegritySLAMetricsService
 from .hero import HeroTransactionOrchestrator
+from .integration import (
+    ContextBindingMismatchError,
+    IntegrationBoundaryError,
+    IntegrationService,
+)
 
 __all__ = [
     "evaluate_integrity",
@@ -23,6 +28,9 @@ __all__ = [
     "IntegrityCheckpointService",
     "IntegritySLAMetricsService",
     "HeroTransactionOrchestrator",
+    "IntegrationService",
+    "IntegrationBoundaryError",
+    "ContextBindingMismatchError",
 ]
 
 
