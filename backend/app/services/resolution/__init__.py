@@ -13,10 +13,12 @@ from .contracts import (
     ResolutionResult,
     ResolutionStrategy,
 )
+from .observer import LEGAL_RESOLUTION_STATES, UnknownObserver
 from .policy import diagnose_unknown
 
 __all__ = [
     "MAX_RESOLUTION_ATTEMPTS",
+    "LEGAL_RESOLUTION_STATES",
     "ResolutionCategory",
     "ResolutionStrategy",
     "ResolutionDiagnosis",
@@ -26,4 +28,6 @@ __all__ = [
     "ResolutionExhaustedError",
     "ResolutionConflictError",
     "diagnose_unknown",
+    "UnknownObserver",
 ]
+
