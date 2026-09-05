@@ -20,6 +20,8 @@ test-bootstrap:
 	@test -f brain/TarkaRaksha_TESTING.md && echo "[✓] brain/TarkaRaksha_TESTING.md exists"
 	@echo "Checking control documents..."
 	@test -f brain/STATUS.md && echo "[✓] brain/STATUS.md exists"
+	@test -f brain/CONTEXT.md && echo "[✓] brain/CONTEXT.md exists"
+	@test -f brain/HANDOFF.md && echo "[✓] brain/HANDOFF.md exists"
 	@test -f AGENTS.md && echo "[✓] AGENTS.md exists"
 	@test -f .agents/rules/tarkaraksha.md && echo "[✓] .agents/rules/tarkaraksha.md exists"
 	@echo "Checking configuration files..."

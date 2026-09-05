@@ -16,7 +16,7 @@ COMPLETE
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T13:47:00+05:30
+2026-09-05T13:52:00+05:30
 
 ## Tests Run
 - `make test-bootstrap` (Verified canonical master documents, control documents, config files, zero root duplicates, pyproject TOML syntax, and credential scan)
@@ -41,7 +41,8 @@ None
 `main`
 
 ## Last Verified Remote Commit
-beca9e8 (chore: update brain/STATUS.md with verified commit hash)
+1a740b0 (chore: align T01 audit governance, status convention, and bootstrap validation)
+Intermediate Commit: beca9e8 (chore: update brain/STATUS.md with verified commit hash)
 Prior Bootstrap Commit: 020cf38 (chore: bootstrap tarkaraksha repository)
 
 ## Next Task

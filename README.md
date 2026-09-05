@@ -72,6 +72,8 @@ tarkaraksha/
 ├── .env.example              # Environment variables template
 ├── brain/                    # Persistent project memory & master documents
 │   ├── STATUS.md             # Authoritative execution state tracker
+│   ├── CONTEXT.md            # Persistent architecture snapshot & invariants
+│   ├── HANDOFF.md            # Task-to-task transition log & instructions
 │   ├── TarkaRaksha_IDEA.md   # Product definition, boundaries, innovation
 │   ├── TarkaRaksha_Execution.md # Technical architecture, task sequence (T01-T18)
 │   ├── TarkaRaksha_PreFinal.md  # Downstream compatibility & deliverables
