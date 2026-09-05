@@ -24,6 +24,7 @@ from backend.app.domain.models import (
     IntentContract,
     TransactionState,
 )
+from backend.app.domain.explanation import ExplanationResult
 from backend.app.services.recovery import (
     InvalidRecoveryStateError,
     RecoveryExhaustedError,
@@ -314,6 +315,22 @@ def get_transaction_mrdp(
         return session.completed_response.mrdp
 
     raise HTTPException(status_code=404, detail="No MRDP found for this transaction")
+
+
+@app.get("/api/v1/transactions/{transaction_id}/explanation", response_model=ExplanationResult)
+async def get_transaction_explanation(
+    transaction_id: str,
+    service: TransactionService = Depends(get_transaction_service),
+) -> ExplanationResult:
+    """
+    Evidence-Aware AI Explanation endpoint (I21).
+    Produces an evidence-grounded explanation of deterministic decisions and execution states.
+    Non-authoritative: strictly explanatory.
+    """
+    try:
+        return service.explain_transaction(transaction_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
 
 
 @app.post("/api/v1/webhook/razorpay")

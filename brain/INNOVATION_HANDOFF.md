@@ -59,6 +59,7 @@
 - [x] **I6 — TIX: TarkaRaksha Integrity Exchange** (Verified Green, 426/426 tests passing)
 - [x] **I7 — Bounded Agentic Negotiation / Replanning** (Verified Green, 487/487 tests passing)
 - [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Verified Green, 464/464 tests passing)
+- [x] **I21 — Evidence-Aware AI Explanation** (Verified Green, 516/516 tests passing)
 
 ---
 
@@ -273,5 +274,45 @@
   - Authoritative Revalidation Required: Any accepted counter-proposal must generate fresh evidence and pass deterministic integrity verification before the session can complete.
   - Deterministic Bounded Loops: Bounded rounds (`max_rounds = 3`, `max_replans = 3`) guarantee clean termination with `ABSTAINED` or `ESCALATED`, eliminating infinite loop or retry exhaustion vulnerabilities.
   - TIX Audit Trail: All negotiation turns are cryptographically linked in the TIX hash chain (`DRIFT_NOTICE`, `REMEDIATION_REQUEST`, `OFFER`, `OUTCOME`).
+
+---
+
+## I21 Verification Record
+- **Implementation Scope**: Evidence-Aware AI Explanation layer providing structured, evidence-grounded natural language and audit explanations of deterministic decisions, integrity drift, and execution safety states.
+  - Invariant: "AI proposes -> evidence proves -> deterministic logic decides."
+  - Non-Authoritative Boundary: The explanation layer has zero authority to alter transaction decisions (`IntegrityStatus`), state machine progression (`TransactionState`), or execution safety gating (`KillSwitchState`).
+  - Domain models: `FindingCategory`, `ClaimType`, `EvidenceReference`, `ExplanationClaim`, `ExplanationContext`, `ExplanationValidationResult`, `ExplanationResult`.
+  - Deterministic Post-Generation Validator: Validates decision consistency (rejects illicit PASS assertions during DRIFT/UNKNOWN), execution state consistency (rejects execution allowed claims during KILLED/PAUSED), evidence reference anti-hallucination (rejects fabricated IDs like `EVIDENCE-999`), and uncertainty preservation.
+  - Pure Deterministic Fallback: Automatically produces a structured, evidence-grounded explanation if the LLM times out, rate limits, returns malformed JSON, or fails validation. AI failure never causes transaction failure.
+  - Services: `ExplanationContextBuilder` (evidence extraction, secret/credential sanitization, expected vs observed mapping) and `EvidenceAwareExplanationService` (Groq LLM inference, JSON schema enforcement, validation, and fallback).
+  - Integration: `TransactionService.explain_transaction()` and `GET /api/v1/transactions/{id}/explanation`.
+- **Files Created**:
+  - `backend/app/domain/explanation/contracts.py`
+  - `backend/app/domain/explanation/validator.py`
+  - `backend/app/domain/explanation/fallback.py`
+  - `backend/app/domain/explanation/__init__.py`
+  - `backend/app/services/explanation/context_builder.py`
+  - `backend/app/services/explanation/service.py`
+  - `backend/app/services/explanation/__init__.py`
+  - `testing/unit/test_explanation_contracts.py`
+  - `testing/unit/test_explanation_validator.py`
+  - `testing/unit/test_explanation_fallback.py`
+  - `testing/unit/test_explanation_service.py`
+  - `testing/unit/test_explanation_integration.py`
+  - `testing/unit/test_explanation_adversarial.py`
+- **Files Modified**:
+  - `backend/app/services/transaction_service.py`
+  - `backend/app/main.py`
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 29 focused tests (7 domain contract & reproducibility tests, 6 post-generation validator tests, 3 fallback generator tests, 6 service & LLM resilience tests, 3 end-to-end integration & API tests, 4 adversarial security tests).
+- **Regression Count**: 516 passed, 0 failed in 7.87s (487 baseline + 29 I21 tests).
+- **Invariants Preserved**:
+  - Non-Authoritative Explanation: AI output is strictly descriptive and explanatory; deterministic engines remain authoritative.
+  - Claim-to-Evidence Traceability: Every claim links to authoritative/protocol-trusted evidence records; hallucinated claims and fictitious IDs fail validation.
+  - Safe Deterministic Fallback: Fallback guarantees 100% availability of evidence-grounded explanations regardless of external AI provider status.
+  - Uncertainty Preservation: UNKNOWN decisions strictly preserve missing evidence and uncertainty disclosures.
+  - Privacy and Redaction: API keys, tokens, and credentials are automatically redacted from explanation payloads.
+
 
 

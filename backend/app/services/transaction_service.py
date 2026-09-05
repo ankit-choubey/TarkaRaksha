@@ -83,6 +83,12 @@ from backend.app.domain.kill_switch import (
     UnauthorizedResumeError,
 )
 from backend.app.services.kill_switch import KillSwitchService
+from backend.app.domain.explanation import ExplanationResult
+from backend.app.services.explanation import (
+    EvidenceAwareExplanationService,
+    ExplanationContextBuilder,
+)
+from backend.app.services.ai.provider import AIProvider
 
 logger = logging.getLogger(__name__)
 
@@ -128,14 +134,20 @@ class TransactionService:
         default_provider: Optional[PaymentProvider] = None,
         binding_service: Optional[TransactionBindingService] = None,
         kill_switch_service: Optional[KillSwitchService] = None,
+        explanation_service: Optional[EvidenceAwareExplanationService] = None,
     ):
         self._default_provider = default_provider
         self._binding_service = binding_service or TransactionBindingService()
         self._kill_switch_service = kill_switch_service or KillSwitchService()
+        self._explanation_service = explanation_service or EvidenceAwareExplanationService()
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
         self._recovery_executor = RecoveryExecutor()
         self._unknown_observer = UnknownObserver()
+
+    @property
+    def explanation_service(self) -> EvidenceAwareExplanationService:
+        return self._explanation_service
 
     @property
     def binding_service(self) -> TransactionBindingService:
@@ -208,6 +220,43 @@ class TransactionService:
             request=request,
             reference_time=reference_time,
         )
+
+    def explain_transaction(
+        self,
+        transaction_id: str,
+        provider_override: Optional[AIProvider] = None,
+        reference_time: Optional[datetime] = None,
+    ) -> ExplanationResult:
+        """
+        Produces an evidence-grounded AI explanation for a transaction.
+        Non-authoritative: strictly explains deterministic decisions and safety states.
+        """
+        session = self.get_session(transaction_id)
+        if not session:
+            raise KeyError(f"Transaction '{transaction_id}' not found")
+
+        ks_state = self.get_kill_switch_state(transaction_id)
+
+        context = ExplanationContextBuilder.build_context(
+            transaction_id=session.transaction_id,
+            intent=session.intent,
+            integrity_result=session.integrity_result,
+            binding_outcome=session.binding_outcome,
+            kill_switch_state=ks_state,
+            kill_switch_record=session.kill_switch_record,
+            evidence_bundle=session.evidence_bundle,
+            events=session.events,
+            order=session.order,
+            payment=session.payment,
+            mrdp=session.completed_response.mrdp if session.completed_response else None,
+            reference_time=reference_time,
+        )
+
+        service = self._explanation_service
+        if provider_override is not None:
+            service = EvidenceAwareExplanationService(ai_provider=provider_override)
+
+        return service.explain(context, reference_time=reference_time)
 
 
     def get_provider(self, provider_override: Optional[PaymentProvider] = None) -> PaymentProvider:

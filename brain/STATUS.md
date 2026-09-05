@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I7 — Bounded Agentic Negotiation / Replanning
+I21 — Evidence-Aware AI Explanation
 
 ## Task Status
-COMPLETE (C_I7 PASS)
+COMPLETE (C_I21 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -36,14 +36,15 @@ COMPLETE (C_I7 PASS)
 - [x] **I6 — TIX: TarkaRaksha Integrity Exchange** (Completed 2026-09-05)
 - [x] **I7 — Bounded Agentic Negotiation / Replanning** (Completed 2026-09-05)
 - [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Completed 2026-09-05)
+- [x] **I21 — Evidence-Aware AI Explanation** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T22:36:00+05:30 — I7 checkpoint
+2026-09-05T22:50:00+05:30 — I21 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (487 passed in 7.36s across all unit, integration, and adversarial suites: 426 baseline + 23 I7 tests + other innovation modules)
+- `pytest` (516 passed in 7.87s across all unit, integration, and adversarial suites: 487 baseline + 29 I21 tests)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -78,10 +79,15 @@ COMPLETE (C_I7 PASS)
 - **Forbidden Direct Resume Invariant**: Direct transition from KILLED to RUNNING is strictly prohibited; resuming a killed transaction unconditionally requires passing through authoritative revalidation.
 - **Authoritative Revalidation Invariant**: Revalidation requires verified registered context matching (transaction_id, intent_id, agent_id, merchant_id) and at least one AUTHORITATIVE or PROTOCOL_TRUSTED evidence record; advisory LLM/agent claims are rejected.
 - **Fail-Closed Execution Gate Invariant**: Unknown transactions, missing evidence, uninitialized context, or repeated UNKNOWNs above tolerance fail-closed by blocking execution.
-- **Negotiation Proposal vs Authorization Invariant**: Negotiation may change the proposal, but negotiation must never change the authorization. The immutable IntentContract remains the authoritative, tamper-proof ceiling (`max_total`, allowed SKUs/substitutions, quantity ceiling, currency). Bounded remediation strictly enforces `max_rounds`, zero payment authorization authority, and mandatory deterministic revalidation.
+-**Negotiation Proposal vs Authorization Invariant**: Negotiation may change the proposal, but negotiation must never change the authorization. The immutable IntentContract remains the authoritative, tamper-proof ceiling (`max_total`, allowed SKUs/substitutions, quantity ceiling, currency). Bounded remediation strictly enforces `max_rounds`, zero payment authorization authority, and mandatory deterministic revalidation.
 - **Deterministic Bounded Loop Invariant**: Negotiation terminates deterministically within configured limits (`max_rounds = 3`, `max_replans = 3`), defaulting to `ABSTAINED` or `ESCALATED` rather than looping indefinitely or exhausting retries.
+- **Evidence-Aware AI Explanation Invariant**: AI explanation is strictly descriptive and non-authoritative (`AI proposes -> evidence proves -> deterministic logic decides`). The explanation layer has zero authority to alter transaction decisions (`IntegrityStatus`), state machine progression (`TransactionState`), or execution safety gates (`KillSwitchState`).
+- **Claim-to-Evidence Traceability Invariant**: Every substantive explanation claim must be anchored to verified `EvidenceReference` records with explicit authority rankings; hallucinated evidence IDs (e.g. `EVIDENCE-999`) or unsupported assertions fail post-generation validation.
+- **Deterministic Fallback Guarantee**: If the AI model fails, times out, rate limits, returns malformed JSON, contradicts deterministic state, or attempts prompt injection, a structured deterministic fallback explanation is automatically produced. AI failure never causes transaction failure.
+- **Uncertainty Preservation Invariant**: When deterministic status is `UNKNOWN`, explanations cannot manufacture certainty or claim transaction validity; missing evidence and uncertainties must be explicitly articulated.
 
 ## Next Task
 Await user instruction for next innovation extension milestone.
+
 
 
