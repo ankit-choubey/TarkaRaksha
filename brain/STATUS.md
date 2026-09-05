@@ -77,7 +77,8 @@ None
 `main`
 
 ## Last Verified Remote Commit
-326f72b (test: add adversarial, prompt injection, budget boundary, and real Groq smoke tests)
+8cf3b65 (docs: synchronize persistent brain and handoff for T08 completion)
+Prior Remote Commits: 326f72b, 81400cf, 793e32d, 62fe47f, ee34cc8, 3ebec10, dc4961a, ...
 
 ## Next Task
 **T09 — Razorpay Adapter** (Razorpay payment gateway adapter: order creation, payment verification, webhook ingestion, test mode integration)
