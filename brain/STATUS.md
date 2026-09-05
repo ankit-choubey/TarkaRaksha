@@ -84,7 +84,7 @@ None
 `main`
 
 ## Last Verified Remote Commit
-eb2fa34 (test: add adversarial, security, drift, and live razorpay smoke tests for T10)
+489ffc9 (docs: synchronize persistent brain and handoff for T10 completion)
 
 ## Next Task
 **T11 — Recovery Loop** (Consuming T07 MRDP + T08 Advisory Recovery Agent + T05 State Machine `DRIFT -> RECOVERING -> REVALIDATING -> PASS`)
