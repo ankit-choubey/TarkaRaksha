@@ -4,10 +4,10 @@
 **TarkaRaksha** — Agentic Transaction Integrity & Recovery Control Plane
 
 ## Current Phase
-Lifecycle State Machine
+Evidence Normalization Layer
 
 ## Current Task
-T05 — State Machine
+T06 — Evidence
 
 ## Task Status
 COMPLETE
@@ -18,16 +18,19 @@ COMPLETE
 - [x] **T03 — Domain Contracts** (Completed 2026-09-05)
 - [x] **T04 — Deterministic Engine** (Completed 2026-09-05)
 - [x] **T05 — State Machine** (Completed 2026-09-05)
+- [x] **T06 — Evidence** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T14:35:00+05:30
+2026-09-05T14:46:00+05:30
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (73 passed in 0.17s):
-  - `testing/unit/test_state_machine.py` (10 tests): normal lifecycle (CREATED->EXECUTING->OBSERVING->VERIFYING->PASS), DRIFT recovery/revalidation flow, UNKNOWN resolution/revalidation/abstain flow, forbidden transitions (PASS->EXECUTING, ABSTAIN->CAPTURE, CREATED->PASS), atomic state immutability on failure, intent immutability preservation, excessive financial action guards, apply_integrity_result verification, 50x repeated determinism
-  - `testing/unit/test_state_machine_adversarial.py` (7 tests): prompt injection resistance in transition reason, untrusted AI trigger rejection, lifecycle skipping attacks, financial capture in unauthorized states, intent mutation attack detection, temporal regression and naive timestamp rejection, direct revalidation rejection without drift/unknown
+- `pytest` (88 passed in 0.19s):
+  - `testing/unit/test_evidence.py` (9 tests): source taxonomy validation, explicit authority tiers and ranking, timezone-aware timestamp validation, monetary value normalization into Money, conflict resolution via authority dominance, irreconcilable tie at top tier (UNKNOWN), evidence deduplication, immutability, 100x repeated determinism
+  - `testing/unit/test_evidence_adversarial.py` (6 tests): prompt injection in evidence payloads as inert data, fake claims cannot override gateway truth, extra unexpected fields rejected by strict schema, float financial injection rejected, temporal anomalies (naive/unparseable) rejected, deeply nested JSON treated as inert dict
+  - `testing/unit/test_state_machine.py` (10 tests): normal lifecycle, drift recovery, unknown resolution, abstain branches, invalid transitions, intent immutability, and determinism
+  - `testing/unit/test_state_machine_adversarial.py` (7 tests): prompt injection in reasons, untrusted AI triggers, lifecycle skipping, financial actions in unauthorized states, and temporal regression
   - `testing/unit/test_engine.py` (21 tests): Economic boundary (49999 PASS, 50000 PASS, 50001 DRIFT), currency mismatch, missing evidence UNKNOWN, authority conflict resolution, Semantic SKU/quantity/substitutions, Temporal duplicate/expiration/double-capture/late-success, Priority semantics (DRIFT > UNKNOWN > PASS), 100x identical determinism run, adversarial prompt injection resistance
   - `testing/unit/test_money.py` (12 tests): integer minor units, float rejection, bool rejection, currency checks
   - `testing/unit/test_models.py` (18 tests): domain contracts, serialization round-trips
@@ -48,39 +51,40 @@ None
 None
 
 ## Important Decisions
-1. **Explicit Lifecycle Graph**: Mapped all 11 lifecycle states in `PERMITTED_TRANSITIONS`. Self-transitions and skipping intermediate stages are strictly forbidden.
-2. **Deterministic Consumption of T04 Results**: `apply_integrity_result` directly translates `IntegrityResult` outcomes to matching destination states (`PASS`, `DRIFT`, `UNKNOWN`) exclusively from `VERIFYING` or `REVALIDATING`. Zero rule logic duplication.
-3. **Hard Financial & Safety Invariants**:
-   - `UNKNOWN` permanently blocks financial actions until resolution.
-   - `DRIFT` strictly prohibits financial capture without successful revalidation.
-   - `ABSTAIN` is terminal and blocks all financial execution.
-   - `Recovery` strictly preserves original `IntentContract` limits and specifications.
-   - AI and agent triggers are strictly advisory and require deterministic verification.
-4. **Pure & Explicit Time**: State transitions accept explicit timezone-aware `datetime` objects; backward timestamp movement is rejected.
+1. **Source vs Authority Decoupling**:
+   - `EvidenceSource` represents the origin channel (`INTENT`, `USER_INTENT`, `AGENT`, `MERCHANT`, `RAZORPAY`, `SYSTEM`, `REPLAY`, `SYNTHETIC`).
+   - `EvidenceAuthority` represents the authoritative weighting tier (`AUTHORITATIVE`: 100 > `PROTOCOL_TRUSTED`: 90 > `MERCHANT_ATTESTED`: 70 > `REPLAY_OBSERVED`: 60 > `SYSTEM_DERIVED`: 50 > `ADVISORY`: 20).
+   - Reconciled terminology: `USER_INTENT` is supported as canonical alias for `INTENT`; `SYSTEM` represents control plane/internal observations, distinct from `SYNTHETIC` mock data.
+2. **Provider-Neutral Normalization**: The normalization layer converts observed payloads into canonical `Evidence` items without leaking gateway-specific schema dependencies into generic domain logic.
+3. **Deterministic Conflict Resolution**:
+   - Conflicts between differing authority tiers are resolved strictly in favor of the higher tier (e.g. `RAZORPAY` overrides `AGENT`), while preserving the lower tier in `conflicting_records` for provenance.
+   - Contradictions at the identical top authority tier remain unresolved (`is_resolved = False`), preserving ambiguity to feed `UNKNOWN` into downstream engines.
+4. **Idempotent Deduplication**: Duplicate deliveries sharing exact IDs or semantic content keys are deterministically deduplicated while maintaining relative order.
+5. **Inert Data Guarantee**: All payload contents and strings are treated strictly as inert data; prompt injection instructions are never executed.
 
 ## Active Branch
 `main`
 
 ## Last Verified Remote Commit
-105dfd0 (docs: synchronize persistent brain and handoff for T05 completion)
-Prior Remote Commits: 812a1c4, d271fec, 5be768a, 02f5789, 5f41a3c, c898ad8, 3d07dd1, 6ea3c9c, 84c7142, f9fa88c, ...
+3c93250 (test: add adversarial and security hardening test suite for evidence layer)
+Prior Remote Commits: 898edc3, 3da5b7f, 855af66, de72092, 4ac842d, 38e0658, cd6af7c, 105dfd0, 812a1c4, d271fec, ...
 
 ## Next Task
-**T06 — Evidence** (Evidence normalization: USER_INTENT, AGENT, MERCHANT, RAZORPAY, SYSTEM, REPLAY into single canonical evidence bundle with authority tiers)
+**T07 — MRDP** (Machine-Readable Drift Proof: generate cryptographic/tamper-evident drift proofs containing contract baseline, observed evidence, rule results, and explanations)
 
 ## Parallel Candidates
-With T05 complete, the transaction state machine is verified. T06 (Evidence Normalization) provides the structured evidence pipeline feeding the deterministic engine and state machine, so work proceeds sequentially.
+With T06 complete, the evidence normalization pipeline is verified. T07 (MRDP) consumes the verified `IntegrityResult` (T04) and `EvidenceBundle` (T06) to generate machine-readable proofs, so work proceeds sequentially.
 
 ## Source Documents Consulted
-- `brain/TarkaRaksha_IDEA.md` (§87–§90)
-- `brain/TarkaRaksha_Execution.md` (§7.21–§7.22, §8.23–§8.25)
-- `brain/TarkaRaksha_TESTING.md` (§9.17–§9.21)
+- `brain/TarkaRaksha_IDEA.md` (§31, §34)
+- `brain/TarkaRaksha_Execution.md` (§7.23–§7.24, §8.26–§8.27)
+- `brain/TarkaRaksha_TESTING.md` (§9.22–§9.24)
 - `brain/CONTEXT.md`
 - `brain/HANDOFF.md`
 
 ## External Sources Consulted
 - Pydantic v2 documentation on `ConfigDict(frozen=True, extra='forbid', strict=True)`
-- Python datetime library standards regarding timezone awareness and comparison
+- ISO-8601 datetime specification for timezone offset representation
 
 ## Open Questions
 None

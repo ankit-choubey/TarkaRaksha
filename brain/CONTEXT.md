@@ -43,15 +43,23 @@
    - **Advisory AI Boundary**: Untrusted agent/AI triggers cannot force state transitions without deterministic verification (`is_verified=True`).
    - **Deterministic Consumption**: `apply_integrity_result` consumes T04 `IntegrityResult` to drive transitions from `VERIFYING` or `REVALIDATING` to `PASS`, `DRIFT`, or `UNKNOWN`.
 
+4. **Evidence Normalization Layer (`backend/app/domain/evidence/` & `backend/app/domain/models/evidence.py`)**:
+   - **Source vs Authority Decoupling**: Origin channel (`EvidenceSource`) is explicitly distinct from authoritative weighting tier (`EvidenceAuthority`).
+   - **Authority Hierarchy**: `AUTHORITATIVE` (100) > `PROTOCOL_TRUSTED` (90) > `MERCHANT_ATTESTED` (70) > `REPLAY_OBSERVED` (60) > `SYSTEM_DERIVED` (50) > `ADVISORY` (20).
+   - **Canonical EvidenceBundle**: Immutable container grouping evidence items and canonical lifecycle events with query, conflict detection, and completeness utilities.
+   - **Conflict Resolution Engine**: Deterministically resolves contradictions across authority tiers in favor of higher rank (storing lower rank in `conflicting_records` for provenance); leaves contradictory top-tier evidence unresolved (`is_resolved = False`) to preserve `UNKNOWN` ambiguity.
+   - **Deterministic Normalization & Deduplication**: Provider-neutral normalizer converting monetary fields to integer-minor-unit `Money` value objects, validating timezone-aware timestamps, and deduplicating deliveries idempotently.
+
 ---
 
-## Repository State (End of T05)
-- **Current Phase**: Lifecycle State Machine (`T05`)
+## Repository State (End of T06)
+- **Current Phase**: Evidence Normalization Layer (`T06`)
 - **Active Branch**: `main`
 - **Core Modules**:
-  - `backend/app/domain/models/`: Immutable contracts, financial math, enums.
+  - `backend/app/domain/models/`: Immutable contracts, financial math, enums, evidence models, bundle.
   - `backend/app/domain/rules/`: Deterministic economic, semantic, and temporal rule engines.
   - `backend/app/domain/states/`: Lifecycle state machine, transitions, invariants, and audit history.
+  - `backend/app/domain/evidence/`: Provider-neutral evidence normalizers, conflict resolution, deduplication.
   - `backend/app/services/evaluation.py`: Deterministic integrity orchestration.
-  - `testing/unit/`: Comprehensive test suites covering environment, models, money, engine, and state machine (73 passing tests).
+  - `testing/unit/`: Comprehensive test suites covering environment, models, money, engine, state machine, and evidence normalization (88 passing tests).
   - `frontend/`: Next.js 15 App Router scaffold verified and build-ready.

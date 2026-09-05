@@ -1,54 +1,50 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `T05 — State Machine`
-- **Current Checkpoint**: `C05 — PASS`
-- **Next Task**: `T06 — Evidence`
+- **Current Task Completed**: `T06 — Evidence`
+- **Current Checkpoint**: `C06 — PASS`
+- **Next Task**: `T07 — MRDP`
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-05T14:35:00+05:30
+- **Handoff Timestamp**: 2026-09-05T14:46:00+05:30
 
 ---
 
-## 1. What Was Done in T05
-1. **State Machine Domain Models & Exceptions** (`backend/app/domain/states/models.py`):
-   - `StateTransitionRecord`: Immutable audit record with transition ID, source/target states, timestamp, reason, trigger, verification flag, context, and integrity status.
-   - `InvalidStateTransitionError`: Domain exception detailing invalid from/to states and specific rejection reasons.
-   - `SafetyInvariantViolationError`: Domain exception detailing violated safety invariants and forbidden actions.
-2. **Authoritative Transition Graph & Validation** (`backend/app/domain/states/transitions.py`):
-   - `PERMITTED_TRANSITIONS`: Complete transition graph mapping all 11 lifecycle states (`CREATED`, `EXECUTING`, `OBSERVING`, `VERIFYING`, `PASS`, `DRIFT`, `UNKNOWN`, `RESOLVING`, `ABSTAIN`, `RECOVERING`, `REVALIDATING`).
-   - `can_transition(from_state, to_state) -> bool`: Pure predicate verifying permitted edges; disallows self-transitions and state skipping.
-   - `validate_transition(...)`: Raises `InvalidStateTransitionError` on illegal transition attempts.
-3. **Safety Invariants & Financial Boundary Guards** (`backend/app/domain/states/invariants.py`):
-   - Invariant A: `UNKNOWN => no financial action` (capture/refund/void strictly blocked).
-   - Invariant B: `DRIFT => no unauthorized financial action` (capture strictly blocked without revalidation).
-   - Invariant C: `Recovery => original constraints remain unchanged` (intent contract immutability verified).
-   - Invariant D: `AI proposal => deterministic validation required` (advisory trigger cannot force transition).
-   - Invariant E: `ABSTAIN => cannot execute financial action` (terminal lock).
-4. **Transaction State Machine Orchestrator** (`backend/app/domain/states/machine.py`):
-   - `TransactionStateMachine`: Atomic state transitions, append-only history audit log, explicit timezone-aware timestamps, and direct consumption of T04 `IntegrityResult` via `apply_integrity_result`.
-5. **Comprehensive Unit & Adversarial Test Suites**:
-   - `testing/unit/test_state_machine.py`: 10 unit tests covering normal lifecycle, drift recovery, unknown resolution, abstain branches, invalid transitions, intent immutability, and determinism.
-   - `testing/unit/test_state_machine_adversarial.py`: 7 adversarial tests covering prompt injection in reasons, untrusted AI triggers, lifecycle skipping, financial actions in unauthorized states, and temporal regression.
-   - Total test suite: 73/73 passing tests across the entire repository.
+## 1. What Was Done in T06
+1. **Source and Authority Taxonomy Established** (`backend/app/domain/models/enums.py`):
+   - Decoupled `EvidenceSource` (`INTENT`, `USER_INTENT`, `AGENT`, `MERCHANT`, `RAZORPAY`, `SYSTEM`, `REPLAY`, `SYNTHETIC`) from `EvidenceAuthority` (`AUTHORITATIVE`: 100, `PROTOCOL_TRUSTED`: 90, `MERCHANT_ATTESTED`: 70, `REPLAY_OBSERVED`: 60, `SYSTEM_DERIVED`: 50, `ADVISORY`: 20).
+2. **Canonical Evidence Models Refined** (`backend/app/domain/models/evidence.py`):
+   - Refined `Evidence` and `CanonicalEvent` with timezone-aware datetimes (`observed_at`, `ingested_at`, `occurred_at`), provenance metadata, and explicit authority tiers.
+   - Implemented `EvidenceBundle` container with conflict detection, authoritative field query, completeness validation, and deterministic ordering.
+3. **Provider-Neutral Evidence Normalization Layer** (`backend/app/domain/evidence/normalizer.py`):
+   - Implemented `normalize_source`, `normalize_authority`, `normalize_monetary_value`, `normalize_evidence_record`, and `build_evidence_bundle`.
+   - Converts monetary fields to integer minor unit `Money` value objects, strictly rejecting floats.
+4. **Deterministic Conflict Analysis & Deduplication** (`backend/app/domain/evidence/conflicts.py`, `deduplication.py`):
+   - Implemented `resolve_field_evidence` and `analyze_bundle_conflicts`. High-authority records dominate lower-authority claims while preserving subordinate records in `conflicting_records` for provenance; contradictory evidence at identical top authority remains unresolved to preserve `UNKNOWN` ambiguity.
+   - Implemented `deduplicate_evidence` and `deduplicate_events` for idempotent delivery deduplication.
+5. **Comprehensive Test Suites**:
+   - `testing/unit/test_evidence.py`: 9 unit tests covering taxonomy, authority ranking, timestamps, Money conversion, conflict resolution, deduplication, immutability, and 100x repeated determinism.
+   - `testing/unit/test_evidence_adversarial.py`: 6 adversarial tests covering prompt injection as inert data, fake agent claims vs gateway truth, extra field injection rejection, float injection rejection, and temporal anomalies.
+   - Total test suite: 88/88 passing tests across the repository.
 6. **Checkpoints & Validation**:
    - `make test-bootstrap`: PASS.
    - `make test-env`: PASS.
-   - `pytest`: 73 passed in 0.17s.
+   - `pytest`: 88 passed in 0.19s.
 
 ---
 
 ## 2. Verified Invariants
-- **AI Output is Advisory**: Untrusted AI or agent recommendations cannot force state machine transitions or financial captures without deterministic verification.
-- **Financial Boundary Safety**: Consequential financial capture is permanently blocked in `UNKNOWN`, `DRIFT`, `ABSTAIN`, and pre-verification states.
-- **Intent Immutability**: State machine transitions cannot mutate original `IntentContract` amounts or items.
-- **Deterministic Consumption**: T04 `IntegrityResult` is consumed directly without duplicating rule evaluation logic.
-- **Temporal Integrity**: State transitions enforce timezone-aware datetimes and reject backward timestamp regression.
+- **Evidence Is Untrusted Data**: Raw evidence cannot authorize financial action or alter state transitions directly; evidence flows solely into deterministic verification.
+- **Authority Dominance Without Guessing**: Conflicting evidence resolves strictly when authority tiers differ; irreconcilable top-tier ties yield `is_resolved=False` to feed `UNKNOWN`.
+- **Inert Data Guarantee**: Payloads containing prompt injection instructions are treated strictly as inert plain text.
+- **Financial Safety**: Monetary evidence strictly uses integer minor units via `Money`; floating-point values are rejected.
+- **Provider Neutrality**: No Razorpay-specific payload structures leak into generic domain logic.
 
 ---
 
-## 3. Explicit Instructions for Next Task (`T06 — Evidence`)
-When starting `T06`:
+## 3. Explicit Instructions for Next Task (`T07 — MRDP`)
+When starting `T07`:
 1. **Read `brain/STATUS.md` first**.
-2. **Read `brain/TarkaRaksha_Execution.md` §7.23–§7.24, §8.26 (T06)** and `brain/TarkaRaksha_TESTING.md` §9.22–§9.25.
-3. **Task Objective**: Implement evidence normalization into a single canonical structure covering all evidence sources (`USER_INTENT`, `AGENT`, `MERCHANT`, `RAZORPAY`, `SYSTEM`, `REPLAY`) with explicit authority levels and timestamps.
-4. **Pass Checkpoint C06** before committing and pushing.
+2. **Read `brain/TarkaRaksha_Execution.md` §7.25, §8.28 (T07)** and `brain/TarkaRaksha_TESTING.md` §9.25–§9.28.
+3. **Task Objective**: Implement Machine-Readable Drift Proof (MRDP) generation:
+   - Construct immutable, verifiable audit proofs containing original contract baseline, observed evidence bundle (T06), deterministic verification results (T04), drift domain classifications, and cryptographic/hash chain proofs.
+4. **Pass Checkpoint C07** before committing and pushing.
