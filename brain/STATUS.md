@@ -10,7 +10,7 @@ Innovation Extension
 I5 — Buyer Agent
 
 ## Task Status
-IN PROGRESS — implementation started; verification pending
+COMPLETE (C_I5 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -31,16 +31,23 @@ IN PROGRESS — implementation started; verification pending
 - [x] **I2 — Security / Protocol Binding** (Completed 2026-09-05)
 - [x] **I3 — Governance + Replay Extension** (Completed 2026-09-05)
 - [x] **I4 — Merchant Agent** (Completed 2026-09-05)
-- [ ] **I5 — Buyer Agent** (In progress)
+- [x] **I5 — Buyer Agent** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T20:10:00+05:30 — I4 checkpoint
+2026-09-05T20:26:00+05:30 — I5 checkpoint
 
-## I5 Verification Status
-- Focused tests: not yet executed in this environment
-- Full regression: not yet executed in this environment
-- Bootstrap/environment checks: not yet executed in this environment
-- Do not mark I5 COMPLETE until actual execution verification is available.
+## Tests Run
+- `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
+- `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
+- `pytest` (359 passed in 1.38s across all unit, integration, and adversarial suites)
+
+## Environment & Toolchains Verified
+- **Python**: 3.12.12 (via project-local `.venv`)
+- **FastAPI**: 0.141.1, **Uvicorn**: 0.52.4, **Pydantic**: 2.13.5, **HTTPX**: 0.28.1, **Pytest**: 9.1.1
+- **AI Client**: `groq` 1.7.0 (instantiation and live smoke test verified with `qwen/qwen3.8-27b`)
+- **Payment Client**: `razorpay` 2.0.1 (live Test Mode order creation and HMAC-SHA256 signature verification verified)
+- **Node.js**: v25.2.1, **npm**: 11.6.2
+- **Frontend Stack**: Next.js 15.5.25 (App Router, Turbopack), TypeScript 5, Tailwind CSS 4, Lucide icons
 
 ## Key Invariants Maintained
 - **Deterministic Replay Guarantee**: Identical IntentContract + identical ordered evidence + same rules version + same explicit reference time MUST yield an identical deterministic replay result.
@@ -54,6 +61,10 @@ IN PROGRESS — implementation started; verification pending
 - **Governance & Replay Invariant**: Decisions remain attributable to rules_version and policy_version.
 - **Merchant Agent Authority Invariant**: Merchant offers remain merchant-attested evidence and cannot declare PASS or override authoritative payment evidence.
 - **Buyer Agent Authority Invariant**: Buyer-agent proposals are projections of the immutable IntentContract; the buyer agent cannot authorize payment, alter authorized constraints, declare PASS, or turn insufficient evidence into PASS.
+- **Explicit Transaction Binding Invariant**: Replanning requires explicit, non-empty transaction_id. The system strictly forbids and rejects substituting intent_id for transaction_id.
+- **Multi-Item Intent Projection Invariant**: Multi-item intents preserve all items in transaction proposals; no silent truncation or item dropping is permitted.
+- **Clarification Over Guessing**: Insufficient constraints trigger explicit BuyerClarification requests instead of AI guessing.
 
 ## Next Task
-I5 is the active task. Do not start I6 until I5 reaches a verified checkpoint.
+**I6 — TIX: TarkaRaksha Integrity Exchange** (STOP — await explicit user prompt before starting I6)
+

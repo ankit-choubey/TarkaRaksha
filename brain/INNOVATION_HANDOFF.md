@@ -54,7 +54,8 @@
 - [x] **I2 — Security / Protocol Binding** (Verified Green, 276/276 tests passing)
 - [x] **I3 — Governance + Replay Extension** (Verified Green, 298/298 tests passing)
 - [x] **I4 — Merchant Agent** (Verified Green, 335/335 tests passing)
-- [ ] **I5 — Buyer Agent** (Next task — await explicit user prompt)
+- [x] **I5 — Buyer Agent** (Verified Green, 359/359 tests passing)
+- [ ] **I6 — TIX: TarkaRaksha Integrity Exchange** (Next task — await explicit user prompt)
 
 ---
 
@@ -129,6 +130,39 @@
   - Inventory & fulfillment drift: stock depletions and delivery timeline breaches are flagged as drift.
   - Protocol binding: cross-intent and cross-transaction response reuse is rejected.
 - **Real vs Synthetic Boundary**: Synthetic/reference Merchant Agent behavior for TarkaRaksha's agentic-commerce control plane demonstration; not a claim of production merchant network integration.
+
+---
+
+## I5 Verification Record
+- **Implementation Scope**: Buyer Agent reference representation, bounded proposal projection, explicit transaction binding, and constrained replanning engine. Implemented buyer domain contracts (`BuyerTransactionProposal`, `BuyerClarification`, `BuyerReplanRequest`, `BuyerReplanResult`, `BuyerAgentDecision`, `BuyerAgentDecisionType`), natural-language goal parsing via authoritative T08 `parse_intent`, multi-item intent projection, deterministic proposal generation (`propose`), merchant request formulation (`formulate_merchant_request` returning `BuyerCommerceRequest`), offer evaluation against authorized limits (`evaluate_merchant_response`), dynamic offer expiry detection, unauthorized SKU substitution detection, and bounded replanning without authorization relaxation (`replan`).
+- **Files Created**:
+  - `backend/app/domain/buyer/contracts.py`
+  - `backend/app/domain/buyer/__init__.py`
+  - `backend/app/services/buyer/agent_service.py`
+  - `backend/app/services/buyer/__init__.py`
+  - `testing/unit/test_buyer_agent.py`
+  - `testing/unit/test_buyer_agent_adversarial.py`
+- **Tests Added**: 24 focused unit, multi-item, integration, and adversarial tests across 2 suites.
+- **Regression Count**: 359 passed, 0 failed in 1.38s (335 baseline + 24 new).
+- **Commits**:
+  - `666467f` — `feat(I5): add buyer agent domain package`
+  - `52a3870` — `feat(I5): add buyer agent contracts`
+  - `c2c2c7d` — `feat(I5): add buyer agent service package`
+  - `043b609` — `feat(I5): add bounded buyer agent service`
+  - `528a0a1` — `fix(I5): preserve transaction binding during replanning`
+  - `0774ebb` — `test(I5): add buyer agent focused coverage`
+  - `d69ae61` — `test(I5): add buyer agent adversarial authority coverage`
+  - `0a3a5cf` — `docs(I5): mark buyer agent implementation in progress`
+  - `8d54ac7` — `fix(I5): enforce explicit transaction binding, deterministic proposal time, and multi-item intent projection`
+- **Invariants Preserved**:
+  - AI advisory only: Buyer Agent outputs remain advisory proposals (`PROPOSE`, `REPLAN`, `ABSTAIN`, `REQUEST_CLARIFICATION`, `REQUEST_MERCHANT_INFO`). It possesses zero authority to declare transaction `PASS` or authorize funds movements.
+  - Subordinate to IntentContract: Authorized constraints (`max_total`, item SKUs, quantity, allowed substitutions, currency) are immutable baselines that the buyer agent cannot broaden or alter.
+  - Multi-item preservation: Multi-item intents preserve all items in `BuyerTransactionProposal.items`; silent truncation or item dropping is prohibited.
+  - Explicit transaction binding: Replanning mandates non-empty `transaction_id`. Substituting `intent_id` for `transaction_id` is strictly blocked.
+  - Clarification over guessing: Insufficient buyer constraints trigger explicit `BuyerClarification` questions instead of guessing.
+  - Zero float arithmetic: All monetary amounts represented in integer minor units (paise).
+  - Replan determinism: Replanning produces a new proposal bound to the same immutable authorized IntentContract without mutating the original authorization.
+
 
 
 
