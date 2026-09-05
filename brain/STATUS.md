@@ -94,7 +94,7 @@ None
 `main`
 
 ## Last Verified Remote Commit
-a696860 (test: add adversarial and security test suite for recovery loop)
+f5d3f27 (docs: synchronize persistent brain and handoff for T11 completion)
 
 ## Next Task
 **T12 — UNKNOWN Resolution** (Consuming T05 `RESOLVING` state + T06 conflict resolution + T07 MRDP + automated gateway polling & evidence collection)
