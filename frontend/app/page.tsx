@@ -68,6 +68,7 @@ export default function Home() {
   );
   const [isInitializing, setIsInitializing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Active Transaction Context
@@ -143,6 +144,35 @@ export default function Home() {
       setErrorMessage(err.message);
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  // Step 3: Trigger Bounded Recovery Loop (T11)
+  const handleRecoverTransaction = async () => {
+    if (!verificationResult) return;
+    setIsRecovering(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/transaction/recover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transaction_id: verificationResult.transaction_id,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || `Recovery failed with status ${res.status}`);
+      }
+
+      const data: CompleteResponse = await res.json();
+      setVerificationResult(data);
+    } catch (err: any) {
+      setErrorMessage(err.message);
+    } finally {
+      setIsRecovering(false);
     }
   };
 
@@ -441,6 +471,31 @@ export default function Home() {
                           SHA-256 Digest: {verificationResult.mrdp.proof_digest}
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* T11 Autonomous Recovery Trigger */}
+                  {verificationResult.integrity_status !== "PASS" && verificationResult.state !== "ABSTAIN" && (
+                    <div className="p-3.5 bg-indigo-950/40 border border-indigo-500/50 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-indigo-300 font-mono">
+                          T11 Autonomous Recovery Loop
+                        </span>
+                        <span className="text-[10px] text-indigo-400 font-mono">
+                          Bounded &bull; Revalidated
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Compensatory corrective action proposed by MRDP discrepancy analysis. Strictly bounded to original intent authority.
+                      </p>
+                      <button
+                        id="btn-trigger-recovery"
+                        onClick={handleRecoverTransaction}
+                        disabled={isRecovering}
+                        className="w-full py-2 px-3 bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow transition-all font-mono active:scale-[0.98]"
+                      >
+                        {isRecovering ? "Executing & Revalidating..." : "Execute Bounded Recovery Action"}
+                      </button>
                     </div>
                   )}
 

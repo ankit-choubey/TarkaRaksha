@@ -19,8 +19,14 @@ from backend.app.domain.models import (
     CreateTransactionResponse,
     CompleteTransactionRequest,
     CompleteTransactionResponse,
+    RecoverTransactionRequest,
     IntentContract,
     TransactionState,
+)
+from backend.app.services.recovery import (
+    InvalidRecoveryStateError,
+    RecoveryExhaustedError,
+    UnsafeActionRequestError,
 )
 from backend.app.services import TransactionService
 from backend.app.services.ai import parse_intent, IntentParsingError
@@ -178,6 +184,30 @@ def complete_transaction_slice(
         raise HTTPException(status_code=400, detail=f"Invalid signature: {exc}")
     except PaymentProviderError as exc:
         raise HTTPException(status_code=502, detail=f"Gateway error: {exc}")
+
+
+@app.post("/api/v1/transaction/recover", response_model=CompleteTransactionResponse)
+def recover_transaction_slice(
+    request: RecoverTransactionRequest,
+    service: TransactionService = Depends(get_transaction_service),
+    provider: PaymentProvider = Depends(get_payment_provider),
+):
+    """
+    Executes the T11 Recovery Loop:
+    Classifies drift/unknown, deterministically validates recovery action,
+    executes compensatory bounded action, and deterministically revalidates integrity.
+    """
+    try:
+        response = service.recover_transaction(request=request, provider=provider)
+        return response
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except InvalidRecoveryStateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (UnsafeActionRequestError, RecoveryExhaustedError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except PaymentProviderError as exc:
+        raise HTTPException(status_code=502, detail=f"Gateway error during recovery: {exc}")
 
 
 @app.get("/api/v1/transaction/{transaction_id}")
