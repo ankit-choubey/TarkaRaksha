@@ -92,7 +92,7 @@ None
 `main`
 
 ## Last Verified Remote Commit
-873bbb2 (test: add adversarial and security test suite for UNKNOWN resolution)
+acba399 (docs: synchronize persistent brain and handoff for T12 completion)
 
 ## Next Task
 **T13 — Replay Engine** (Consuming T05 `REPLAY_OBSERVED` authority + canonical event journal + deterministic verification replay)
