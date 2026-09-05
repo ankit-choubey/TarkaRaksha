@@ -118,6 +118,10 @@ from backend.app.domain.integration import (
     IntegrationEvaluationResponse,
     IntegrationExecutionRecord,
 )
+from backend.app.domain.orchestration import LifecycleOutcome, LifecycleViolationError
+from backend.app.domain.buyer.contracts import BuyerTransactionProposal
+from backend.app.domain.merchant.contracts import MerchantResponse
+from backend.app.domain.binding.contracts import PaymentBindingClaim
 from backend.app.services.integration import (
     ContextBindingMismatchError,
     IntegrationBoundaryError,
@@ -681,5 +685,52 @@ def get_integration_record_endpoint(
     if not record:
         raise HTTPException(status_code=404, detail=f"Integration transaction '{transaction_id}' not found")
     return record
+
+
+class OrchestrateLifecycleRequest(BaseModel):
+    """Request model for E3 agentic transaction lifecycle orchestration."""
+    intent: IntentContract
+    agent_id: str
+    merchant_id: str
+    buyer_proposal: Optional[BuyerTransactionProposal] = None
+    merchant_response: Optional[MerchantResponse] = None
+    order_id: Optional[str] = None
+    payment_id: Optional[str] = None
+    payment_claim: Optional[PaymentBindingClaim] = None
+    execute_payment: bool = False
+    reference_time: Optional[datetime] = None
+    idempotency_key: Optional[str] = None
+    untrusted_text: Optional[str] = None
+    attempt_id: str = "att_1"
+
+
+@app.post("/api/v1/integration/{transaction_id}/orchestrate", response_model=LifecycleOutcome)
+def orchestrate_lifecycle_endpoint(
+    transaction_id: str,
+    request: OrchestrateLifecycleRequest,
+    service: IntegrationService = Depends(get_integration_service),
+) -> LifecycleOutcome:
+    """Executes bounded agentic transaction lifecycle orchestration (E3)."""
+    try:
+        return service.orchestrate_lifecycle(
+            transaction_id=transaction_id,
+            intent=request.intent,
+            agent_id=request.agent_id,
+            merchant_id=request.merchant_id,
+            buyer_proposal=request.buyer_proposal,
+            merchant_response=request.merchant_response,
+            order_id=request.order_id,
+            payment_id=request.payment_id,
+            payment_claim=request.payment_claim,
+            execute_payment=request.execute_payment,
+            reference_time=request.reference_time,
+            idempotency_key=request.idempotency_key,
+            untrusted_text=request.untrusted_text,
+            attempt_id=request.attempt_id,
+        )
+    except (LifecycleViolationError, ContextBindingMismatchError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except IntegrationBoundaryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
