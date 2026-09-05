@@ -2,7 +2,10 @@
 Services package exports for TarkaRaksha.
 """
 from .evaluation import evaluate_integrity
+from .mrdp import build_mrdp, verify_mrdp_integrity
 
 __all__ = [
     "evaluate_integrity",
+    "build_mrdp",
+    "verify_mrdp_integrity",
 ]
