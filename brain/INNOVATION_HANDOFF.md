@@ -55,6 +55,7 @@
 - [x] **I3 — Governance + Replay Extension** (Verified Green, 298/298 tests passing)
 - [x] **I4 — Merchant Agent** (Verified Green, 335/335 tests passing)
 - [x] **I5 — Buyer Agent** (Verified Green, 359/359 tests passing)
+- [x] **I8 — Agent / Transaction / Payment Binding** (Verified Green, 385/385 tests passing)
 - [ ] **I6 — TIX: TarkaRaksha Integrity Exchange** (Next task — await explicit user prompt)
 
 ---
@@ -163,6 +164,28 @@
   - Zero float arithmetic: All monetary amounts represented in integer minor units (paise).
   - Replan determinism: Replanning produces a new proposal bound to the same immutable authorized IntentContract without mutating the original authorization.
 
+---
 
-
-
+## I8 Verification Record
+- **Implementation Scope**: Bounded transaction/agent/payment context binding covering the full 7-tuple: `intent_id`, `agent_id`, `merchant_id`, `transaction_id`, `order_id`, `payment_id`, `attempt_id`. Provides deterministic `TransactionBindingVerifier`, stateful uniqueness and attempt lifecycle service `TransactionBindingService`, and integration into `TransactionService`.
+- **Files Created**:
+  - `backend/app/domain/binding/contracts.py`
+  - `backend/app/domain/binding/verifier.py`
+  - `backend/app/domain/binding/__init__.py`
+  - `backend/app/services/binding/service.py`
+  - `backend/app/services/binding/__init__.py`
+  - `testing/unit/test_binding_contracts.py`
+  - `testing/unit/test_binding_verifier.py`
+  - `testing/unit/test_binding_integration.py`
+- **Files Modified**:
+  - `backend/app/services/transaction_service.py`
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 26 focused unit, verifier, adversarial, and lifecycle integration tests across 3 suites.
+- **Regression Count**: 385 passed, 0 failed in 2.33s (359 baseline + 26 new).
+- **Invariants Preserved**:
+  - Authoritative 7-Tuple Binding: Deterministically verifies `intent_id`, `agent_id`, `merchant_id`, `transaction_id`, `order_id`, `payment_id`, and `attempt_id`.
+  - Amount Non-Sufficiency: Matching amount across disparate contexts is strictly rejected with `DRIFT`.
+  - Zero LLM Involvement: Pure deterministic rule verification produces authoritative `Evidence` records feeding TarkaRaksha's 3-way authority model (`PASS`, `DRIFT`, `UNKNOWN`).
+  - Global Order and Payment Uniqueness: Prevents cross-transaction reuse of order IDs or payment IDs.
+  - Attempt Bounding & Replay Defense: Consumed checkout attempts cannot be reused for payment completion.

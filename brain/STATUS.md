@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I5 — Buyer Agent
+I8 — Agent / Transaction / Payment Binding
 
 ## Task Status
-COMPLETE (C_I5 PASS)
+COMPLETE (C_I8 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -32,14 +32,15 @@ COMPLETE (C_I5 PASS)
 - [x] **I3 — Governance + Replay Extension** (Completed 2026-09-05)
 - [x] **I4 — Merchant Agent** (Completed 2026-09-05)
 - [x] **I5 — Buyer Agent** (Completed 2026-09-05)
+- [x] **I8 — Agent / Transaction / Payment Binding** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T20:26:00+05:30 — I5 checkpoint
+2026-09-05T20:33:00+05:30 — I8 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (359 passed in 1.38s across all unit, integration, and adversarial suites)
+- `pytest` (385 passed in 2.33s across all unit, integration, and adversarial suites: 359 baseline + 26 I8 tests)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -64,6 +65,9 @@ COMPLETE (C_I5 PASS)
 - **Explicit Transaction Binding Invariant**: Replanning requires explicit, non-empty transaction_id. The system strictly forbids and rejects substituting intent_id for transaction_id.
 - **Multi-Item Intent Projection Invariant**: Multi-item intents preserve all items in transaction proposals; no silent truncation or item dropping is permitted.
 - **Clarification Over Guessing**: Insufficient constraints trigger explicit BuyerClarification requests instead of AI guessing.
+- **Agent / Transaction / Payment Binding Invariant**: intent_id, agent_id, merchant_id, transaction_id, order_id, payment_id, and attempt_id are deterministically bound and strictly verified; matching amount alone is never sufficient to establish validity.
+- **Global Order and Payment Uniqueness Invariant**: Order ID and Payment ID reuse across different transactions is strictly rejected with DRIFT / DUPLICATE errors.
+- **Attempt Bounding & Replay Defense Invariant**: Consumed attempts cannot be reused for payment completion.
 
 ## Next Task
 **I6 — TIX: TarkaRaksha Integrity Exchange** (STOP — await explicit user prompt before starting I6)
