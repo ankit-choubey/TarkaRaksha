@@ -1,11 +1,11 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `I2 — Security / Protocol Binding`
-- **Current Checkpoint**: `C_I2 — PASS`
-- **Next Task**: `I3 — Governance + Replay Extension`
+- **Current Task Completed**: `I3 — Governance + Replay Extension`
+- **Current Checkpoint**: `C_I3 — PASS`
+- **Next Task**: `I4 — Merchant Agent`
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-05T19:34:00+05:30
+- **Handoff Timestamp**: 2026-09-05T19:50:00+05:30
 
 ---
 

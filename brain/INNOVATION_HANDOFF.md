@@ -52,7 +52,8 @@
 - [x] **I0 — Baseline Freeze** (Verified Green, 242/242 tests passing)
 - [x] **I1 — Evidence Extensions** (Verified Green, 258/258 tests passing)
 - [x] **I2 — Security / Protocol Binding** (Verified Green, 276/276 tests passing)
-- [ ] **I3 — Governance + Replay Extension** (Next task — await explicit user prompt)
+- [x] **I3 — Governance + Replay Extension** (Verified Green, 298/298 tests passing)
+- [ ] **I4 — Merchant Agent** (Next task — await explicit user prompt)
 
 ---
 
@@ -73,5 +74,26 @@
 - **Tests Added**: 18 focused tests in `test_security_binding.py`
 - **Regression Count**: 276 passed, 0 failed in 3.31s (258 baseline + 18 new)
 - **T01–T13 & I1 Preservation**: Fully confirmed; 0 existing tests modified, zero breaking changes to existing domain models, services, or engines.
+
+---
+
+## I3 Verification Record
+- **Implementation Scope**: Governance and reproducible replay extension. Added `GovernanceVersion` (explicit `rules_version` and `policy_version`), `ReproducibilityRecord` (snapshot hash over intent, events, evidence, rules/policy version, reference time, and recorded result), `DecisionReproducibilityCertificate` (tamper-detectable signature hash binding decisions to raw component hashes), `GovernedReplayService` (auditable wrapper around T13 replay verifying policy consistency and issuing certificates), and `CounterfactualReplayAnalysisService` (side-effect-free counterfactual evaluation of candidate event removal/modification).
+- **Files Created**:
+  - `backend/app/domain/governance/contracts.py`
+  - `backend/app/domain/governance/record.py`
+  - `backend/app/domain/governance/certificate.py`
+  - `backend/app/domain/governance/__init__.py`
+  - `backend/app/services/replay/governance_replay.py`
+  - `backend/app/services/replay/counterfactual.py`
+  - `testing/unit/test_governance_contracts.py`
+  - `testing/unit/test_reproducibility_record.py`
+  - `testing/unit/test_decision_certificate.py`
+  - `testing/unit/test_governance_replay.py`
+  - `testing/unit/test_counterfactual_replay.py`
+- **Files Modified**: `backend/app/domain/models/__init__.py`, `backend/app/services/replay/__init__.py`
+- **Tests Added**: 22 focused tests across 5 test suites.
+- **Regression Count**: 298 passed, 0 failed in 2.49s (276 baseline + 22 new)
+- **T01–T13, I1 & I2 Preservation**: Fully confirmed; 0 existing tests modified, zero breaking changes to core replay engine or models.
 
 

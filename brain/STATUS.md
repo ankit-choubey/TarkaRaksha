@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I2 — Security / Protocol Binding
+I3 — Governance + Replay Extension
 
 ## Task Status
-COMPLETE (C_I2 PASS)
+COMPLETE (C_I3 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -29,14 +29,15 @@ COMPLETE (C_I2 PASS)
 - [x] **I0 — Baseline Freeze** (Completed 2026-09-05)
 - [x] **I1 — Evidence Extensions** (Completed 2026-09-05)
 - [x] **I2 — Security / Protocol Binding** (Completed 2026-09-05)
+- [x] **I3 — Governance + Replay Extension** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T19:34:00+05:30
+2026-09-05T19:50:00+05:30
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (276 passed in 3.31s across all unit, integration, and adversarial suites)
+- `pytest` (298 passed in 2.49s across all unit, integration, and adversarial suites)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -52,9 +53,10 @@ COMPLETE (C_I2 PASS)
 - **AI Independence**: Replay never invokes live LLMs; historical AI proposals are evaluated purely as untrusted, static advisory records.
 - **Authoritative Engine Reuse**: Replay directly consumes T04 `evaluate_integrity`, T05 `TransactionStateMachine`, T06 authority hierarchy, and T07 `verify_mrdp_integrity` without duplicating business logic.
 - **Three-Way Classification**: Categorizes replay outcomes into `MATCH` (agreement), `MISMATCH` (drift or tampering detected), or `INVALID_REPLAY` (illegal lifecycle transition or ambiguous event ordering).
-- **Additive Innovation**: Completed T01–T13 and I1 functionality frozen; innovation extensions added strictly additively.
+- **Additive Innovation**: Completed T01–T13 and I1–I2 functionality frozen; innovation extensions added strictly additively.
 - **Evidence Freshness Invariant**: Freshness determined from explicit reference timestamps, not AI confidence. Stale or expired evidence cannot silently produce PASS.
 - **Protocol Binding Invariant**: Explicit binding of intent_id, transaction_id, attempt_id, and agent identity. Tamper-evident message chaining via SHA-256 canonical hashing. Replayed consumed intents strictly blocked.
+- **Governance & Replay Invariant**: Explicit attribution of every decision to rules_version and policy_version. Same inputs + same rules + same policy = same decision. Cryptographically verifiable Decision Reproducibility Certificate and side-effect-free counterfactual replay analysis.
 
 ## Next Task
-**I3 — Governance + Replay Extension** (STOP — await explicit user prompt before starting I3)
+**I4 — Merchant Agent** (STOP — await explicit user prompt before starting I4)
