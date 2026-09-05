@@ -65,6 +65,7 @@
 - [x] **I11 — Deterministic Scenario Lab** (Verified Green, 639/639 tests passing)
 - [x] **I12 — Ground-Truth Certification** (Verified Green, 668/668 tests passing)
 - [x] **I13 — Integrity Trace / Fault Localization** (Verified Green, 693/693 tests passing)
+- [x] **I14 — Integrity Checkpoints** (Verified Green, 720/720 tests passing)
 
 
 ---
@@ -526,5 +527,45 @@
   - Non-Authoritative Boundary: I13 never alters verifier decisions (`PASS`/`DRIFT`/`UNKNOWN`) or Kill Switch states.
   - Observational Fact vs. Speculative Inference: Only deterministic discrepancies and factual evidence references are recorded (zero hallucinated root causes).
   - Secret Protection: Zero credentials or private tokens exposed in audit traces.
+
+---
+
+## I14 Verification Record
+- **Implementation Scope**: Integrity Checkpoints & Verification Boundary Layer.
+  - Deterministic 8-Stage Checkpoint Chain: Explicit checkpoints covering the transaction lifecycle (`INTENT_AUTHORIZED`, `AGENT_ACTION_AUTHORIZED`, `MERCHANT_OFFER_VERIFIED`, `ORDER_CREATED`, `PAYMENT_ATTEMPT_CREATED`, `PAYMENT_AUTHORIZED`, `PAYMENT_CAPTURE_VERIFIED`, `COMPLETION_VERIFIED`).
+  - Strict 4-Status Checkpoint Semantics: `VALID`, `INVALID`, `UNKNOWN`, `NOT_REACHED`. Explicit invariant: `UNKNOWN != VALID`, `NOT_REACHED != UNKNOWN != INVALID`.
+  - Cryptographic Tamper-Evident Hash Chain: Byte-canonical JSON serialization and SHA-256 fingerprinting for every checkpoint (`fingerprint`), cryptographically linked to the preceding checkpoint (`previous_checkpoint_fingerprint` and `previous_checkpoint_id`). Detects sequence gaps, duplicates, reordering, and data modifications.
+  - Verification Timeline Boundary Tracking: Aggregates `last_valid_checkpoint` and `first_invalid_checkpoint` without overriding or modifying authoritative decisions.
+  - Sensitive Data Sanitization: All secret keys, authorization tokens, passwords, and webhook secrets are sanitized before checkpoint emission.
+  - Control Plane API Endpoint: Read-only `GET /api/v1/transactions/{transaction_id}/integrity-checkpoints` returning structured timeline JSON.
+  - Explanation Layer Integration (I21): Transparently consumed into `ExplanationContextBuilder.build_context(...)` as verified evidence references without altering AI non-authoritative boundary.
+- **Files Created**:
+  - `backend/app/domain/checkpoint/contracts.py`
+  - `backend/app/domain/checkpoint/engine.py`
+  - `backend/app/domain/checkpoint/__init__.py`
+  - `backend/app/services/checkpoint/service.py`
+  - `backend/app/services/checkpoint/__init__.py`
+  - `testing/unit/test_checkpoint_contracts.py`
+  - `testing/unit/test_checkpoint_engine.py`
+  - `testing/unit/test_checkpoint_integration.py`
+  - `testing/unit/test_checkpoint_adversarial.py`
+- **Files Modified**:
+  - `backend/app/services/__init__.py`
+  - `backend/app/services/explanation/context_builder.py`
+  - `backend/app/services/transaction_service.py`
+  - `backend/app/main.py`
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 27 focused tests across 4 test suites:
+  - 7 domain contract tests (`test_checkpoint_contracts.py`)
+  - 6 checkpoint engine tests (`test_checkpoint_engine.py`)
+  - 4 service & API integration tests (`test_checkpoint_integration.py`)
+  - 10 adversarial security & tamper-evidence tests (`test_checkpoint_adversarial.py`)
+- **Regression Count**: 720 passed, 0 failed in 11.81s (693 baseline + 27 I14 tests).
+- **Invariants Preserved**:
+  - `AI proposes -> evidence proves -> deterministic logic decides`: Zero LLM decision logic in I14.
+  - Non-Authoritative Boundary: Checkpoints record boundaries and facts; never override T04 integrity decisions or I9 kill switch states.
+  - Cryptographic Chain Integrity: Sequence 1..N order, no gaps, no duplicates, valid parent fingerprint links.
+  - Secret Protection: Zero credentials or private tokens exposed in checkpoints.
 
 

@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I13 — Integrity Trace / Fault Localization
+I14 — Integrity Checkpoints
 
 ## Task Status
-COMPLETE (C_I13 PASS)
+COMPLETE (C_I14 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -42,14 +42,15 @@ COMPLETE (C_I13 PASS)
 - [x] **I11 — Deterministic Scenario Lab** (Completed 2026-09-06)
 - [x] **I12 — Ground-Truth Certification** (Completed 2026-09-06)
 - [x] **I13 — Integrity Trace / Fault Localization** (Completed 2026-09-06)
+- [x] **I14 — Integrity Checkpoints** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T00:52:00+05:30 — I13 checkpoint
+2026-09-06T02:07:00+05:30 — I14 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (693 passed in 14.48s across all unit, integration, and adversarial suites: 668 baseline + 25 I13 tests)
+- `pytest` (720 passed in 11.81s across all unit, integration, and adversarial suites: 693 baseline + 27 I14 tests)
 
 
 ## Environment & Toolchains Verified
@@ -115,10 +116,17 @@ COMPLETE (C_I13 PASS)
 - **CERTIFIED / FAILED / INVALID Strict Semantics Invariant**: Outcomes strictly adhere to three-way classification: `CERTIFIED` (pipeline aligns with ground truth), `FAILED` (pipeline produced valid execution but differed from ground truth), or `INVALID` (compromised snapshot hash, cross-scenario reuse, malformed input). `INVALID` is never silently downgraded to `FAILED`.
 - **Cryptographic Tamper-Evidence Chain Invariant**: Every certification record binds `ground_truth_hash`, `input_snapshot_hash`, `actual_result_hash`, and computed `certification_hash` using canonical JSON serialization and SHA-256 digests. Tampering with any field changes the resulting digest.
 - **Deterministic Replay & Order Invariance Invariant**: Forward execution (01 -> 12), reversed execution (12 -> 01), and shuffled orders produce 100% bit-identical digests. Replay scenarios preserve replay semantics and do not mutate historical state.
-- **AI & Network Independence Invariant**: Certification execution requires zero external network calls, zero live Razorpay APIs, and zero LLM calls.
+- **Deterministic Integrity Trace & Fault Localization Invariant**: I13 evaluates 8 lifecycle stages (`INTENT` -> `AGENT` -> `MERCHANT` -> `ORDER` -> `ATTEMPT` -> `PAYMENT` -> `GATEWAY` -> `COMPLETION`) in chronological order to isolate the exact point of divergence without altering authoritative integrity decisions.
+- **Trace Non-Authoritative Boundary Invariant**: Trace generation is purely analytical/observational; it never mutates `IntegrityStatus` (`PASS`/`DRIFT`/`UNKNOWN`), `KillSwitchState`, or `TransactionState`.
+- **Trace Secret Sanitization Invariant**: All trace records and evidence excerpts recursively redact API keys, webhook secrets, authorization headers, and passwords.
+- **Deterministic Verification-Boundary Invariant**: I14 records explicit deterministic verifications at 8 lifecycle checkpoints (`INTENT_AUTHORIZED`, `AGENT_ACTION_AUTHORIZED`, `MERCHANT_OFFER_VERIFIED`, `ORDER_CREATED`, `PAYMENT_ATTEMPT_CREATED`, `PAYMENT_AUTHORIZED`, `PAYMENT_CAPTURE_VERIFIED`, `COMPLETION_VERIFIED`).
+- **Tamper-Evident Hash Chain Invariant**: Every checkpoint binds a canonical SHA-256 fingerprint over its fields and cryptographically links to the preceding checkpoint fingerprint (`previous_checkpoint_fingerprint`), detecting sequence reordering, gaps, duplicates, or content modifications.
+- **Checkpoint Non-Authoritative Boundary Invariant**: Checkpoint timelines record facts (`last_valid_checkpoint`, `first_invalid_checkpoint`) and never override or modify T04 decisions, I8 bindings, I9 kill switch states, or transaction state machine states.
+- **UNKNOWN State Non-Degradation Invariant**: `UNKNOWN` is never coerced or converted to `VALID`, nor confused with `NOT_REACHED` or `INVALID`.
+- **Checkpoint Explanation Grounding Invariant**: I21 explanations consume verified checkpoint data as evidence references without AI becoming an authority over checkpoint integrity.
 
 ## Next Task
-I13 — Integrity Trace & Fault Localization (Await user instruction)
+I15 (Await user instruction)
 
 
 
