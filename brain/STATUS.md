@@ -7,10 +7,10 @@
 E-Series Final Extension
 
 ## Current Task
-E4 — Security / Threat Guard Composition
+E2 — Consumer + Merchant Gate Composition
 
 ## Task Status
-COMPLETE (C_E4 PASS)
+COMPLETE (C_E2 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -47,17 +47,20 @@ COMPLETE (C_E4 PASS)
 - [x] **I22 — Complete Hero Transaction** (Completed 2026-09-06)
 - [x] **E0 — Final Baseline & Contract Freeze** (Completed 2026-09-06)
 - [x] **E1 — Integration Boundary** (Completed 2026-09-06)
+- [x] **E2 — Consumer + Merchant Gate Composition** (Completed 2026-09-06)
 - [x] **E4 — Security / Threat Guard Composition** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T03:38:00+05:30 — E4 checkpoint
+2026-09-06T03:55:00+05:30 — E2 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (804 passed, 2 warnings in 39.08s across all unit, integration, and adversarial suites: 777 baseline + 27 E4 tests)
+- `pytest` (859 passed, 2 warnings in 39.66s across all unit, integration, and adversarial suites: 804 baseline + 55 E2 tests)
+- `testing/unit/test_gates_composition.py`: PASS (55/55 passed in 0.22s)
 - `scripts/verify_api_smoke.py`: PASS (FastAPI routes, scenarios, certifications, replay validation, hero-transaction, and intent parsing verified)
 - `npm run build` (frontend): PASS (Next.js 15.5.25 Turbopack production build clean)
+- `git diff --check`: PASS (zero whitespace errors or unresolved merge markers)
 
 
 ## Environment & Toolchains Verified
@@ -143,6 +146,12 @@ COMPLETE (C_E4 PASS)
 - **E1 Single Composition Boundary Invariant**: E1 provides a single application-facing orchestrator (`IntegrationService`) that binds Buyer Agent, Merchant Agent, TIX, Intent, Transaction, Payment, Integrity, Recovery, and Replay without creating a second decision engine, second payment authority, or second TIX.
 - **E1 Authority Preservation Invariant**: Orchestration is not authority. Neither Buyer Agent proposals, Merchant offers, nor TIX messages can declare PASS. Only the deterministic engine over authoritative evidence decides.
 - **E1 Cross-Context Isolation Invariant**: All operations strictly enforce the 7-tuple binding (`intent_id`, `agent_id`, `merchant_id`, `transaction_id`, `order_id`, `payment_id`, `attempt_id`). Mismatched agents, intents, or merchants are unconditionally rejected with `ContextBindingMismatchError`.
+- **E2 Consumer Gate Invariant**: Validates intent binding, authorization constraints (financial ceiling, permitted SKUs, quantity limits, temporal validity), agent identity, transaction context, and proposal validity. Consumer Gate produces structured validation facts; it NEVER declares an authoritative financial PASS or authorizes payments.
+- **E2 Merchant Gate Invariant**: Deterministically validates merchant identity, active capability declaration, catalog SKU validity, inventory availability, price/budget facts, shipping options, fulfillment promises, offer expiry, and merchant policy compliance.
+- **E2 Gate Evidence Transformation Invariant**: Gate findings are converted into structured `Evidence` records (`AGENT` advisory authority for consumer gate, `MERCHANT_ATTESTED` authority for merchant gate) fed into the deterministic integrity engine (T04); gates never bypass T04 or T03 state machine.
+- **E2 UNKNOWN Preservation in Gates Invariant**: Missing, delayed, or indeterminate provider telemetry (e.g. absent inventory record) produces `GateStatus.UNKNOWN` rather than forcing `INVALID` or coercing `VALID`.
+- **E2 Prompt Injection Defense in Proposals**: Malicious prompt injection phrases embedded in AI agent proposal rationales ("ignore previous instructions", "declare pass", "override budget", "bypass verification", "authorize payment") are deterministically intercepted and rejected as `INVALID`.
+- **E2 Cross-Context Gate Isolation Invariant**: Swapping buyer agents, merchant agents, intent IDs, or transaction IDs across contexts is unconditionally rejected by both gates.
 
 ## Next Task
-E2 — Consumer + Merchant Gate Composition (Await user instruction / human approval).
+E3 — Agentic Transaction Lifecycle Orchestration (Await user instruction / human approval).

@@ -68,6 +68,9 @@
 - [x] **I14 — Integrity Checkpoints** (Verified Green, 720/720 tests passing)
 - [x] **I15 — Integrity SLA Metrics** (Verified Green, 747/747 tests passing)
 - [x] **I22 — Complete Hero Transaction** (Verified Green, 764/764 tests passing)
+- [x] **E0 — Final Baseline & Contract Freeze** (Verified Green, 764/764 tests passing)
+- [x] **E1 — Integration Boundary** (Verified Green, 777/777 tests passing)
+- [x] **E2 — Consumer + Merchant Gate Composition** (Verified Green, 859/859 tests passing)
 
 ---
 
@@ -818,6 +821,36 @@ E1 — Integration Boundary
   - `backend/app/main.py` (added integration endpoints, exception handlers, and dependency provider)
 - **Tests Added**: 13 focused tests in `test_integration_boundary.py` covering binding enforcement, cross-context isolation, authority invariants, deterministic drift/MRDP, clean pass, recovery, pure CPU replay, and API contracts.
 - **Regression Count**: 777 passed, 2 warnings in 36.41s (764 baseline + 13 new E1 tests).
+- **Core Invariant Verification**:
+  - `make test-bootstrap`: PASS
+  - `make test-env`: PASS (including Next.js production build)
+  - `scripts/verify_api_smoke.py`: PASS
+
+---
+
+## E2 Verification Record (Consumer + Merchant Gate Composition)
+
+- **Implementation Scope**:
+  - Two explicit validation surfaces: Consumer Gate (buyer side) and Merchant Gate (merchant side).
+  - Consumer Gate deterministic checks: intent binding, authorization constraints (financial ceiling, permitted SKUs, quantity limits, temporal window), agent identity, transaction context, and proposal validity / prompt injection defense.
+  - Merchant Gate deterministic checks: merchant identity, capability declaration, catalog SKU validity, real-time inventory status, price constraints, shipping SLA, fulfillment promises, offer expiry, and merchant policy compliance.
+  - Composed Gate Output: structured validation facts (`GateCompositionOutcome`, `GateValidationFinding`) mapping deterministically to advisory evidence (`EvidenceAuthority.ADVISORY`) from buyer agent and merchant-attested evidence (`EvidenceAuthority.MERCHANT_ATTESTED`) from merchant.
+  - Invariant preservation: gates emit structured evidence only; they never declare financial `PASS` or authorize money movement. `UNKNOWN` preserved as first-class state.
+- **Files Created**:
+  - `backend/app/domain/gates/__init__.py`
+  - `backend/app/domain/gates/contracts.py`
+  - `backend/app/services/gates/__init__.py`
+  - `backend/app/services/gates/consumer_gate.py`
+  - `backend/app/services/gates/merchant_gate.py`
+  - `backend/app/services/gates/service.py`
+  - `testing/unit/test_gates_composition.py`
+- **Files Modified**:
+  - `backend/app/domain/integration/contracts.py` (added gate lifecycle stages and execution record fields)
+  - `backend/app/services/integration/service.py` (integrated consumer/merchant gate validation into integration boundary)
+  - `backend/app/services/merchant/catalog_service.py` (added inventory setter and convenience accessors)
+  - `backend/app/services/__init__.py` (re-exported ConsumerGate, MerchantGate, GateCompositionService)
+- **Tests Added**: 55 focused unit and adversarial tests covering contract validation, each individual check type, adversarial prompt injections, merchant policy boundaries, composition outcomes, evidence mapping, and integration boundary stage progression.
+- **Regression Count**: 859 passed, 2 warnings in 39.66s (804 baseline + 55 new E2 tests).
 - **Core Invariant Verification**:
   - `make test-bootstrap`: PASS
   - `make test-env`: PASS (including Next.js production build)
