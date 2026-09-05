@@ -27,6 +27,12 @@ from backend.app.services.replay.governance_replay import (
     GovernedReplayService,
 )
 
+from backend.app.services.replay.counterfactual import (
+    CounterfactualComparison,
+    CounterfactualMutationType,
+    CounterfactualReplayAnalysisService,
+)
+
 __all__ = [
     "REPLAY_PROTOCOL_VERSION",
     "RULES_VERSION_DEFAULT",
@@ -44,4 +50,7 @@ __all__ = [
     "replay_state_transitions",
     "GovernedReplayResult",
     "GovernedReplayService",
+    "CounterfactualComparison",
+    "CounterfactualMutationType",
+    "CounterfactualReplayAnalysisService",
 ]
