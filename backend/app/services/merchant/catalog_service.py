@@ -156,9 +156,21 @@ class MerchantCatalogService:
         """Retrieves a catalog item by SKU."""
         return self._catalog.get(sku)
 
+    def get_item(self, sku: str) -> Optional[CatalogItem]:
+        """Convenience alias for get_catalog_item."""
+        return self.get_catalog_item(sku)
+
     def get_inventory_record(self, sku: str) -> Optional[InventoryRecord]:
         """Retrieves inventory availability for a SKU."""
         return self._inventory.get(sku)
+
+    def get_inventory(self, sku: str) -> Optional[InventoryRecord]:
+        """Convenience alias for get_inventory_record."""
+        return self.get_inventory_record(sku)
+
+    def set_inventory(self, sku: str, record: InventoryRecord) -> None:
+        """Sets an inventory record directly for a SKU."""
+        self._inventory[sku] = record
 
     def process_buyer_request(
         self,
