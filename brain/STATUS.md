@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I12 — Ground-Truth Certification
+I13 — Integrity Trace / Fault Localization
 
 ## Task Status
-COMPLETE (C_I12 PASS)
+COMPLETE (C_I13 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -41,14 +41,15 @@ COMPLETE (C_I12 PASS)
 - [x] **I19 — Merchant-Side Capability Graph** (Completed 2026-09-05)
 - [x] **I11 — Deterministic Scenario Lab** (Completed 2026-09-06)
 - [x] **I12 — Ground-Truth Certification** (Completed 2026-09-06)
+- [x] **I13 — Integrity Trace / Fault Localization** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T00:40:00+05:30 — I12 checkpoint
+2026-09-06T00:52:00+05:30 — I13 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (668 passed in 10.10s across all unit, integration, and adversarial suites: 639 baseline + 29 I12 tests)
+- `pytest` (693 passed in 14.48s across all unit, integration, and adversarial suites: 668 baseline + 25 I13 tests)
 
 
 ## Environment & Toolchains Verified

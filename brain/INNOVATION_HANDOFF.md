@@ -64,6 +64,7 @@
 - [x] **I19 — Merchant-Side Capability Graph** (Verified Green, 605/605 tests passing)
 - [x] **I11 — Deterministic Scenario Lab** (Verified Green, 639/639 tests passing)
 - [x] **I12 — Ground-Truth Certification** (Verified Green, 668/668 tests passing)
+- [x] **I13 — Integrity Trace / Fault Localization** (Verified Green, 693/693 tests passing)
 
 
 ---
@@ -485,4 +486,45 @@
   - Strict INVALID Semantics: Cross-scenario reuse and snapshot hash corruption immediately yield INVALID.
   - AI & Network Independence: Deterministic execution with zero network calls, zero Razorpay API calls, and zero LLM calls.
   - Determinism & Order Invariance: Bit-for-bit identical hashes across forward (01->12), reversed (12->01), and shuffled execution orders.
+
+---
+
+## I13 Verification Record
+- **Implementation Scope**: Integrity Trace & Fault Localization Layer.
+  - Deterministic 8-Stage Lifecycle Progression: Evaluates `INTENT` (1) -> `AGENT` (2) -> `MERCHANT` (3) -> `ORDER` (4) -> `ATTEMPT` (5) -> `PAYMENT` (6) -> `GATEWAY` (7) -> `COMPLETION` (8) strictly in chronological sequence.
+  - First Divergence Detection: Identifies the earliest chronological point where integrity diverged, including stage, step sequence, primary discrepancy, and evidence references.
+  - Multiple Fault Preservation: Subsequent fault locations and divergences across downstream stages are strictly preserved.
+  - Strict UNKNOWN State & Uncertainty Handling: Early missing evidence sets stage to UNKNOWN and generates explicit uncertainty warnings preventing premature or false downstream fault attribution.
+  - Credential & Secret Sanitization: Recursively redacts API keys, webhook secrets, passwords, tokens, and authorization headers from expected and observed contexts.
+  - Control Plane API Endpoint: Read-only `GET /api/v1/transactions/{transaction_id}/integrity-trace` providing structured, replay-compatible JSON trace output.
+  - Explanation Layer Integration (I21): Transparently incorporated into `ExplanationContextBuilder.build_context` without altering AI explanation non-authoritative boundaries.
+- **Files Created**:
+  - `backend/app/domain/trace/contracts.py`
+  - `backend/app/domain/trace/engine.py`
+  - `backend/app/domain/trace/__init__.py`
+  - `backend/app/services/trace/service.py`
+  - `backend/app/services/trace/__init__.py`
+  - `testing/unit/test_trace_contracts.py`
+  - `testing/unit/test_trace_engine.py`
+  - `testing/unit/test_trace_integration.py`
+  - `testing/unit/test_trace_adversarial.py`
+- **Files Modified**:
+  - `backend/app/services/__init__.py`
+  - `backend/app/services/explanation/context_builder.py`
+  - `backend/app/services/transaction_service.py`
+  - `backend/app/main.py`
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 25 focused tests across 4 test suites:
+  - 7 domain contract tests (`test_trace_contracts.py`)
+  - 7 trace engine tests (`test_trace_engine.py`)
+  - 4 service & API integration tests (`test_trace_integration.py`)
+  - 7 adversarial security & fault localization tests (`test_trace_adversarial.py`)
+- **Regression Count**: 693 passed, 0 failed in 14.48s (668 baseline + 25 I13 tests).
+- **Invariants Preserved**:
+  - `AI proposes -> evidence proves -> deterministic logic decides`: I13 contains zero LLM decision logic.
+  - Non-Authoritative Boundary: I13 never alters verifier decisions (`PASS`/`DRIFT`/`UNKNOWN`) or Kill Switch states.
+  - Observational Fact vs. Speculative Inference: Only deterministic discrepancies and factual evidence references are recorded (zero hallucinated root causes).
+  - Secret Protection: Zero credentials or private tokens exposed in audit traces.
+
 
