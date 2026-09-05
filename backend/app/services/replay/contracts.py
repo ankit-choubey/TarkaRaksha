@@ -14,7 +14,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from backend.app.domain.models import (
     CanonicalEvent,
     Evidence,
+    EvidenceAuthority,
     EvidenceBundle,
+    EvidenceSource,
     IntegrityResult,
     IntegrityStatus,
     IntentContract,
@@ -82,7 +84,6 @@ class ReplaySnapshot(BaseModel):
     model_config = ConfigDict(
         frozen=True,
         extra="forbid",
-        strict=True,
     )
 
     @field_validator("reference_time", mode="before")
@@ -97,6 +98,85 @@ class ReplaySnapshot(BaseModel):
         if dt.tzinfo is None:
             raise ValueError("reference_time must be timezone-aware (e.g. UTC)")
         return dt
+
+    @field_validator("events", mode="before")
+    @classmethod
+    def parse_events(cls, v: Any) -> List[CanonicalEvent]:
+        if not isinstance(v, list):
+            return v
+        parsed = []
+        for item in v:
+            if isinstance(item, CanonicalEvent):
+                parsed.append(item)
+            elif isinstance(item, dict):
+                item_copy = dict(item)
+                if "source" in item_copy and isinstance(item_copy["source"], str):
+                    item_copy["source"] = EvidenceSource(item_copy["source"])
+                if "authority" in item_copy and isinstance(item_copy["authority"], str):
+                    item_copy["authority"] = EvidenceAuthority(item_copy["authority"])
+                parsed.append(CanonicalEvent.model_validate(item_copy))
+            else:
+                parsed.append(item)
+        return parsed
+
+    @field_validator("evidence", mode="before")
+    @classmethod
+    def parse_evidence(cls, v: Any) -> List[Evidence]:
+        if not isinstance(v, list):
+            return v
+        parsed = []
+        for item in v:
+            if isinstance(item, Evidence):
+                parsed.append(item)
+            elif isinstance(item, dict):
+                item_copy = dict(item)
+                if "source" in item_copy and isinstance(item_copy["source"], str):
+                    item_copy["source"] = EvidenceSource(item_copy["source"])
+                if "authority" in item_copy and isinstance(item_copy["authority"], str):
+                    item_copy["authority"] = EvidenceAuthority(item_copy["authority"])
+                parsed.append(Evidence.model_validate(item_copy))
+            else:
+                parsed.append(item)
+        return parsed
+
+    @field_validator("state_transitions", mode="before")
+    @classmethod
+    def parse_state_transitions(cls, v: Any) -> List[StateTransitionRecord]:
+        if not isinstance(v, list):
+            return v
+        parsed = []
+        for item in v:
+            if isinstance(item, StateTransitionRecord):
+                parsed.append(item)
+            elif isinstance(item, dict):
+                item_copy = dict(item)
+                if "from_state" in item_copy and isinstance(item_copy["from_state"], str):
+                    item_copy["from_state"] = TransactionState(item_copy["from_state"])
+                if "to_state" in item_copy and isinstance(item_copy["to_state"], str):
+                    item_copy["to_state"] = TransactionState(item_copy["to_state"])
+                if "integrity_status" in item_copy and isinstance(item_copy["integrity_status"], str):
+                    item_copy["integrity_status"] = IntegrityStatus(item_copy["integrity_status"])
+                parsed.append(StateTransitionRecord.model_validate(item_copy))
+            else:
+                parsed.append(item)
+        return parsed
+
+    @field_validator("recorded_final_state", mode="before")
+    @classmethod
+    def parse_recorded_final_state(cls, v: Any) -> Optional[TransactionState]:
+        if isinstance(v, str):
+            return TransactionState(v)
+        return v
+
+    @field_validator("recorded_integrity_result", mode="before")
+    @classmethod
+    def parse_recorded_integrity_result(cls, v: Any) -> Optional[IntegrityResult]:
+        if isinstance(v, dict):
+            v_copy = dict(v)
+            if "status" in v_copy and isinstance(v_copy["status"], str):
+                v_copy["status"] = IntegrityStatus(v_copy["status"])
+            return IntegrityResult.model_validate(v_copy)
+        return v
 
     @field_validator("replay_id", "transaction_id")
     @classmethod

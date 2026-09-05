@@ -37,11 +37,11 @@ def order_canonical_events(events: List[CanonicalEvent]) -> List[CanonicalEvent]
     for ev in events:
         if ev.event_id in seen_events:
             existing = seen_events[ev.event_id]
-            # If two events share an event_id but differ in type, timestamp, or payload, it's ambiguous/tampered
+            # If two events share an event_id but differ in type, timestamp, or payload_summary, it's ambiguous/tampered
             if (
                 existing.event_type != ev.event_type
                 or existing.timestamp != ev.timestamp
-                or existing.payload != ev.payload
+                or existing.payload_summary != ev.payload_summary
             ):
                 raise ReplayAmbiguityError(
                     f"Conflicting canonical events detected with identical event_id '{ev.event_id}' "
@@ -51,14 +51,8 @@ def order_canonical_events(events: List[CanonicalEvent]) -> List[CanonicalEvent]
             seen_events[ev.event_id] = ev
 
     def sort_key(ev: CanonicalEvent) -> Tuple[str, int, str]:
-        # Sequence number extraction if provided in payload, default 0
-        seq = 0
-        if isinstance(ev.payload, dict) and "sequence_number" in ev.payload:
-            val = ev.payload["sequence_number"]
-            if isinstance(val, int):
-                seq = val
-
-        # Ensure timestamp comparison uses ISO string with timezone
+        # Sequence number extraction
+        seq = ev.sequence_number or 0
         ts_str = ev.timestamp.isoformat()
         return (ts_str, seq, ev.event_id)
 
@@ -71,12 +65,12 @@ def order_evidence_records(evidence: List[Evidence]) -> List[Evidence]:
     Sorts evidence records deterministically and checks for integrity.
     
     Sorting key:
-    1. authority rank (AUTHORITATIVE before CORROBORATIVE before ADVISORY)
+    1. authority rank (highest authority first: AUTHORITATIVE = 100, etc.)
     2. observed_at timestamp (chronological)
     3. evidence_id (stable deterministic string tie-breaker)
     
     Detects ambiguities:
-    - Conflicting duplicate evidence IDs with differing payloads or authority.
+    - Conflicting duplicate evidence IDs with differing values or authority.
     """
     if not evidence:
         return []
@@ -87,9 +81,10 @@ def order_evidence_records(evidence: List[Evidence]) -> List[Evidence]:
             existing = seen_evidence[ev.evidence_id]
             if (
                 existing.source != ev.source
-                or existing.authority != ev.authority
+                or existing.effective_authority != ev.effective_authority
                 or existing.observed_at != ev.observed_at
-                or existing.payload != ev.payload
+                or existing.field_name != ev.field_name
+                or existing.field_value != ev.field_value
             ):
                 raise ReplayAmbiguityError(
                     f"Conflicting evidence records detected with identical evidence_id '{ev.evidence_id}' "
@@ -98,17 +93,10 @@ def order_evidence_records(evidence: List[Evidence]) -> List[Evidence]:
         else:
             seen_evidence[ev.evidence_id] = ev
 
-    # Authority rank mapping: AUTHORITATIVE = 0, CORROBORATIVE = 1, ADVISORY = 2
-    authority_ranks = {
-        "AUTHORITATIVE": 0,
-        "CORROBORATIVE": 1,
-        "ADVISORY": 2,
-    }
-
     def sort_key(ev: Evidence) -> Tuple[int, str, str]:
-        auth_val = getattr(ev.authority, "value", str(ev.authority))
-        rank = authority_ranks.get(auth_val, 99)
+        # Higher authority_rank first -> negate for ascending sort
+        rank_neg = -ev.authority_rank
         ts_str = ev.observed_at.isoformat()
-        return (rank, ts_str, ev.evidence_id)
+        return (rank_neg, ts_str, ev.evidence_id)
 
     return sorted(evidence, key=sort_key)

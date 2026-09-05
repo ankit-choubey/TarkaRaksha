@@ -39,11 +39,13 @@ class StateReplayOutcome:
         final_state: TransactionState,
         reconstructed_history: List[StateTransitionRecord],
         is_valid: bool,
+        has_illegal_transition: bool,
         discrepancies: List[ReplayDiscrepancy],
     ):
         self.final_state = final_state
         self.reconstructed_history = reconstructed_history
         self.is_valid = is_valid
+        self.has_illegal_transition = has_illegal_transition
         self.discrepancies = discrepancies
 
 
@@ -61,7 +63,7 @@ def replay_state_transitions(
     - Checks whether transition from current machine state to record.to_state is valid according to T05 rules.
     - If valid, executes transition_to on the machine.
     - If invalid or illegal (e.g. UNKNOWN -> PASS directly, or skipped transitions),
-      captures the exact discrepancy and marks outcome as invalid.
+      captures the exact discrepancy and marks has_illegal_transition=True.
     """
     discrepancies: List[ReplayDiscrepancy] = []
 
@@ -79,7 +81,7 @@ def replay_state_transitions(
     )
 
     if not recorded_transitions:
-        # If no transitions recorded, verify against expected_final_state
+        # If no transitions recorded, compare against expected_final_state as an outcome discrepancy (MISMATCH, not INVALID_REPLAY)
         if expected_final_state and expected_final_state != TransactionState.CREATED:
             discrepancies.append(
                 ReplayDiscrepancy(
@@ -92,7 +94,8 @@ def replay_state_transitions(
         return StateReplayOutcome(
             final_state=TransactionState.CREATED,
             reconstructed_history=[],
-            is_valid=len(discrepancies) == 0,
+            is_valid=True,
+            has_illegal_transition=False,
             discrepancies=discrepancies,
         )
 
@@ -118,6 +121,7 @@ def replay_state_transitions(
                 final_state=machine.current_state,
                 reconstructed_history=machine.history,
                 is_valid=False,
+                has_illegal_transition=True,
                 discrepancies=discrepancies,
             )
 
@@ -145,6 +149,7 @@ def replay_state_transitions(
                 final_state=machine.current_state,
                 reconstructed_history=machine.history,
                 is_valid=False,
+                has_illegal_transition=True,
                 discrepancies=discrepancies,
             )
 
@@ -166,5 +171,6 @@ def replay_state_transitions(
         final_state=machine.current_state,
         reconstructed_history=machine.history,
         is_valid=len(discrepancies) == 0,
+        has_illegal_transition=False,
         discrepancies=discrepancies,
     )

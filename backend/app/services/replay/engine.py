@@ -139,7 +139,7 @@ class ReplayEngine:
 
         # If state transition replay failed due to an illegal jump or forbidden state transition,
         # it is an invalid replay condition
-        if not state_outcome.is_valid:
+        if state_outcome.has_illegal_transition:
             # Reconstruct evaluation for audit visibility
             replayed_integrity = evaluate_integrity(
                 contract=snapshot.contract,
@@ -211,15 +211,18 @@ class ReplayEngine:
             if replayed_integrity.status in (IntegrityStatus.DRIFT, IntegrityStatus.UNKNOWN):
                 evidence_bundle = EvidenceBundle(
                     bundle_id=f"replay-bundle-{snapshot.transaction_id}",
+                    intent_id=snapshot.contract.intent_id,
                     transaction_id=snapshot.transaction_id,
-                    evidence_items=ordered_evidence,
+                    created_at=snapshot.reference_time,
+                    records=ordered_evidence,
+                    events=ordered_events,
                 )
                 replayed_mrdp = build_mrdp(
                     contract=snapshot.contract,
                     integrity_result=replayed_integrity,
                     evidence_bundle=evidence_bundle,
                     generated_at=snapshot.recorded_mrdp.generated_at,
-                    proof_id=snapshot.recorded_mrdp.mrdp_id,
+                    mrdp_id=snapshot.recorded_mrdp.mrdp_id,
                 )
 
                 # Compare error code and status
