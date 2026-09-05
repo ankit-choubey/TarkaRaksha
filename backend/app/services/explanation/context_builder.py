@@ -55,6 +55,7 @@ class ExplanationContextBuilder:
         snapshot_hash: Optional[str] = None,
         certificate_id: Optional[str] = None,
         reference_time: Optional[datetime] = None,
+        integrity_trace: Optional[Any] = None,
     ) -> ExplanationContext:
         """
         Builds a frozen ExplanationContext.
@@ -259,6 +260,12 @@ class ExplanationContextBuilder:
                 uncertainty_notes.extend(integrity_result.violations)
             else:
                 uncertainty_notes.append("System could not establish facts with authoritative confidence")
+
+        if integrity_trace:
+            if hasattr(integrity_trace, "missing_evidence") and integrity_trace.missing_evidence:
+                missing_evidence.extend(integrity_trace.missing_evidence)
+            if hasattr(integrity_trace, "uncertainties") and integrity_trace.uncertainties:
+                uncertainty_notes.extend(integrity_trace.uncertainties)
 
         # 7. Extract identifiers
         agent_id = getattr(intent, "issued_by", None)

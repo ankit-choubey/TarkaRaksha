@@ -25,6 +25,7 @@ from backend.app.domain.models import (
     TransactionState,
 )
 from backend.app.domain.explanation import ExplanationResult
+from backend.app.domain.trace import IntegrityTrace
 from backend.app.services.recovery import (
     InvalidRecoveryStateError,
     RecoveryExhaustedError,
@@ -361,6 +362,22 @@ async def get_transaction_explanation(
     """
     try:
         return service.explain_transaction(transaction_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
+
+
+@app.get("/api/v1/transactions/{transaction_id}/integrity-trace", response_model=IntegrityTrace)
+async def get_transaction_integrity_trace(
+    transaction_id: str,
+    service: TransactionService = Depends(get_transaction_service),
+) -> IntegrityTrace:
+    """
+    Integrity Trace & Fault Localization endpoint (I13).
+    Deterministic 8-stage lifecycle evaluation, first-divergence detection,
+    and structured fault localization.
+    """
+    try:
+        return service.get_integrity_trace(transaction_id)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
 

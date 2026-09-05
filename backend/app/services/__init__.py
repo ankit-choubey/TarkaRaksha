@@ -6,6 +6,7 @@ from .mrdp import build_mrdp, verify_mrdp_integrity
 from .transaction_service import TransactionService, TransactionSession
 from .scenario import ScenarioLabService
 from .certification import GroundTruthCertificationService
+from .trace import IntegrityTraceService
 
 __all__ = [
     "evaluate_integrity",
@@ -15,6 +16,7 @@ __all__ = [
     "TransactionSession",
     "ScenarioLabService",
     "GroundTruthCertificationService",
+    "IntegrityTraceService",
 ]
 
 

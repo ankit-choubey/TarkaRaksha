@@ -103,6 +103,8 @@ from backend.app.services.explanation import (
     ExplanationContextBuilder,
 )
 from backend.app.services.ai.provider import AIProvider
+from backend.app.domain.trace import IntegrityTrace
+from backend.app.services.trace import IntegrityTraceService
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +155,7 @@ class TransactionService:
         explanation_service: Optional[EvidenceAwareExplanationService] = None,
         operational_mode_service: Optional[OperationalModeService] = None,
         capability_service: Optional[MerchantCapabilityService] = None,
+        trace_service: Optional[IntegrityTraceService] = None,
     ):
         self._default_provider = default_provider
         self._binding_service = binding_service or TransactionBindingService()
@@ -160,6 +163,7 @@ class TransactionService:
         self._explanation_service = explanation_service or EvidenceAwareExplanationService()
         self._operational_mode_service = operational_mode_service or OperationalModeService()
         self._capability_service = capability_service or MerchantCapabilityService()
+        self._trace_service = trace_service or IntegrityTraceService()
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
         self._recovery_executor = RecoveryExecutor()
@@ -168,6 +172,10 @@ class TransactionService:
     @property
     def capability_service(self) -> MerchantCapabilityService:
         return self._capability_service
+
+    @property
+    def trace_service(self) -> IntegrityTraceService:
+        return self._trace_service
 
     @property
     def explanation_service(self) -> EvidenceAwareExplanationService:
@@ -293,6 +301,26 @@ class TransactionService:
     def get_human_review_for_transaction(self, transaction_id: str) -> Optional[HumanReviewRequirement]:
         return self._operational_mode_service.get_review_for_transaction(transaction_id)
 
+    def get_integrity_trace(
+        self,
+        transaction_id: str,
+        reference_time: Optional[datetime] = None,
+    ) -> IntegrityTrace:
+        """
+        Builds an authoritative, deterministic IntegrityTrace for a transaction.
+        Fault localization and lifecycle divergence without altering any decisions (I13).
+        """
+        session = self.get_session(transaction_id)
+        if not session:
+            raise KeyError(f"Transaction '{transaction_id}' not found")
+
+        ks_state = self.get_kill_switch_state(transaction_id)
+        return self._trace_service.build_trace_from_session(
+            session=session,
+            kill_switch_state=ks_state,
+            reference_time=reference_time,
+        )
+
     def explain_transaction(
         self,
         transaction_id: str,
@@ -308,6 +336,7 @@ class TransactionService:
             raise KeyError(f"Transaction '{transaction_id}' not found")
 
         ks_state = self.get_kill_switch_state(transaction_id)
+        trace = self.get_integrity_trace(transaction_id, reference_time=reference_time)
 
         context = ExplanationContextBuilder.build_context(
             transaction_id=session.transaction_id,
@@ -322,6 +351,7 @@ class TransactionService:
             payment=session.payment,
             mrdp=session.completed_response.mrdp if session.completed_response else None,
             reference_time=reference_time,
+            integrity_trace=trace,
         )
 
         service = self._explanation_service
