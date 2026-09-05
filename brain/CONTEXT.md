@@ -4,6 +4,7 @@
 **TarkaRaksha** (तर्क रक्षा — *Reasoned Defense / Logical Protection*) is an agentic transaction integrity & recovery control plane.
 - **Core Principle**: AI is advisory. Deterministic verification is authoritative.
 - **Core Loop**: Authorized Intent → Agent Execution → Observe → Deterministic Integrity Verification (Pass/Drift/Unknown) → Prove (MRDP) → Safe Recovery → Revalidate.
+- **Audit Capability**: Historical transactions and evidence bundles can be replayed deterministically to verify past decisions and detect post-facto tampering.
 
 ---
 
@@ -22,11 +23,12 @@
 3. **Financial Safety**: Monetary amounts must strictly be represented in integer minor units (paise, cents). Floating-point currency math is strictly forbidden.
 4. **First-Class UNKNOWN**: UNKNOWN is a legitimate transaction state, not a failure to be guessed away. It may leave UNKNOWN only when sufficient authoritative evidence is acquired and deterministically verified.
 5. **Observation vs Recovery**: UNKNOWN resolution (T12) performs strictly non-side-effecting observation without moving money. If DRIFT is established, it hands off to the established T11 recovery loop.
-6. **Zero Premature Code**: Minimal infrastructure, maximum verifiable engineering. No Kafka, Redis, or microservice overbuilding.
+6. **Replay Determinism & Isolation (T13)**: The replay engine is a pure verification and audit capability. Zero live network calls, zero live AI queries, zero Razorpay API mutations, and zero production database state alterations.
+7. **Zero Premature Code**: Minimal infrastructure, maximum verifiable engineering. No Kafka, Redis, or microservice overbuilding.
 
 ---
 
-## Implemented Domain & Integrity Foundations (T01–T12)
+## Implemented Domain & Integrity Foundations (T01–T13)
 1. **Domain Contracts (`backend/app/domain/models/`)**:
    - `Money`: Immutable integer minor unit representation (paise, cents) with ISO 4217 validation, rejecting float/bool.
    - Enums: `IntegrityStatus` (PASS, DRIFT, UNKNOWN), `DriftDomain`, `EvidenceSource`, `EvidenceAuthority`, `TransactionState`, `MRDPErrorCode`, `ActionType`.
@@ -57,12 +59,13 @@
    - **Safe Observation Engine (`UnknownObserver`)**: Non-side-effecting observation querying provider truth (`fetch_payment`, `fetch_order_payments`), normalizing evidence, and re-evaluating through `evaluate_integrity`.
    - **Bounded Attempts & Idempotency**: Bounded at 3 attempts; attempt 4 forces `ABSTAIN`. Idempotency table caches results by `idempotency_key`.
 
-8. **Application Layer & Control Plane UI (`backend/app/main.py`, `frontend/app/page.tsx`)**:
-   - FastAPI REST endpoints: `/api/v1/transaction/create`, `/api/v1/transaction/complete`, `/api/v1/transaction/recover`, `/api/v1/transaction/resolve`, `/api/v1/transaction/{id}`, `/api/v1/transaction/{id}/mrdp`.
-   - Next.js functional control plane dashboard with interactive buttons for initialization, test scenarios, recovery execution, and UNKNOWN resolution.
+8. **Deterministic Replay Engine (`backend/app/services/replay/`) (T13)**:
+   - **Replay Snapshot (`ReplaySnapshot`)**: Immutable audit input encapsulating `contract`, `events`, `evidence`, `state_transitions`, `recorded_integrity_result`, `recorded_final_state`, `recorded_mrdp`, explicit `reference_time`, and `rules_version`.
+   - **Deterministic Ordering (`ordering.py`)**: Strict canonical ordering using chronological timestamps, sequence numbers, and deterministic string ID tie-breakers. Conflicting duplicate events/evidence trigger `ReplayAmbiguityError`.
+   - **State Machine Reconstruction (`reconstructor.py`)**: Replays recorded transitions using authoritative T05 `TransactionStateMachine`, detecting illegal jumps (e.g. UNKNOWN to PASS) and skipped states.
+   - **Deterministic Verification & Comparison (`engine.py`)**: Re-runs T04 `evaluate_integrity`, verifies cryptographic MRDP digests via `verify_mrdp_integrity`, and compares outcomes.
+   - **Verdict Classification**: Yields `MATCH` (perfect agreement), `MISMATCH` (drift/tamper detected with exact discrepancies), or `INVALID_REPLAY` (illegal transition or ambiguous ordering).
+   - **REST API Endpoint (`main.py`)**: `POST /api/v1/replay` accepts replay snapshot and returns diagnostic comparison.
 
----
-
-## Current Status & Next Step
-- **Status**: T12 COMPLETE (C12 PASS). Full test suite: 215 passed in 1.49s.
-- **Next Step**: T13 — Replay Engine.
+9. **Application Layer & Control Plane UI (`backend/app/main.py`, `frontend/app/page.tsx`)**:
+   - Complete slice operational: Protected Order Creation (`POST /api/v1/transaction/create`), Completion & Verification (`POST /api/v1/transaction/complete`), Webhook Ingestion (`POST /api/v1/webhook/razorpay`), Recovery (`POST /api/v1/transaction/recover`), UNKNOWN Resolution (`POST /api/v1/transaction/resolve`), and Replay (`POST /api/v1/replay`).
