@@ -12,6 +12,12 @@ from backend.app.domain.merchant.contracts import (
     ShippingOption,
     TaxEstimate,
 )
+from backend.app.domain.merchant.capabilities import (
+    CommerceCapabilityType,
+    MerchantCapability,
+    MerchantCapabilityDeclaration,
+    MerchantPolicyAsCode,
+)
 
 __all__ = [
     "InventoryStatus",
@@ -23,4 +29,8 @@ __all__ = [
     "BuyerCommerceRequest",
     "MerchantOfferItem",
     "MerchantResponse",
+    "CommerceCapabilityType",
+    "MerchantCapability",
+    "MerchantCapabilityDeclaration",
+    "MerchantPolicyAsCode",
 ]
