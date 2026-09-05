@@ -57,6 +57,7 @@ class ExplanationContextBuilder:
         reference_time: Optional[datetime] = None,
         integrity_trace: Optional[Any] = None,
         integrity_checkpoints: Optional[Any] = None,
+        integrity_sla_report: Optional[Any] = None,
     ) -> ExplanationContext:
         """
         Builds a frozen ExplanationContext.
@@ -308,6 +309,32 @@ class ExplanationContextBuilder:
                 )
             if getattr(integrity_checkpoints, "has_unknown_checkpoints", False):
                 uncertainty_notes.append("Transaction timeline contains UNKNOWN checkpoint boundaries awaiting authoritative evidence")
+
+        if integrity_sla_report and hasattr(integrity_sla_report, "metrics"):
+            for m in integrity_sla_report.metrics:
+                m_name = m.metric_name.value if hasattr(m.metric_name, "value") else str(m.metric_name)
+                m_status = m.status.value if hasattr(m.status, "value") else str(m.status)
+                m_unit = m.unit.value if hasattr(m.unit, "value") else str(m.unit)
+                if m_status == "MEASURABLE":
+                    ev_refs.append(
+                        EvidenceReference(
+                            evidence_id=f"ev_sla_{m_name.lower()}",
+                            field_name=m_name.lower(),
+                            source=EvidenceSource.SYSTEM,
+                            authority=EvidenceAuthority.AUTHORITATIVE,
+                            observed_value={
+                                "value": m.value,
+                                "unit": m_unit,
+                                "status": m_status,
+                                "is_compliant": m.is_compliant,
+                            },
+                            expected_value={"threshold": m.threshold},
+                            is_authoritative=True,
+                            description=f"Deterministic SLA Metric {m_name}: {m.value} {m_unit} (compliant: {m.is_compliant})",
+                        )
+                    )
+                elif m_status == "UNKNOWN":
+                    uncertainty_notes.append(f"SLA metric {m_name} is UNKNOWN: {m.calculation_reason}")
 
         # 7. Extract identifiers
         agent_id = getattr(intent, "issued_by", None)

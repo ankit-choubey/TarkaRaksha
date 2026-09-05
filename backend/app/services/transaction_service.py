@@ -107,6 +107,8 @@ from backend.app.domain.trace import IntegrityTrace
 from backend.app.services.trace import IntegrityTraceService
 from backend.app.domain.checkpoint import IntegrityCheckpointTimeline
 from backend.app.services.checkpoint import IntegrityCheckpointService
+from backend.app.domain.sla import IntegritySLAMetricsReport, SLAPolicy
+from backend.app.services.sla import IntegritySLAMetricsService
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +161,7 @@ class TransactionService:
         capability_service: Optional[MerchantCapabilityService] = None,
         trace_service: Optional[IntegrityTraceService] = None,
         checkpoint_service: Optional[IntegrityCheckpointService] = None,
+        sla_service: Optional[IntegritySLAMetricsService] = None,
     ):
         self._default_provider = default_provider
         self._binding_service = binding_service or TransactionBindingService()
@@ -168,10 +171,15 @@ class TransactionService:
         self._capability_service = capability_service or MerchantCapabilityService()
         self._trace_service = trace_service or IntegrityTraceService()
         self._checkpoint_service = checkpoint_service or IntegrityCheckpointService(trace_service=self._trace_service)
+        self._sla_service = sla_service or IntegritySLAMetricsService(trace_service=self._trace_service, checkpoint_service=self._checkpoint_service)
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
         self._recovery_executor = RecoveryExecutor()
         self._unknown_observer = UnknownObserver()
+
+    @property
+    def sla_service(self) -> IntegritySLAMetricsService:
+        return self._sla_service
 
     @property
     def capability_service(self) -> MerchantCapabilityService:
@@ -350,6 +358,29 @@ class TransactionService:
             reference_time=reference_time,
         )
 
+    def get_integrity_sla_metrics(
+        self,
+        transaction_id: str,
+        policy: Optional[SLAPolicy] = None,
+        reference_time: Optional[datetime] = None,
+    ) -> IntegritySLAMetricsReport:
+        """
+        Builds an authoritative, deterministic IntegritySLAMetricsReport for a transaction.
+        Measures detection latency, checkpoint coverage, trace completeness, UNKNOWN duration,
+        and SLA compliance without altering any decisions (I15).
+        """
+        session = self.get_session(transaction_id)
+        if not session:
+            raise KeyError(f"Transaction '{transaction_id}' not found")
+
+        ks_state = self.get_kill_switch_state(transaction_id)
+        return self._sla_service.get_sla_report_for_session(
+            session=session,
+            policy=policy,
+            kill_switch_state=ks_state,
+            reference_time=reference_time,
+        )
+
     def explain_transaction(
         self,
         transaction_id: str,
@@ -367,6 +398,7 @@ class TransactionService:
         ks_state = self.get_kill_switch_state(transaction_id)
         trace = self.get_integrity_trace(transaction_id, reference_time=reference_time)
         checkpoints = self.get_integrity_checkpoints(transaction_id, reference_time=reference_time)
+        sla_metrics = self.get_integrity_sla_metrics(transaction_id, reference_time=reference_time)
 
         context = ExplanationContextBuilder.build_context(
             transaction_id=session.transaction_id,
@@ -383,6 +415,7 @@ class TransactionService:
             reference_time=reference_time,
             integrity_trace=trace,
             integrity_checkpoints=checkpoints,
+            integrity_sla_report=sla_metrics,
         )
 
         service = self._explanation_service

@@ -27,6 +27,7 @@ from backend.app.domain.models import (
 from backend.app.domain.explanation import ExplanationResult
 from backend.app.domain.trace import IntegrityTrace
 from backend.app.domain.checkpoint import IntegrityCheckpointTimeline
+from backend.app.domain.sla import IntegritySLAMetricsReport
 from backend.app.services.recovery import (
     InvalidRecoveryStateError,
     RecoveryExhaustedError,
@@ -395,6 +396,22 @@ async def get_transaction_integrity_checkpoints(
     """
     try:
         return service.get_integrity_checkpoints(transaction_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
+
+
+@app.get("/api/v1/transactions/{transaction_id}/integrity-sla", response_model=IntegritySLAMetricsReport)
+async def get_transaction_integrity_sla(
+    transaction_id: str,
+    service: TransactionService = Depends(get_transaction_service),
+) -> IntegritySLAMetricsReport:
+    """
+    Integrity SLA Metrics endpoint (I15).
+    Deterministic SLA measurement covering detection latency, checkpoint coverage,
+    trace completeness, UNKNOWN duration, and policy compliance.
+    """
+    try:
+        return service.get_integrity_sla_metrics(transaction_id)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
 

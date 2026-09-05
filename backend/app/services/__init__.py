@@ -8,6 +8,7 @@ from .scenario import ScenarioLabService
 from .certification import GroundTruthCertificationService
 from .trace import IntegrityTraceService
 from .checkpoint import IntegrityCheckpointService
+from .sla import IntegritySLAMetricsService
 
 __all__ = [
     "evaluate_integrity",
@@ -19,6 +20,7 @@ __all__ = [
     "GroundTruthCertificationService",
     "IntegrityTraceService",
     "IntegrityCheckpointService",
+    "IntegritySLAMetricsService",
 ]
 
 
