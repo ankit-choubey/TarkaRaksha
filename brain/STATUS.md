@@ -94,7 +94,7 @@ None
 `main`
 
 ## Last Verified Remote Commit
-f5d3f27 (docs: synchronize persistent brain and handoff for T11 completion)
+902355a (docs: finalize verified remote commit reference in STATUS.md)
 
 ## Next Task
 **T12 — UNKNOWN Resolution** (Consuming T05 `RESOLVING` state + T06 conflict resolution + T07 MRDP + automated gateway polling & evidence collection)
