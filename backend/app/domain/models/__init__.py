@@ -38,6 +38,11 @@ from backend.app.domain.security import (
     ProtocolVerificationOutcome,
     ProtocolViolationCode,
 )
+from backend.app.domain.governance import (
+    GovernanceVersion,
+    DEFAULT_RULES_VERSION,
+    DEFAULT_POLICY_VERSION,
+)
 
 __all__ = [
     "ActionType",
@@ -77,5 +82,8 @@ __all__ = [
     "AgentTransactionMessage",
     "ProtocolVerificationOutcome",
     "ProtocolViolationCode",
+    "GovernanceVersion",
+    "DEFAULT_RULES_VERSION",
+    "DEFAULT_POLICY_VERSION",
 ]
 
