@@ -4,10 +4,10 @@
 **TarkaRaksha** — Agentic Transaction Integrity & Recovery Control Plane
 
 ## Current Phase
-Domain Contracts
+Deterministic Integrity Engine
 
 ## Current Task
-T03 — Domain Contracts
+T04 — Deterministic Engine
 
 ## Task Status
 COMPLETE
@@ -16,17 +16,19 @@ COMPLETE
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
 - [x] **T02 — Environment** (Completed 2026-09-05)
 - [x] **T03 — Domain Contracts** (Completed 2026-09-05)
+- [x] **T04 — Deterministic Engine** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T14:10:00+05:30
+2026-09-05T14:24:00+05:30
 
 ## Tests Run
-- `make test-bootstrap`: PASS (canonical docs in brain/, zero root copies, pyproject valid, zero secrets)
-- `make test-env`: PASS (Python 3.12, Node.js 25.2, npm 11.6, Git 2.50, backend packages, AI/payment client imports, Next.js 15 build, pytest smoke)
-- `pytest` (35 passed in 0.16s):
-  - `testing/unit/test_money.py` (12 tests): strict integer minor units, float rejection, bool rejection, currency ISO-4217, immutability, exact arithmetic, comparisons, serialization round-trip
-  - `testing/unit/test_models.py` (18 tests): IntentItem, IntentContract, Authorization, CanonicalEvent, Evidence, IntegrityResult, Decision, MRDP, RecoveryProposal, ActionRequest, Transaction, round-trip serialization for all models
-  - `testing/unit/test_environment.py` (5 tests): baseline runtime smoke tests
+- `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
+- `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
+- `pytest` (56 passed in 0.21s):
+  - `testing/unit/test_engine.py` (21 tests): Economic boundary (49999 PASS, 50000 PASS, 50001 DRIFT), currency mismatch, missing evidence UNKNOWN, authority conflict resolution, Semantic SKU/quantity/substitutions, Temporal duplicate/expiration/double-capture/late-success, Priority semantics (DRIFT > UNKNOWN > PASS), 100x identical determinism run, adversarial prompt injection resistance
+  - `testing/unit/test_money.py` (12 tests): integer minor units, float rejection, bool rejection, currency checks
+  - `testing/unit/test_models.py` (18 tests): domain contracts, serialization round-trips
+  - `testing/unit/test_environment.py` (5 tests): baseline environment checks
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -43,29 +45,31 @@ None
 None
 
 ## Important Decisions
-1. **Pydantic v2 Idiomatic Typing**: Enforced `frozen=True`, `extra='forbid'`, and `strict=True` across domain contracts.
-2. **Strict Integer Minor Units**: `Money` strictly rejects `float` and `bool` (subclass of int in Python) via custom `@field_validator(..., mode='before')` returning clear validation errors.
-3. **First-Class UNKNOWN**: `IntegrityStatus.UNKNOWN` is explicitly distinct from `PASS` and `DRIFT`.
-4. **Untrusted AI Invariant**: `RecoveryProposal` is typed as an advisory proposal and cannot be executed directly; only validated `ActionRequest` can be authorized.
-5. **Evidence Authority Hierarchy**: Implemented deterministic `authority_rank` on `Evidence` (`RAZORPAY` > `INTENT` > `MERCHANT` > `REPLAY` > `AGENT` > `SYNTHETIC`).
+1. **Three Orthogonal Drift Domains**: Modularized checks into `check_economic`, `check_semantic`, and `check_temporal` in `backend/app/domain/rules/`.
+2. **Deterministic Priority Semantics**:
+   - If any sub-check produces `DRIFT` -> overall `DRIFT` (violations aggregated).
+   - If no `DRIFT`, but any sub-check produces `UNKNOWN` -> overall `UNKNOWN` (safety invariant: missing evidence never defaults to `PASS`).
+   - Only when all sub-checks produce `PASS` -> overall `PASS`.
+3. **No External or Network Dependencies**: Integrity evaluation is strictly offline and pure; zero LLM calls, zero database calls, zero current-time dependencies (`reference_time` explicitly passed).
+4. **Authority-Based Conflict Resolution**: Conflicting evidence resolved via `authority_rank` (`RAZORPAY` > `INTENT` > `MERCHANT` > `REPLAY` > `AGENT` > `SYNTHETIC`). Unresolvable ties at highest tier yield `UNKNOWN`.
 
 ## Active Branch
 `main`
 
 ## Last Verified Remote Commit
-f9fa88c (chore: configure development environment)
-Prior Remote Commits: 17e99c9, 1a740b0, beca9e8, 020cf38
+84c7142 (feat: implement domain contracts)
+Prior Remote Commits: f9fa88c, 17e99c9, 1a740b0, beca9e8, 020cf38
 
 ## Next Task
-**T04 — Deterministic Engine** (Implement core verification functions: economic_check, semantic_check, temporal_check, evaluate_integrity)
+**T05 — State Machine** (Implement lifecycle states: CREATED, EXECUTING, OBSERVING, VERIFYING, PASS, DRIFT, UNKNOWN, RESOLVING, ABSTAIN, RECOVERING, REVALIDATING)
 
 ## Parallel Candidates
-With T03 complete, the domain boundary is established. However, T04 directly depends on T03 contracts to build the deterministic rule evaluation logic, so T04 should proceed sequentially.
+With T04 complete, the deterministic engine core is verified. T05 (State Machine) depends on the `IntegrityResult` output of T04 to orchestrate state transitions, so T05 proceeds sequentially.
 
 ## Source Documents Consulted
 - `brain/TarkaRaksha_IDEA.md`
-- `brain/TarkaRaksha_Execution.md` (§7.15–§7.21, §8.10–§8.14)
-- `brain/TarkaRaksha_TESTING.md` (§9.5–§9.9)
+- `brain/TarkaRaksha_Execution.md` (§7.17–§7.20, §8.15–§8.22)
+- `brain/TarkaRaksha_TESTING.md` (§9.10–§9.16)
 - `brain/CONTEXT.md`
 - `brain/HANDOFF.md`
 

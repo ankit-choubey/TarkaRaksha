@@ -25,8 +25,24 @@
 
 ---
 
-## Repository State (End of T01)
-- **Current Phase**: Repository Bootstrap (`T01`)
+## Implemented Domain & Integrity Foundations (T01–T04)
+1. **Domain Contracts (`backend/app/domain/models.py`)**:
+   - `Money`: Immutable integer minor unit representation (paise, cents) with ISO 4217 validation, rejecting float/bool.
+   - Enums: `IntegrityStatus` (PASS, DRIFT, UNKNOWN), `DriftDomain` (ECONOMIC, SEMANTIC, TEMPORAL), `EvidenceAuthority` (RAZORPAY, INTENT, MERCHANT, REPLAY, AGENT, SYNTHETIC), `TransactionStatus`.
+   - Frozen immutable Pydantic v2 models: `IntentContract`, `ItemSpec`, `AllowedSubstitution`, `EvidenceBundle`, `IntegrityResult`, `RuleResult`, `RecoveryPlan`, `EvidenceRecord`.
+2. **Deterministic Integrity Engine (`backend/app/domain/rules/` & `backend/app/services/evaluation.py`)**:
+   - **Economic Rule (`check_economic`)**: Verifies authorized amount bounds (e.g. ₹50,000 threshold: 49999 PASS, 50000 PASS, 50001 DRIFT), currency match, missing/malformed amounts (`UNKNOWN`), and authority-tier conflict resolution.
+   - **Semantic Rule (`check_semantic`)**: Checks SKU matching, quantity bounds, explicitly authorized substitutions (`AllowedSubstitution`), and missing attribute (`UNKNOWN`).
+   - **Temporal Rule (`check_temporal`)**: Validates contract validity window (`not_before`/`expires_at`), detects duplicate event IDs, multi-capture double execution risk, and timeout with late success conflict.
+   - **Overall Evaluation (`evaluate_integrity`)**: Pure deterministic evaluation with explicit `reference_time`. Priority semantics: DRIFT dominates (confirmed violation), followed by UNKNOWN (missing or ambiguous evidence cannot PASS), and PASS only when all sub-checks pass cleanly.
+
+---
+
+## Repository State (End of T04)
+- **Current Phase**: Deterministic Integrity Engine (`T04`)
 - **Active Branch**: `main`
-- **Governance Established**: `AGENTS.md`, `.agents/rules/tarkaraksha.md`, `SECURITY.md`, `README.md`, `Makefile`, `pyproject.toml`, `.gitignore`, `.env.example`.
-- **Planned Modules**: `backend/`, `frontend/`, `testing/`, `scripts/` to be introduced starting in `T02`.
+- **Core Modules**:
+  - `backend/app/domain/`: Immutable contracts, financial math, and deterministic rule engines.
+  - `backend/app/services/evaluation.py`: Deterministic integrity orchestration.
+  - `testing/unit/`: Test suites covering environment, domain models, money constraints, and rule engine.
+  - `frontend/`: Next.js 15 App Router scaffold verified and build-ready.
