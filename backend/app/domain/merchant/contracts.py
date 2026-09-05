@@ -52,6 +52,11 @@ class CatalogItem(BaseModel):
             raise ValueError("String identifier cannot be empty or whitespace.")
         return v.strip()
 
+    @property
+    def price(self) -> Money:
+        """Convenience property for base_price."""
+        return self.base_price
+
 
 class InventoryRecord(BaseModel):
     """Inventory tracking record for a specific SKU."""
@@ -245,6 +250,16 @@ class MerchantResponse(BaseModel):
         strict=True,
     )
 
+    @field_validator("inventory_status", mode="before")
+    @classmethod
+    def validate_inventory_status(cls, v: Any) -> InventoryStatus:
+        if isinstance(v, str):
+            try:
+                return InventoryStatus(v)
+            except ValueError:
+                raise ValueError(f"Invalid inventory status: {v}")
+        return v
+
     @field_validator("offer_created_at", "offer_expires_at", mode="before")
     @classmethod
     def validate_timezone(cls, v: Any) -> datetime:
@@ -274,6 +289,15 @@ class MerchantResponse(BaseModel):
             estimated_delivery_days=self.estimated_delivery_days,
             guaranteed_delivery=False,
         )
+
+    @property
+    def total(self) -> Money:
+        """Convenience property for total_amount."""
+        if self.total_amount is not None:
+            return self.total_amount
+        if self.items:
+            return self.items[0].total_price
+        return Money(amount=0, currency="INR")
 
 
 # Alias for semantic clarity across offer integrity workflows

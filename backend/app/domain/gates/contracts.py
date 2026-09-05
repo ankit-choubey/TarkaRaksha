@@ -60,6 +60,11 @@ class GateValidationFinding(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
+    @property
+    def message(self) -> str:
+        """Convenience alias for reason."""
+        return self.reason
+
 
 GateFinding = GateValidationFinding
 

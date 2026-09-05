@@ -42,11 +42,15 @@ class IntegrationBoundaryStage(str, Enum):
     OFFER_RECEIVED = "OFFER_RECEIVED"
     TIX_COMMITTED = "TIX_COMMITTED"
     EVALUATED = "EVALUATED"
+    DRIFT_REPLANNING = "DRIFT_REPLANNING"
+    UNKNOWN_RESOLVING = "UNKNOWN_RESOLVING"
     PAYMENT_BOUND = "PAYMENT_BOUND"
     RECOVERED = "RECOVERED"
     RESOLVED = "RESOLVED"
     REPLAYED = "REPLAYED"
     COMPLETED = "COMPLETED"
+    ABSTAINED = "ABSTAINED"
+    BLOCKED = "BLOCKED"
 
 
 class IntegrationTransactionContext(BaseModel):
@@ -154,6 +158,9 @@ class IntegrationExecutionRecord(BaseModel):
     order: Optional[ProviderOrder] = None
     payment: Optional[ProviderPayment] = None
     mrdp: Optional[MRDP] = None
+    security_guard_result: Optional[Any] = None
+    negotiation_session: Optional[Any] = None
+    resolution_result: Optional[Any] = None
     recovery_result: Optional[Any] = None
     replay_result: Optional[Any] = None
     history: List[str] = Field(default_factory=list)
