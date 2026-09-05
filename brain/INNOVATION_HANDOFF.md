@@ -60,6 +60,11 @@
 - [x] **I7 — Bounded Agentic Negotiation / Replanning** (Verified Green, 487/487 tests passing)
 - [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Verified Green, 464/464 tests passing)
 - [x] **I21 — Evidence-Aware AI Explanation** (Verified Green, 516/516 tests passing)
+- [x] **I10 — Operational Deployment Modes** (Verified Green, 545/545 tests passing)
+- [x] **I19 — Merchant-Side Capability Graph** (Verified Green, 605/605 tests passing)
+- [x] **I11 — Deterministic Scenario Lab** (Verified Green, 639/639 tests passing)
+- [x] **I12 — Ground-Truth Certification** (Verified Green, 668/668 tests passing)
+
 
 ---
 
@@ -441,3 +446,43 @@
   - Authority Hierarchy: Advisory prompt injection and merchant claims cannot force PASS or escalate authority.
   - Zero Side Effects: Zero live network requests, zero live Razorpay orders, and zero live AI calls.
   - Determinism & Isolation: Bit-for-bit identical digests and results across repeated runs and arbitrary execution order.
+
+---
+
+## I12 Verification Record
+- **Implementation Scope**: Ground-Truth Certification Harness for deterministic verification of transaction and scenario outcomes against canonical expectations without becoming a transaction decision engine.
+  - Typed Ground Truth Contracts: `GroundTruthDefinition` with dimensional expectations (`expected_integrity_verdict`, `expected_security_state`, `expected_terminal_state`, `expected_mrdp_presence`, `expected_abstention`, `expected_violation_codes`, `expected_authority_level`) and deterministic SHA-256 digest computation (`compute_ground_truth_hash`).
+  - Canonical Scenario Coverage: Explicit, immutable ground truth definitions for all 12 canonical I11 scenarios (`HAPPY_PATH`, `PRICE_DRIFT`, `WRONG_SKU`, `INVENTORY_DISAPPEARS`, `DELIVERY_DRIFT`, `DUPLICATE_PAYMENT`, `DELAYED_WEBHOOK`, `REPLAY_ATTACK`, `PROMPT_INJECTION_IN_EVIDENCE`, `MERCHANT_AGENT_COMPROMISED`, `BUYER_AGENT_REUSE`, `UNKNOWN_PROVIDER_STATE`).
+  - Deterministic Certification Comparator: `CertificationComparator` evaluating 7 dimensions (`integrity_match`, `security_match`, `state_match`, `mrdp_match`, `abstention_match`, `violation_match`, `authority_match`) against authoritative `ScenarioResult` obtained from executing the actual pipeline.
+  - Strict Three-Way Status Semantics: `CERTIFIED` (full alignment), `FAILED` (pipeline produced valid execution but differed from ground truth), and `INVALID` (cross-scenario reuse, snapshot hash mismatch, corrupted snapshot). `INVALID` is never silently downgraded to `FAILED`.
+  - Machine-Readable Certification Matrix: `CertificationMatrixRow` and `CertificationSuiteResult` providing typed audit representation of all certification dimensions and hashes.
+  - Tamper-Evident Digest Chain: Binds `ground_truth_hash`, `input_snapshot_hash`, `actual_result_hash`, and computed canonical `certification_hash`.
+  - Replay and Capability Context: Scenarios preserving replay semantics (e.g. `REPLAY_ATTACK`) and I19 capability assertions (`INVENTORY_DISAPPEARS`, `MERCHANT_AGENT_COMPROMISED`) verified without mutating historical state or inventing separate representations.
+  - Control Plane API Endpoints: Exposed `GET /api/v1/certifications`, `POST /api/v1/certifications/{scenario_id}/run`, and `POST /api/v1/certifications/run-all`.
+- **Files Created**:
+  - `backend/app/domain/certification/contracts.py`
+  - `backend/app/domain/certification/ground_truth.py`
+  - `backend/app/domain/certification/comparator.py`
+  - `backend/app/domain/certification/__init__.py`
+  - `backend/app/services/certification/service.py`
+  - `backend/app/services/certification/__init__.py`
+  - `testing/unit/test_certification_contracts.py`
+  - `testing/unit/test_certification_comparator.py`
+  - `testing/unit/test_certification_service.py`
+  - `testing/unit/test_certification_adversarial.py`
+  - `testing/unit/test_certification_determinism.py`
+- **Files Modified**:
+  - `backend/app/services/__init__.py`
+  - `backend/app/main.py`
+  - `brain/STATUS.md`
+  - `brain/HANDOFF.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 29 focused tests across 5 test suites (4 contract tests, 5 comparator tests, 7 service/runner & API tests, 8 adversarial security tests, 5 determinism, order invariance & replay tests).
+- **Regression Count**: 668 passed, 0 failed in 10.10s (639 baseline + 29 I12 tests).
+- **Invariants Preserved**:
+  - `GROUND TRUTH ≠ ACTUAL RESULT ≠ CERTIFICATION RESULT`: Certification observes and compares; it never decides transaction outcomes.
+  - Zero Authority / Non-Intervention: Certification cannot authorize funds, mutate payment status, override DRIFT, convert UNKNOWN into PASS, or bypass the kill switch.
+  - Strict INVALID Semantics: Cross-scenario reuse and snapshot hash corruption immediately yield INVALID.
+  - AI & Network Independence: Deterministic execution with zero network calls, zero Razorpay API calls, and zero LLM calls.
+  - Determinism & Order Invariance: Bit-for-bit identical hashes across forward (01->12), reversed (12->01), and shuffled execution orders.
+

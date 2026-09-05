@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I11 — Deterministic Scenario Lab
+I12 — Ground-Truth Certification
 
 ## Task Status
-COMPLETE (C_I11 PASS)
+COMPLETE (C_I12 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -40,14 +40,16 @@ COMPLETE (C_I11 PASS)
 - [x] **I10 — Operational Deployment Modes** (Completed 2026-09-05)
 - [x] **I19 — Merchant-Side Capability Graph** (Completed 2026-09-05)
 - [x] **I11 — Deterministic Scenario Lab** (Completed 2026-09-06)
+- [x] **I12 — Ground-Truth Certification** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T00:26:00+05:30 — I11 checkpoint
+2026-09-06T00:40:00+05:30 — I12 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (639 passed in 8.43s across all unit, integration, and adversarial suites: 605 baseline + 34 I11 tests)
+- `pytest` (668 passed in 10.10s across all unit, integration, and adversarial suites: 639 baseline + 29 I12 tests)
+
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -107,9 +109,16 @@ COMPLETE (C_I11 PASS)
 - **Expected vs Actual Separation Invariant**: Expected verdict is a test assertion. Actual verdict is computed by the authoritative engine. If expected != actual, the Scenario Lab flags `ScenarioStatus.FAIL` and never modifies engine outputs.
 - **Zero Live Financial Side Effects**: Scenario Lab executes strictly on offline, synthetic/reference fixtures with zero live network calls, zero live Razorpay orders, and zero live AI dependencies.
 - **Canonical 12 Scenarios Completeness**: All 12 canonical scenarios (`HAPPY_PATH`, `PRICE_DRIFT`, `WRONG_SKU`, `INVENTORY_DISAPPEARS`, `DELIVERY_DRIFT`, `DUPLICATE_PAYMENT`, `DELAYED_WEBHOOK`, `REPLAY_ATTACK`, `PROMPT_INJECTION_IN_EVIDENCE`, `MERCHANT_AGENT_COMPROMISED`, `BUYER_AGENT_REUSE`, `UNKNOWN_PROVIDER_STATE`) are implemented, verified, and pass deterministically.
+- **GROUND TRUTH ≠ ACTUAL RESULT ≠ CERTIFICATION RESULT Invariant**: Ground truth defines expectations, actual results are generated exclusively by executing the authoritative pipeline, and certification evaluates alignment deterministically. Certification NEVER replaces or shortcuts the transaction engine.
+- **Certification Non-Authority & Non-Intervention Invariant**: Certification is an audit/verification layer and possesses zero authority to approve payments, mutate transaction state machine states, override DRIFT, convert UNKNOWN into PASS, or bypass safety controls (I9 kill switch).
+- **CERTIFIED / FAILED / INVALID Strict Semantics Invariant**: Outcomes strictly adhere to three-way classification: `CERTIFIED` (pipeline aligns with ground truth), `FAILED` (pipeline produced valid execution but differed from ground truth), or `INVALID` (compromised snapshot hash, cross-scenario reuse, malformed input). `INVALID` is never silently downgraded to `FAILED`.
+- **Cryptographic Tamper-Evidence Chain Invariant**: Every certification record binds `ground_truth_hash`, `input_snapshot_hash`, `actual_result_hash`, and computed `certification_hash` using canonical JSON serialization and SHA-256 digests. Tampering with any field changes the resulting digest.
+- **Deterministic Replay & Order Invariance Invariant**: Forward execution (01 -> 12), reversed execution (12 -> 01), and shuffled orders produce 100% bit-identical digests. Replay scenarios preserve replay semantics and do not mutate historical state.
+- **AI & Network Independence Invariant**: Certification execution requires zero external network calls, zero live Razorpay APIs, and zero LLM calls.
 
 ## Next Task
-Await user instruction for next innovation extension milestone.
+I13 — Integrity Trace & Fault Localization (Await user instruction)
+
 
 
 

@@ -1,11 +1,12 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `I11 — Deterministic Scenario Lab`
-- **Current Checkpoint**: `C_I11 — PASS`
-- **Next Task**: Await user instruction for next approved innovation milestone
+- **Current Task Completed**: `I12 — Ground-Truth Certification`
+- **Current Checkpoint**: `C_I12 — PASS`
+- **Next Task**: `I13 — Integrity Trace & Fault Localization` (Await user instruction)
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-06T00:27:00+05:30
+- **Handoff Timestamp**: 2026-09-06T00:40:00+05:30
+
 
 ---
 
