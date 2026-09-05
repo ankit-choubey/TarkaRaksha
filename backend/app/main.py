@@ -112,12 +112,32 @@ def get_certification_service() -> GroundTruthCertificationService:
     return _global_certification_service
 
 
+from backend.app.domain.integration import (
+    IntegrationBoundaryStage,
+    IntegrationTransactionContext,
+    IntegrationEvaluationResponse,
+    IntegrationExecutionRecord,
+)
+from backend.app.services.integration import (
+    ContextBindingMismatchError,
+    IntegrationBoundaryError,
+    IntegrationService,
+)
+
 _global_hero_orchestrator = HeroTransactionOrchestrator()
 
 
 def get_hero_orchestrator() -> HeroTransactionOrchestrator:
     """Dependency provider for HeroTransactionOrchestrator (I22). Can be overridden in tests."""
     return _global_hero_orchestrator
+
+
+_global_integration_service = IntegrationService()
+
+
+def get_integration_service() -> IntegrationService:
+    """Dependency provider for IntegrationService (E1). Can be overridden in tests."""
+    return _global_integration_service
 
 
 
@@ -175,6 +195,22 @@ async def intent_parsing_error_handler(request: Request, exc: IntentParsingError
 async def replay_error_handler(request: Request, exc: ReplayError):
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": str(exc), "error_type": type(exc).__name__},
+    )
+
+
+@app.exception_handler(ContextBindingMismatchError)
+async def context_binding_mismatch_handler(request: Request, exc: ContextBindingMismatchError):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": str(exc), "error_type": "CONTEXT_BINDING_MISMATCH"},
+    )
+
+
+@app.exception_handler(IntegrationBoundaryError)
+async def integration_boundary_error_handler(request: Request, exc: IntegrationBoundaryError):
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
         content={"detail": str(exc), "error_type": type(exc).__name__},
     )
 
@@ -604,6 +640,46 @@ async def get_hero_transaction_endpoint(
     record = orchestrator.get_hero_record(hero_transaction_id)
     if not record:
         raise HTTPException(status_code=404, detail=f"Hero transaction '{hero_transaction_id}' not found")
+    return record
+
+
+class CreateIntegrationContextRequest(BaseModel):
+    """Request model to create an E1 integration context."""
+    transaction_id: str
+    intent_id: str
+    agent_id: str
+    merchant_id: str
+    attempt_id: str = "att_1"
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    reference_time: Optional[datetime] = None
+
+
+@app.post("/api/v1/integration/context", response_model=IntegrationExecutionRecord)
+def create_integration_context_endpoint(
+    request: CreateIntegrationContextRequest,
+    service: IntegrationService = Depends(get_integration_service),
+) -> IntegrationExecutionRecord:
+    """Initializes a typed integration transaction context preserving explicit 4-tuple bindings (E1)."""
+    return service.create_context(
+        transaction_id=request.transaction_id,
+        intent_id=request.intent_id,
+        agent_id=request.agent_id,
+        merchant_id=request.merchant_id,
+        attempt_id=request.attempt_id,
+        metadata=request.metadata,
+        reference_time=request.reference_time,
+    )
+
+
+@app.get("/api/v1/integration/{transaction_id}", response_model=IntegrationExecutionRecord)
+def get_integration_record_endpoint(
+    transaction_id: str,
+    service: IntegrationService = Depends(get_integration_service),
+) -> IntegrationExecutionRecord:
+    """Retrieves the current execution record for an integration transaction context (E1)."""
+    record = service.get_record(transaction_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Integration transaction '{transaction_id}' not found")
     return record
 
 
