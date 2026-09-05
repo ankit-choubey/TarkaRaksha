@@ -74,17 +74,17 @@ def assert_financial_action_permitted(
 
     # If amount is provided, assert it does not exceed original authorized intent
     if amount is not None and intent is not None and action == ActionType.CAPTURE:
-        if amount.currency != intent.max_authorized_amount.currency:
+        if amount.currency != intent.max_total.currency:
             raise SafetyInvariantViolationError(
                 state=state,
                 action=action,
-                reason=f"Currency mismatch: action currency {amount.currency} != intent currency {intent.max_authorized_amount.currency}",
+                reason=f"Currency mismatch: action currency {amount.currency} != intent currency {intent.max_total.currency}",
             )
-        if amount.amount_in_subunits > intent.max_authorized_amount.amount_in_subunits:
+        if amount.amount > intent.max_total.amount:
             raise SafetyInvariantViolationError(
                 state=state,
                 action=action,
-                reason=f"Action amount {amount.amount_in_subunits} exceeds authorized intent maximum {intent.max_authorized_amount.amount_in_subunits}",
+                reason=f"Action amount {amount.amount} exceeds authorized intent maximum {intent.max_total.amount}",
             )
 
 
@@ -121,7 +121,7 @@ def assert_intent_immutability(
             action=None,
             reason="Intent ID mismatch; intent immutability violated.",
         )
-    if original_intent.max_authorized_amount != current_intent.max_authorized_amount:
+    if original_intent.max_total != current_intent.max_total:
         raise SafetyInvariantViolationError(
             state=TransactionState.RECOVERING,
             action=None,

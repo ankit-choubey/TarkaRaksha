@@ -45,7 +45,7 @@ class TransactionStateMachine:
         self.history: List[StateTransitionRecord] = []
         
         # Reference timestamps
-        ts = created_at or intent.created_at
+        ts = created_at or intent.issued_at
         if ts.tzinfo is None:
             raise ValueError("created_at timestamp must be timezone-aware (e.g. UTC)")
         self.created_at = ts
@@ -144,8 +144,8 @@ class TransactionStateMachine:
             triggered_by="DETERMINISTIC_ENGINE",
             is_verified=True,
             context={
-                "drift_domains": [d.value for d in integrity_result.drift_domains],
-                "primary_reason": integrity_result.primary_reason,
+                "violations": integrity_result.violations,
+                "explanation": integrity_result.explanation,
                 "evidence_ids": integrity_result.evidence_ids,
             },
             integrity_status=integrity_result.status,
