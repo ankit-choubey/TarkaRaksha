@@ -12,6 +12,10 @@ from backend.app.domain.certification.ground_truth import (
     get_ground_truth,
     list_ground_truths,
 )
+from backend.app.domain.certification.comparator import (
+    CertificationComparator,
+    compute_actual_result_hash,
+)
 
 __all__ = [
     "CertificationResult",
@@ -21,4 +25,6 @@ __all__ = [
     "CANONICAL_GROUND_TRUTH",
     "get_ground_truth",
     "list_ground_truths",
+    "CertificationComparator",
+    "compute_actual_result_hash",
 ]
