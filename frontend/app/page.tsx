@@ -69,6 +69,7 @@ export default function Home() {
   const [isInitializing, setIsInitializing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Active Transaction Context
@@ -173,6 +174,35 @@ export default function Home() {
       setErrorMessage(err.message);
     } finally {
       setIsRecovering(false);
+    }
+  };
+
+  // Step 4: Trigger UNKNOWN Resolution Subsystem (T12)
+  const handleResolveTransaction = async () => {
+    if (!verificationResult) return;
+    setIsResolving(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/transaction/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transaction_id: verificationResult.transaction_id,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || `Resolution failed with status ${res.status}`);
+      }
+
+      const data: CompleteResponse = await res.json();
+      setVerificationResult(data);
+    } catch (err: any) {
+      setErrorMessage(err.message);
+    } finally {
+      setIsResolving(false);
     }
   };
 
@@ -475,7 +505,7 @@ export default function Home() {
                   )}
 
                   {/* T11 Autonomous Recovery Trigger */}
-                  {verificationResult.integrity_status !== "PASS" && verificationResult.state !== "ABSTAIN" && (
+                  {verificationResult.integrity_status === "DRIFT" && verificationResult.state !== "ABSTAIN" && (
                     <div className="p-3.5 bg-indigo-950/40 border border-indigo-500/50 rounded-xl space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-indigo-300 font-mono">
@@ -495,6 +525,31 @@ export default function Home() {
                         className="w-full py-2 px-3 bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow transition-all font-mono active:scale-[0.98]"
                       >
                         {isRecovering ? "Executing & Revalidating..." : "Execute Bounded Recovery Action"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* T12 UNKNOWN Resolution Trigger */}
+                  {verificationResult.integrity_status === "UNKNOWN" && verificationResult.state !== "ABSTAIN" && (
+                    <div className="p-3.5 bg-amber-950/40 border border-amber-500/50 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-amber-300 font-mono">
+                          T12 UNKNOWN Resolution
+                        </span>
+                        <span className="text-[10px] text-amber-400 font-mono">
+                          Safe &bull; Read-Only Observation
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Acquires authoritative provider ground truth without moving funds. Re-evaluates integrity deterministically.
+                      </p>
+                      <button
+                        id="btn-trigger-resolution"
+                        onClick={handleResolveTransaction}
+                        disabled={isResolving}
+                        className="w-full py-2 px-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow transition-all font-mono active:scale-[0.98]"
+                      >
+                        {isResolving ? "Observing Provider Truth..." : "Execute Safe UNKNOWN Resolution"}
                       </button>
                     </div>
                   )}

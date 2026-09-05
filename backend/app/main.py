@@ -20,6 +20,7 @@ from backend.app.domain.models import (
     CompleteTransactionRequest,
     CompleteTransactionResponse,
     RecoverTransactionRequest,
+    ResolveTransactionRequest,
     IntentContract,
     TransactionState,
 )
@@ -27,6 +28,11 @@ from backend.app.services.recovery import (
     InvalidRecoveryStateError,
     RecoveryExhaustedError,
     UnsafeActionRequestError,
+)
+from backend.app.services.resolution import (
+    InvalidResolutionStateError,
+    ResolutionConflictError,
+    ResolutionExhaustedError,
 )
 from backend.app.services import TransactionService
 from backend.app.services.ai import parse_intent, IntentParsingError
@@ -210,7 +216,32 @@ def recover_transaction_slice(
         raise HTTPException(status_code=502, detail=f"Gateway error during recovery: {exc}")
 
 
+@app.post("/api/v1/transaction/resolve", response_model=CompleteTransactionResponse)
+def resolve_transaction_slice(
+    request: ResolveTransactionRequest,
+    service: TransactionService = Depends(get_transaction_service),
+    provider: PaymentProvider = Depends(get_payment_provider),
+):
+    """
+    Executes the T12 UNKNOWN Resolution subsystem:
+    Safe, bounded, non-side-effecting observation to establish ground truth
+    for an ambiguous UNKNOWN transaction and deterministically re-evaluates integrity.
+    """
+    try:
+        response = service.resolve_transaction(request=request, provider_override=provider)
+        return response
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except InvalidResolutionStateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (ResolutionExhaustedError, ResolutionConflictError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except PaymentProviderError as exc:
+        raise HTTPException(status_code=502, detail=f"Gateway error during resolution: {exc}")
+
+
 @app.get("/api/v1/transaction/{transaction_id}")
+
 def get_transaction_status(
     transaction_id: str,
     service: TransactionService = Depends(get_transaction_service),
