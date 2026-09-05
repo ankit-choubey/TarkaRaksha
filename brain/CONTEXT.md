@@ -25,11 +25,11 @@
 
 ---
 
-## Implemented Domain & Integrity Foundations (T01–T08)
+## Implemented Domain & Integrity Foundations (T01–T09)
 1. **Domain Contracts (`backend/app/domain/models/`)**:
    - `Money`: Immutable integer minor unit representation (paise, cents) with ISO 4217 validation, rejecting float/bool.
    - Enums: `IntegrityStatus` (PASS, DRIFT, UNKNOWN), `DriftDomain` (ECONOMIC, SEMANTIC, TEMPORAL), `EvidenceSource`, `EvidenceAuthority`, `TransactionStatus`, `MRDPErrorCode`, `ActionType`.
-   - Frozen immutable Pydantic v2 models: `IntentContract`, `ItemSpec`, `AllowedSubstitution`, `Evidence`, `EvidenceBundle`, `IntegrityResult`, `RuleResult`, `RecoveryProposal`, `MRDP`.
+   - Frozen immutable Pydantic v2 models: `IntentContract`, `ItemSpec`, `AllowedSubstitution`, `Evidence`, `EvidenceBundle`, `IntegrityResult`, `RuleResult`, `RecoveryProposal`, `MRDP`, `ProviderOrder`, `ProviderPayment`, `ProviderWebhookEvent`.
 2. **Deterministic Integrity Engine (`backend/app/domain/rules/` & `backend/app/services/evaluation.py`)**:
    - **Economic Rule (`check_economic`)**: Verifies authorized amount bounds (e.g. ₹50,000 threshold: 49999 PASS, 50000 PASS, 50001 DRIFT), currency match, missing/malformed amounts (`UNKNOWN`), and authority-tier conflict resolution.
    - **Semantic Rule (`check_semantic`)**: Checks SKU matching, quantity bounds, explicitly authorized substitutions (`AllowedSubstitution`), and missing attribute (`UNKNOWN`).
@@ -56,7 +56,7 @@
    - **Canonicalization & SHA-256 Digest**: Stable JSON canonicalization with sorted keys, compact separators, normalized Money integers, and ISO-8601 datetimes. Hashed via SHA-256 (`proof_digest`). Proves tamper-evident integrity of the proof representation.
    - **Tamper Verification**: `verify_mrdp_integrity()` verifies whether any serialized or model field was tampered with post-creation.
 
-6. **AI Integration Layer (T08) (`backend/app/services/ai/`, `backend/app/core/config.py`)**:
+6. **AI Integration Layer (`backend/app/services/ai/`, `backend/app/core/config.py`)**:
    - **Two Logical AI Roles**:
      1. `Intent Parser`: Extracts structured constraints from user natural language into intermediate `AIIntentExtraction`, validated into authoritative immutable `IntentContract`.
      2. `Advisory Recovery Agent`: Analyzes MRDP and IntentContract to propose advisory `RecoveryProposal`.
@@ -65,14 +65,21 @@
    - **Deterministic Safety Validator**: `validate_recovery_proposal_safety()` enforces that AI suggestions cannot propose CAPTURE, exceed budget, exceed MRDP discrepancy amounts, or introduce bypass instructions.
    - **Bounded Retries & Safe Fallback**: Bounded retries on malformed JSON or transient provider errors, falling back safely to `IntentParsingError` or safe abstain without crashing.
 
+7. **Payment Gateway Adapter Layer (T09) (`backend/app/services/payment/`)**:
+   - **Narrow Provider Interface (`PaymentProvider`)**: Decouples domain services from Razorpay SDK specifics (`create_order`, `fetch_payment`, `fetch_order_payments`, `verify_payment_signature`, `verify_webhook_signature`, `parse_webhook_payload`).
+   - **Provider-Neutral Models**: `ProviderOrder`, `ProviderPayment`, and `ProviderWebhookEvent` ensure amounts remain strictly in integer minor units (`Money`).
+   - **Cryptographic Signatures**: Constant-time HMAC-SHA256 signature verification for checkout completion and webhook deliveries. Invalid signatures reject unverified data before normalization.
+   - **Canonical Evidence Normalization**: Translates provider observations into `Evidence` (`EvidenceSource.RAZORPAY`, `EvidenceAuthority.AUTHORITATIVE`) and `CanonicalEvent`. Integrates with T06 deduplication for replayed webhooks.
+   - **Zero Business Logic in Adapter**: RazorpayAdapter never evaluates budget rules or declares PASS/DRIFT/UNKNOWN.
+
 ---
 
-## Repository State (End of T08)
-- **Current Phase**: AI Integration Layer (`T08`)
+## Repository State (End of T09)
+- **Current Phase**: Payment Gateway Adapter Layer (`T09`)
 - **Active Branch**: `main`
 - **Core Modules**:
   - `backend/app/core/`: Runtime settings and environment configuration.
-  - `backend/app/domain/models/`: Immutable contracts, financial math, enums, evidence models, MRDP model, recovery model, bundle.
+  - `backend/app/domain/models/`: Immutable contracts, financial math, enums, evidence models, MRDP model, recovery model, payment models, bundle.
   - `backend/app/domain/rules/`: Deterministic economic, semantic, and temporal rule engines.
   - `backend/app/domain/states/`: Lifecycle state machine, transitions, invariants, and audit history.
   - `backend/app/domain/evidence/`: Provider-neutral evidence normalizers, conflict resolution, deduplication.
@@ -80,5 +87,6 @@
   - `backend/app/services/mrdp.py`: Pure deterministic MRDP builder and tamper-evident verification.
   - `backend/app/services/evaluation.py`: Deterministic integrity orchestration.
   - `backend/app/services/ai/`: AIProvider interface, GroqAIProvider, FakeAIProvider, Intent Parser, and Advisory Recovery Agent.
-  - `testing/unit/`: Comprehensive test suites covering environment, models, money, engine, state machine, evidence normalization, MRDP, and AI integration (124 passing tests).
+  - `backend/app/services/payment/`: PaymentProvider interface, RazorpayAdapter, FakePaymentProvider, signature verification, and normalization.
+  - `testing/unit/`: Comprehensive test suites covering environment, models, money, engine, state machine, evidence normalization, MRDP, AI integration, and payment adapter (142 passing tests, 1 skipped).
   - `frontend/`: Next.js 15 App Router scaffold verified and build-ready.
