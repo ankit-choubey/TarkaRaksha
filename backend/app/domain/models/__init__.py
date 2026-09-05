@@ -38,7 +38,7 @@ from backend.app.domain.security import (
     ProtocolVerificationOutcome,
     ProtocolViolationCode,
 )
-from backend.app.domain.governance import (
+from backend.app.domain.governance.contracts import (
     GovernanceVersion,
     DEFAULT_RULES_VERSION,
     DEFAULT_POLICY_VERSION,
