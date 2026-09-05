@@ -667,6 +667,13 @@ def test_fastapi_resolve_endpoint(sample_intent, sample_order, base_now):
     )
     service._sessions[session.transaction_id] = session
 
+    # Wrap resolve_transaction on the test service instance to ensure deterministic evaluation time
+    original_resolve = service.resolve_transaction
+    eval_ref_time = base_now + timedelta(seconds=10)
+    def deterministic_resolve(request, provider_override=None, now=None, **kwargs):
+        return original_resolve(request=request, provider_override=provider_override, now=now or eval_ref_time, **kwargs)
+    service.resolve_transaction = deterministic_resolve
+
     app.dependency_overrides[get_transaction_service] = lambda: service
     app.dependency_overrides[get_payment_provider] = lambda: mock_provider
 
@@ -680,3 +687,4 @@ def test_fastapi_resolve_endpoint(sample_intent, sample_order, base_now):
         assert data["state"] == "PASS"
     finally:
         app.dependency_overrides.clear()
+

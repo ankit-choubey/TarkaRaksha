@@ -1,11 +1,11 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `T13 — Replay Engine`
-- **Current Checkpoint**: `C13 — PASS`
-- **Next Task**: `T14 — Control Room UI`
+- **Current Task Completed**: `I0 — Baseline Freeze`
+- **Current Checkpoint**: `C_I0 — PASS`
+- **Next Task**: `I1 — Evidence Extensions`
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-05T17:08:00+05:30
+- **Handoff Timestamp**: 2026-09-05T19:15:00+05:30
 
 ---
 
