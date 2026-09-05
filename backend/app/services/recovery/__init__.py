@@ -16,9 +16,11 @@ from .contracts import (
     UnsafeActionRequestError,
 )
 from .policy import classify_recovery
+from .validator import PERMISSIBLE_RECOVERY_ACTIONS, validate_action_request
 
 __all__ = [
     "MAX_RECOVERY_ATTEMPTS",
+    "PERMISSIBLE_RECOVERY_ACTIONS",
     "InvalidRecoveryStateError",
     "NonRecoverableDriftError",
     "RecoverabilityStatus",
@@ -29,4 +31,5 @@ __all__ = [
     "RecoveryIdempotencyError",
     "UnsafeActionRequestError",
     "classify_recovery",
+    "validate_action_request",
 ]
