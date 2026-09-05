@@ -621,7 +621,7 @@ class HeroTransactionOrchestrator:
         is_real_razorpay = (
             isinstance(provider, RazorpayAdapter)
             and getattr(provider, "_client", None) is not None
-            and not settings.RAZORPAY_KEY_ID.startswith("rzp_test_placeholder")
+            and "placeholder" not in settings.RAZORPAY_KEY_ID.lower()
         )
         execution_mode = "REAL_RAZORPAY_TEST_MODE" if is_real_razorpay else "SYNTHETIC_OFFLINE_HERO_RUN"
 

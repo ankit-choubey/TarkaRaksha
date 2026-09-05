@@ -67,7 +67,7 @@
 - [x] **I13 — Integrity Trace / Fault Localization** (Verified Green, 693/693 tests passing)
 - [x] **I14 — Integrity Checkpoints** (Verified Green, 720/720 tests passing)
 - [x] **I15 — Integrity SLA Metrics** (Verified Green, 747/747 tests passing)
-
+- [x] **I22 — Complete Hero Transaction** (Verified Green, 764/764 tests passing)
 
 ---
 
@@ -608,5 +608,50 @@
   - Strict Timestamp Integrity: No fabricated `now()` latency; reversed timestamps rejected as `INVALID`.
   - Secret Protection: Zero credentials or private tokens exposed in SLA metrics reports.
 
+---
 
-
+## I22 Verification Record
+- **Implementation Scope**: Complete Hero Transaction Integration Layer.
+  - End-to-End Orchestration & Composition: Proves the complete thesis (`Detect → Prove → Repair → Revalidate → Execute → Verify`) by composing existing subsystems without introducing duplicate engines.
+  - Realistic Agentic Commerce Flow: Concrete SSD purchase fixture ("Buy me a 1TB external SSD under ₹8,000, preferably with fast delivery", `SKU-SSD-1TB`, 800,000 paise max).
+  - Clean Baseline & Deliberate Drift: Initial offer passes deterministic verification (₹7,500 total). Deliberate mutation in checkout induces price surge to ₹8,250, deterministically detected by T04 engine as `EconomicDrift`.
+  - Machine-Readable Drift Proof: Cryptographically built via T07 `build_mrdp` with `ECONOMIC_AMOUNT_EXCEEDED` and bound to `HeroDriftNotice` transmitted via TIX.
+  - Bounded Replanning & Remediation: Buyer Agent replans within immutable authorization ceiling (cannot expand budget); Merchant Agent generates compliant alternative (₹7,650 total).
+  - Deterministic Revalidation: T04 engine revalidates fresh evidence to PASS while immutably preserving the original DRIFT and MRDP in history.
+  - Gating & Binding: I9 Kill Switch verified (`RUNNING`); I8 7-tuple binding strictly enforced.
+  - Authoritative Payment Execution: Authoritative payment evidence normalized; strictly separates `REAL_RAZORPAY_TEST_MODE` from `SYNTHETIC_OFFLINE_HERO_RUN` without fake gateway states.
+  - Full Verification & Audit Composition:
+    - I13 Integrity Trace: 8 lifecycle stages evaluated with root cause isolation.
+    - I14 Checkpoints: 8-checkpoint timeline with SHA-256 fingerprint chain.
+    - I15 SLA Metrics: Deterministic calculation of latency and coverage ratios.
+    - I19 Capability Graph: Merchant capability snapshot digest bound to record.
+    - I21 Explanation: Evidence-aware explanation anchored to factual evidence references.
+    - T13 Replay: Side-effect free CPU replay reconstructing the transaction with `ReplayVerdict.MATCH`.
+    - I12 Certification: Evaluated against canonical scenario alignment.
+- **Files Created**:
+  - `backend/app/domain/hero/contracts.py`
+  - `backend/app/domain/hero/__init__.py`
+  - `backend/app/services/hero/orchestrator.py`
+  - `backend/app/services/hero/__init__.py`
+  - `testing/unit/test_hero_contracts.py`
+  - `testing/unit/test_hero_orchestration.py`
+  - `testing/unit/test_hero_adversarial.py`
+  - `testing/unit/test_hero_api.py`
+- **Files Modified**:
+  - `backend/app/main.py`
+  - `backend/app/services/hero/orchestrator.py`
+  - `brain/STATUS.md`
+  - `brain/HANDOFF.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 17 focused tests across 4 test suites:
+  - 3 domain contract tests (`test_hero_contracts.py`)
+  - 2 end-to-end journey tests (`test_hero_orchestration.py`)
+  - 9 adversarial & determinism tests (`test_hero_adversarial.py`)
+  - 3 REST API endpoint tests (`test_hero_api.py`)
+- **Regression Count**: 764 passed, 0 failed in 39.78s (747 baseline + 17 I22 tests).
+- **Invariants Preserved**:
+  - Pure Orchestration & Composition: No duplicate business logic or competing integrity engine.
+  - Strict Real vs Synthetic Boundary: `SYNTHETIC_OFFLINE_HERO_RUN` clearly distinguished from `REAL_RAZORPAY_TEST_MODE`.
+  - Zero Secret Leakage: Credentials, tokens, and authorization headers redacted.
+  - Historical Truth Preservation: Original DRIFT, MRDP, and evidence preserved in history.
+  - AI Advisory Boundary: LLM cannot declare PASS or bypass revalidation.
