@@ -14,7 +14,7 @@ from .money import Money
 from .intent import IntentItem, IntentContract
 from .authorization import Authorization
 from .evidence import CanonicalEvent, Evidence, EvidenceBundle
-from .integrity import IntegrityResult, Decision, MRDP
+from .integrity import IntegrityResult, Decision, MRDP, MRDPErrorCode
 from .recovery import RecoveryProposal, ActionRequest
 from .transaction import Transaction
 
@@ -35,6 +35,7 @@ __all__ = [
     "IntegrityResult",
     "Decision",
     "MRDP",
+    "MRDPErrorCode",
     "RecoveryProposal",
     "ActionRequest",
     "Transaction",

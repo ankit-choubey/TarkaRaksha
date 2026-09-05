@@ -91,6 +91,28 @@ class Decision(BaseModel):
         return dt
 
 
+from enum import Enum
+
+
+class MRDPErrorCode(str, Enum):
+    """
+    Stable error code taxonomy for TarkaRaksha's proposed Machine-Readable Drift Proof (MRDP).
+    Maps deterministic verifier outcomes to machine-readable error categories.
+    """
+    ECONOMIC_AMOUNT_EXCEEDED = "ECONOMIC_AMOUNT_EXCEEDED"
+    ECONOMIC_CURRENCY_MISMATCH = "ECONOMIC_CURRENCY_MISMATCH"
+    SEMANTIC_SKU_MISMATCH = "SEMANTIC_SKU_MISMATCH"
+    SEMANTIC_QUANTITY_MISMATCH = "SEMANTIC_QUANTITY_MISMATCH"
+    SEMANTIC_UNAUTHORIZED_SUBSTITUTION = "SEMANTIC_UNAUTHORIZED_SUBSTITUTION"
+    TEMPORAL_CONTRACT_EXPIRED = "TEMPORAL_CONTRACT_EXPIRED"
+    TEMPORAL_DUPLICATE_EVENT = "TEMPORAL_DUPLICATE_EVENT"
+    TEMPORAL_EXCESSIVE_CAPTURES = "TEMPORAL_EXCESSIVE_CAPTURES"
+    TEMPORAL_TIMEOUT_LATE_SUCCESS = "TEMPORAL_TIMEOUT_LATE_SUCCESS"
+    EVIDENCE_CONFLICT_UNRESOLVED = "EVIDENCE_CONFLICT_UNRESOLVED"
+    EVIDENCE_INSUFFICIENT = "EVIDENCE_INSUFFICIENT"
+    GENERAL_DRIFT = "GENERAL_DRIFT"
+
+
 class MRDP(BaseModel):
     """
     TarkaRaksha's proposed Machine-Readable Drift Proof (MRDP).
@@ -112,6 +134,7 @@ class MRDP(BaseModel):
     remediation: Optional[str] = None
     revalidation_required: bool = True
     generated_at: datetime
+    proof_digest: Optional[str] = None
 
     model_config = ConfigDict(
         frozen=True,
@@ -132,3 +155,23 @@ class MRDP(BaseModel):
         if dt.tzinfo is None:
             raise ValueError("generated_at must be timezone-aware (e.g., UTC)")
         return dt
+
+    @property
+    def expected(self) -> Any:
+        """Alias for expected_value."""
+        return self.expected_value
+
+    @property
+    def observed(self) -> Any:
+        """Alias for observed_value."""
+        return self.observed_value
+
+    @property
+    def evidence_refs(self) -> List[str]:
+        """Alias for evidence_references."""
+        return self.evidence_references
+
+    @property
+    def remediation_hint(self) -> Optional[str]:
+        """Alias for remediation."""
+        return self.remediation
