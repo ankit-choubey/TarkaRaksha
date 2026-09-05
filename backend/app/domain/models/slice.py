@@ -124,3 +124,35 @@ class RecoverTransactionRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("transaction_id cannot be empty or whitespace")
         return v.strip()
+
+
+class ResolveTransactionRequest(BaseModel):
+    """
+    Request payload submitted to trigger safe UNKNOWN resolution for an ambiguous transaction (T12).
+    """
+    transaction_id: str
+    strategy: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        strict=True,
+    )
+
+    @field_validator("transaction_id")
+    @classmethod
+    def validate_transaction_id(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("transaction_id cannot be empty or whitespace")
+        return v.strip()
+
+    @field_validator("strategy", "idempotency_key")
+    @classmethod
+    def validate_optional_strings(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Field cannot be empty or whitespace if provided")
+            return v.strip()
+        return None
+

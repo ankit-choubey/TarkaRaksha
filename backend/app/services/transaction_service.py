@@ -54,6 +54,18 @@ from backend.app.services.recovery import (
     revalidate_recovery,
     validate_action_request,
 )
+from backend.app.services.resolution import (
+    MAX_RESOLUTION_ATTEMPTS,
+    InvalidResolutionStateError,
+    ResolutionCategory,
+    ResolutionConflictError,
+    ResolutionExhaustedError,
+    ResolutionResult,
+    ResolutionStrategy,
+    UnknownObserver,
+    diagnose_unknown,
+)
+from backend.app.domain.models.slice import ResolveTransactionRequest
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +92,7 @@ class TransactionSession:
         self.integrity_result: Optional[IntegrityResult] = None
         self.events: List[CanonicalEvent] = []
         self.recovery_attempts: int = 0
+        self.resolution_attempts: int = 0
 
 
 class TransactionService:
@@ -94,10 +107,16 @@ class TransactionService:
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
         self._recovery_executor = RecoveryExecutor()
+        self._unknown_observer = UnknownObserver()
 
     @property
     def recovery_executor(self) -> RecoveryExecutor:
         return self._recovery_executor
+
+    @property
+    def unknown_observer(self) -> UnknownObserver:
+        return self._unknown_observer
+
 
     def get_provider(self, provider_override: Optional[PaymentProvider] = None) -> PaymentProvider:
         if provider_override is not None:
@@ -774,3 +793,158 @@ class TransactionService:
         )
         session.completed_response = response
         return response
+
+    def resolve_transaction(
+        self,
+        request: ResolveTransactionRequest,
+        provider_override: Optional[PaymentProvider] = None,
+        now: Optional[datetime] = None,
+    ) -> CompleteTransactionResponse:
+        """
+        Execute deterministic, bounded UNKNOWN resolution for an ambiguous transaction (T12).
+        Strictly safe and non-side-effecting:
+        - UNKNOWN is never guessed away
+        - Queries provider truth without moving money
+        - State machine lifecycle: UNKNOWN -> RESOLVING -> REVALIDATING -> PASS/DRIFT/UNKNOWN/ABSTAIN
+        - Bounded attempts: MAX_RESOLUTION_ATTEMPTS = 3; attempt 4 transitions to ABSTAIN
+        - DRIFT is NOT financially recovered here; handed back cleanly to T11
+        """
+        eval_time = now or datetime.now(timezone.utc)
+        session = self.get_session(request.transaction_id)
+        if not session:
+            raise KeyError(f"Transaction '{request.transaction_id}' not found")
+
+        curr_state = session.state_machine.current_state
+
+        # Idempotency check: if request has idempotency key and cached resolution exists
+        if request.idempotency_key:
+            cached_res = self._unknown_observer.get_cached_result(request.idempotency_key)
+            if cached_res and session.completed_response:
+                logger.info("Returning cached resolution response for key %s", request.idempotency_key)
+                return session.completed_response
+
+        # 1. State check (§14): Must be UNKNOWN or RESOLVING
+        if curr_state not in (TransactionState.UNKNOWN, TransactionState.RESOLVING):
+            raise InvalidResolutionStateError(
+                f"Cannot resolve transaction in state '{curr_state.value}'. "
+                f"Resolution is only permitted for UNKNOWN transactions."
+            )
+
+        # 2. Check Bounded Resolution Attempts (§9)
+        if session.resolution_attempts >= MAX_RESOLUTION_ATTEMPTS:
+            # Budget exhausted -> deterministic transition to ABSTAIN
+            logger.warning(
+                "Resolution attempts exhausted (%d/%d) for transaction %s; transitioning to ABSTAIN",
+                session.resolution_attempts,
+                MAX_RESOLUTION_ATTEMPTS,
+                session.transaction_id,
+            )
+            step_ts = max(eval_time, session.state_machine.updated_at + timedelta(milliseconds=10))
+            if session.state_machine.current_state != TransactionState.ABSTAIN:
+                if session.state_machine.current_state == TransactionState.UNKNOWN:
+                    session.state_machine.transition_to(
+                        TransactionState.ABSTAIN,
+                        timestamp=step_ts,
+                        reason="Resolution budget exhausted",
+                    )
+                elif session.state_machine.current_state == TransactionState.RESOLVING:
+                    session.state_machine.transition_to(
+                        TransactionState.ABSTAIN,
+                        timestamp=step_ts,
+                        reason="Resolution budget exhausted",
+                    )
+            raise ResolutionExhaustedError(
+                f"Resolution attempt budget exhausted ({session.resolution_attempts}/{MAX_RESOLUTION_ATTEMPTS}). "
+                f"Transaction {session.transaction_id} escalated to ABSTAIN."
+            )
+
+        # 3. Transition: UNKNOWN -> RESOLVING (§14)
+        session.resolution_attempts += 1
+        t_resolving = max(eval_time, session.state_machine.updated_at + timedelta(milliseconds=10))
+        if session.state_machine.current_state == TransactionState.UNKNOWN:
+            session.state_machine.transition_to(
+                TransactionState.RESOLVING,
+                timestamp=t_resolving,
+                reason="Starting safe provider observation to resolve UNKNOWN",
+            )
+
+        provider = self.get_provider(provider_override)
+
+        # 4. Execute Safe Observation via UnknownObserver
+        strategy_enum = None
+        if request.strategy:
+            try:
+                strategy_enum = ResolutionStrategy(request.strategy)
+            except ValueError:
+                pass
+
+        res_result = self._unknown_observer.resolve(
+            transaction_id=session.transaction_id,
+            intent=session.intent,
+            order=session.order,
+            known_payment=session.payment,
+            prior_bundle=session.evidence_bundle,
+            prior_events=session.events,
+            prior_integrity=session.integrity_result,
+            provider=provider,
+            reference_time=t_resolving,
+            strategy_override=strategy_enum,
+            idempotency_key=request.idempotency_key,
+        )
+
+        # 5. Transition: RESOLVING -> REVALIDATING (§14)
+        t_reval = max(res_result.evaluated_at, session.state_machine.updated_at + timedelta(milliseconds=10))
+        session.state_machine.transition_to(
+            TransactionState.REVALIDATING,
+            timestamp=t_reval,
+            reason="Deterministic re-evaluation with acquired resolution evidence",
+        )
+
+        # 6. Apply IntegrityResult to State Machine (T05 contract)
+        t_final = t_reval + timedelta(milliseconds=10)
+        session.state_machine.apply_integrity_result(res_result.integrity_result, timestamp=t_final)
+
+        # 7. Update Session State with Fresh Evidence and Provider Data
+        if res_result.provider_payment:
+            session.payment = res_result.provider_payment
+
+        if res_result.evidence_bundle:
+            session.evidence_bundle = res_result.evidence_bundle
+
+        if res_result.canonical_events:
+            # Deduplicate events by event_id
+            existing_event_ids = {e.event_id for e in session.events}
+            for ev in res_result.canonical_events:
+                if ev.event_id not in existing_event_ids:
+                    session.events.append(ev)
+                    existing_event_ids.add(ev.event_id)
+
+        session.integrity_result = res_result.integrity_result
+
+        # 8. Build MRDP if outcome is DRIFT or UNKNOWN
+        updated_mrdp = res_result.mrdp
+        if updated_mrdp is None and res_result.status in (IntegrityStatus.DRIFT, IntegrityStatus.UNKNOWN):
+            updated_mrdp = build_mrdp(
+                contract=session.intent,
+                integrity_result=res_result.integrity_result,
+                evidence_bundle=session.evidence_bundle,
+                generated_at=t_final,
+            )
+
+        response = CompleteTransactionResponse(
+            transaction_id=session.transaction_id,
+            intent_id=session.intent.intent_id,
+            order_id=session.order.order_id,
+            payment_id=session.payment.payment_id if session.payment else "unresolved",
+            state=session.state_machine.current_state,
+            integrity_status=res_result.status,
+            rule_results=res_result.integrity_result.rule_results,
+            violations=res_result.integrity_result.violations,
+            evidence_ids=res_result.integrity_result.evidence_ids,
+            mrdp=updated_mrdp,
+            verified_at=t_final,
+        )
+        session.completed_response = response
+        session.updated_at = t_final
+        return response
+
