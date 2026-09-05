@@ -39,6 +39,8 @@ from .normalization import (
 
 logger = logging.getLogger(__name__)
 
+_UNSET = object()
+
 
 class RazorpayAdapter(PaymentProvider):
     """
@@ -49,12 +51,12 @@ class RazorpayAdapter(PaymentProvider):
 
     def __init__(
         self,
-        key_id: Optional[str] = None,
-        key_secret: Optional[str] = None,
+        key_id: Any = _UNSET,
+        key_secret: Any = _UNSET,
         timeout_seconds: float = 30.0,
     ):
-        self.key_id = key_id or settings.razorpay_key_id
-        self.key_secret = key_secret or settings.razorpay_key_secret
+        self.key_id = settings.razorpay_key_id if key_id is _UNSET else (key_id or "")
+        self.key_secret = settings.razorpay_key_secret if key_secret is _UNSET else (key_secret or "")
         self.timeout_seconds = timeout_seconds
         self._client = None
 

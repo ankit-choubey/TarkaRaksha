@@ -20,6 +20,7 @@ from backend.app.domain.models import (
     CompleteTransactionRequest,
     CompleteTransactionResponse,
     IntentContract,
+    TransactionState,
 )
 from backend.app.services import TransactionService
 from backend.app.services.ai import parse_intent, IntentParsingError
@@ -211,6 +212,31 @@ def get_transaction_status(
         ],
         "completed_result": session.completed_response.model_dump() if session.completed_response else None,
     }
+
+
+@app.get("/api/v1/transaction/{transaction_id}/mrdp")
+def get_transaction_mrdp(
+    transaction_id: str,
+    service: TransactionService = Depends(get_transaction_service),
+):
+    """
+    Returns the Machine-Readable Drift Proof (MRDP) if DRIFT or UNKNOWN occurred.
+    Returns 404 if transaction is PASS (no drift proof generated).
+    """
+    session = service.get_session(transaction_id)
+    if not session:
+        raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
+
+    if not session.completed_response:
+        raise HTTPException(status_code=400, detail="Transaction has not yet been verified")
+
+    if session.completed_response.state == TransactionState.PASS:
+        raise HTTPException(status_code=404, detail="No MRDP generated for PASS transaction")
+
+    if session.completed_response.mrdp:
+        return session.completed_response.mrdp
+
+    raise HTTPException(status_code=404, detail="No MRDP found for this transaction")
 
 
 @app.post("/api/v1/webhook/razorpay")

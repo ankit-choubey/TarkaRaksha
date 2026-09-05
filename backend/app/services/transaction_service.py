@@ -11,7 +11,11 @@ from typing import Any, Dict, List, Optional
 
 from backend.app.core.config import settings
 from backend.app.domain.models import (
+    CanonicalEvent,
+    Evidence,
+    EvidenceAuthority,
     EvidenceBundle,
+    EvidenceSource,
     IntegrityResult,
     IntegrityStatus,
     IntentContract,
@@ -58,6 +62,8 @@ class TransactionSession:
         self.created_at = created_at
         self.updated_at = created_at
         self.completed_response: Optional[CompleteTransactionResponse] = None
+        self.evidence_bundle: Optional[EvidenceBundle] = None
+        self.integrity_result: Optional[IntegrityResult] = None
 
 
 class TransactionService:
@@ -275,6 +281,20 @@ class TransactionService:
             )
             eval_ts = verif_ts + timedelta(milliseconds=10)
             session.state_machine.apply_integrity_result(unknown_result, timestamp=eval_ts)
+            empty_bundle = EvidenceBundle(
+                bundle_id=f"b_{session.intent.intent_id}",
+                intent_id=session.intent.intent_id,
+                created_at=eval_ts,
+                records=[],
+            )
+            mrdp_unknown = build_mrdp(
+                contract=session.intent,
+                integrity_result=unknown_result,
+                evidence_bundle=empty_bundle,
+                generated_at=eval_ts,
+            )
+            session.integrity_result = unknown_result
+            session.evidence_bundle = empty_bundle
             
             response = CompleteTransactionResponse(
                 transaction_id=session.transaction_id,
@@ -286,7 +306,7 @@ class TransactionService:
                 rule_results=unknown_result.rule_results,
                 violations=unknown_result.violations,
                 evidence_ids=[],
-                mrdp=None,
+                mrdp=mrdp_unknown,
                 verified_at=eval_ts,
             )
             session.completed_response = response
@@ -295,26 +315,80 @@ class TransactionService:
         # 6. Normalize Authoritative Gateway Evidence
         evidence_list = payment_gateway.normalize_payment_evidence(payment, session.intent.intent_id)
 
+        # Ensure executed_items evidence is present from provider order/payment notes
+        if not any(e.field_name == "executed_items" for e in evidence_list):
+            notes = payment.notes or (session.order.notes if session.order else {})
+            if "sku" in notes or "item_sku" in notes:
+                sku = str(notes.get("sku") or notes.get("item_sku"))
+                try:
+                    qty = int(notes.get("quantity", 1))
+                except (ValueError, TypeError):
+                    qty = 1
+                evidence_list.append(
+                    Evidence(
+                        evidence_id=f"ev_rzp_{payment.payment_id}_items",
+                        intent_id=session.intent.intent_id,
+                        source=EvidenceSource.RAZORPAY,
+                        authority=EvidenceAuthority.AUTHORITATIVE,
+                        field_name="executed_items",
+                        field_value=[{"sku": sku, "quantity": qty}],
+                        observed_at=payment.created_at,
+                        raw_reference=payment.payment_id,
+                    )
+                )
+
+        bundle = EvidenceBundle(
+            bundle_id=f"b_{session.intent.intent_id}",
+            intent_id=session.intent.intent_id,
+            created_at=verif_ts,
+            records=evidence_list,
+        )
+        session.evidence_bundle = bundle
+
+        # Build canonical events for temporal integrity verification
+        canonical_events: List[CanonicalEvent] = [
+            CanonicalEvent(
+                event_id=f"evt_ord_{session.order.order_id}",
+                transaction_id=session.transaction_id,
+                intent_id=session.intent.intent_id,
+                event_type="order.created",
+                timestamp=session.created_at,
+                occurred_at=session.created_at,
+                amount=session.order.amount,
+                source=EvidenceSource.RAZORPAY,
+                authority=EvidenceAuthority.AUTHORITATIVE,
+                payload_summary={"order_id": session.order.order_id},
+            ),
+            CanonicalEvent(
+                event_id=f"evt_pay_{payment.payment_id}",
+                transaction_id=session.transaction_id,
+                intent_id=session.intent.intent_id,
+                event_type="payment.captured" if payment.captured else f"payment.{payment.status}",
+                timestamp=payment.created_at,
+                occurred_at=payment.created_at,
+                amount=payment.amount,
+                source=EvidenceSource.RAZORPAY,
+                authority=EvidenceAuthority.AUTHORITATIVE,
+                payload_summary={"payment_id": payment.payment_id, "status": payment.status},
+            ),
+        ]
+
         # 7. Execute Pure Deterministic Integrity Verification
         eval_result = evaluate_integrity(
             contract=session.intent,
             evidence_list=evidence_list,
+            events=canonical_events,
             reference_time=verif_ts,
         )
+        session.integrity_result = eval_result
 
         # 8. Apply Deterministic Result to State Machine
         eval_ts = verif_ts + timedelta(milliseconds=10)
         session.state_machine.apply_integrity_result(eval_result, timestamp=eval_ts)
 
-        # 9. If DRIFT detected, generate Machine-Readable Drift Proof (MRDP)
+        # 9. If DRIFT or UNKNOWN, generate Machine-Readable Drift Proof (MRDP)
         mrdp_proof: Optional[MRDP] = None
-        if eval_result.status == IntegrityStatus.DRIFT:
-            bundle = EvidenceBundle(
-                bundle_id=f"b_{session.intent.intent_id}",
-                intent_id=session.intent.intent_id,
-                created_at=eval_ts,
-                records=evidence_list,
-            )
+        if eval_result.status in (IntegrityStatus.DRIFT, IntegrityStatus.UNKNOWN):
             mrdp_proof = build_mrdp(
                 contract=session.intent,
                 integrity_result=eval_result,
