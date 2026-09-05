@@ -4,10 +4,10 @@
 **TarkaRaksha** — Agentic Transaction Integrity & Recovery Control Plane
 
 ## Current Phase
-Machine-Readable Drift Proof Layer
+AI Integration Layer (Intent Parser & Advisory Recovery Agent)
 
 ## Current Task
-T07 — MRDP
+T08 — Groq AI
 
 ## Task Status
 COMPLETE
@@ -20,14 +20,17 @@ COMPLETE
 - [x] **T05 — State Machine** (Completed 2026-09-05)
 - [x] **T06 — Evidence** (Completed 2026-09-05)
 - [x] **T07 — MRDP** (Completed 2026-09-05)
+- [x] **T08 — Groq AI** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T14:55:00+05:30
+2026-09-05T15:40:00+05:30
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (98 passed in 0.18s):
+- `pytest` (124 passed in 1.07s):
+  - `testing/unit/test_ai_agent.py` (16 tests): valid intent parsing, empty prompt rejection, missing required fields, float amount rejection, quantity violations, budget inconsistency, bounded retries on malformed JSON, valid advisory recovery proposals, CAPTURE action rejection, refund exceeding discrepancy rejection, currency mismatch rejection, confidence informational invariant, AI provider failure matrix (timeout, rate limit, unavailable).
+  - `testing/unit/test_ai_adversarial.py` (10 tests): budget increase attempt rejected with contract immutability, AI opinion cannot create PASS status, prompt injection in user intent treated as inert text, prompt injection in recovery reasoning rejected, extra unexpected fields rejected, boolean-as-integer rejected, string-as-integer rejected, nulls rejected, deterministic engine and MRDP zero AI calls verification, real Groq live smoke test verified.
   - `testing/unit/test_mrdp.py` (5 tests): valid DRIFT proof generation from IntegrityResult and EvidenceBundle, canonical fields and aliases (`expected`, `observed`, `evidence_refs`, `remediation_hint`), stable error code taxonomy (`ECONOMIC_DRIFT_CEILING_EXCEEDED`, etc.), UNKNOWN diagnostic proofs, and 100x identical deterministic digest stability.
   - `testing/unit/test_mrdp_adversarial.py` (5 tests): safety boundary blocking budget increases / verifier bypass in remediation, tamper detection catching payload field mutation via SHA-256 digest invalidation, prompt injection payloads treated strictly as inert strings, Pydantic immutability enforcement, and round-trip intent preservation (DRIFT -> MRDP -> RecoveryProposal).
   - `testing/unit/test_evidence.py` (9 tests): source taxonomy validation, explicit authority tiers and ranking, timezone-aware timestamp validation, monetary value normalization into Money, conflict resolution via authority dominance, irreconcilable tie at top tier (UNKNOWN), evidence deduplication, immutability, 100x repeated determinism
@@ -42,7 +45,7 @@ COMPLETE
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
 - **FastAPI**: 0.141.1, **Uvicorn**: 0.52.4, **Pydantic**: 2.13.5, **HTTPX**: 0.28.1, **Pytest**: 9.1.1
-- **AI Client**: `groq` 1.7.0 (instantiation verified)
+- **AI Client**: `groq` 1.7.0 (instantiation and live smoke test verified with `qwen/qwen3.8-27b`)
 - **Payment Client**: `razorpay` 2.0.1 (instantiation verified)
 - **Node.js**: v25.2.1, **npm**: 11.6.2
 - **Frontend Stack**: Next.js 15.5.25 (App Router, Turbopack), TypeScript 5, Tailwind CSS 4, shadcn/ui
@@ -54,46 +57,44 @@ None
 None
 
 ## Important Decisions
-1. **MRDP Protocol Status**:
-   - Machine-Readable Drift Proof (MRDP) is strictly **TarkaRaksha's proposed protocol/artifact**, NOT an industry standard, NOT a payment standard, and NOT an official Razorpay or universal specification.
-2. **Deterministic & Downstream of Verifier**:
-   - The architecture remains `Evidence -> Deterministic Engine -> IntegrityResult -> MRDP -> Recovery Agent`.
-   - AI is strictly advisory and is not introduced into proof generation.
-   - Given identical inputs (`IntentContract`, `IntegrityResult`, `EvidenceBundle`), `build_mrdp()` produces bit-for-bit identical proofs and canonical digests across 100x runs.
-3. **Cryptographic / Tamper-Evidence Specification**:
-   - Defined deterministic canonical JSON serialization (`canonicalize_mrdp_payload`) with sorted keys, compact separators, explicit ISO-8601 strings, and integer minor units.
-   - Hashed using standard SHA-256 (`proof_digest`).
-   - `verify_mrdp_integrity()` detects any post-creation mutation or tampering.
-   - Explicitly documented that this proves **tamper-evident integrity of the canonicalized proof representation** under SHA-256, and does NOT claim digital signatures, author authenticity, or non-repudiation without PKI/asymmetric signing keys.
-4. **Safety Boundaries & Inert Data**:
-   - Remediation hints are strictly advisory guidance for downstream recovery; `validate_remediation_safety()` blocks any attempt to instruct budget increases, constraint bypasses, or authorization changes.
-   - Malicious prompt injections inside violation strings, evidence payloads, or remediation text are treated strictly as inert data.
-5. **Canonical Aliases and Backward Compatibility**:
-   - Preserved canonical aliases (`expected` -> `expected_value`, `observed` -> `observed_value`, `evidence_refs` -> `evidence_references`, `remediation_hint` -> `remediation`) in `MRDP` to guarantee complete compatibility across T03 models and T07 execution specifications.
+1. **Untrusted AI Boundary**:
+   - AI is advisory. All outputs from Groq or any model are treated as untrusted inputs.
+   - The validation pipeline is strictly: `Natural Language -> Groq -> Structured JSON -> Pydantic Intermediate DTO -> Domain Validation -> Validated Domain Contract / RecoveryProposal`.
+   - AI can never authorize payments, capture funds, increase budget, modify authorized SKU/quantity/currency, or declare PASS.
+2. **Narrow Provider Abstraction**:
+   - `AIProvider` ABC decouples domain services from the Groq SDK.
+   - `GroqAIProvider` handles production calls with timeout/rate-limit translation.
+   - `FakeAIProvider` enables deterministic, network-free local testing.
+3. **Model Selection**:
+   - Configured `qwen/qwen3.8-27b` as default model due to verified support on Groq for `json_object` structured output and fast inference; configurable via `GROQ_MODEL`.
+4. **Bounded Retries & Safe Fallback**:
+   - Bounded retry (default 2 retries) catches transient network errors and JSON formatting glitches.
+   - If retries exhaust or model produces invalid schema, the system fails safely with `IntentParsingError` or safe abstain, never fabricating authorization.
+5. **Deterministic Engine Independence**:
+   - `evaluate_integrity()` and `build_mrdp()` make zero AI calls; deterministic verification remains 100% independent of external AI availability.
 
 ## Active Branch
 `main`
 
 ## Last Verified Remote Commit
-9bb77c9 (docs: synchronize persistent brain and handoff for T07 completion)
-Prior Remote Commits: 2d59ea8, 0e5001a, ef1c7ff, b1415ee, f8d85b5, 5ea1c53, ...
+326f72b (test: add adversarial, prompt injection, budget boundary, and real Groq smoke tests)
 
 ## Next Task
-**T08 — Groq AI** (Intent Parser & Advisory Recovery Agent: untrusted natural-language parsing, bounded recovery suggestions, strictly downstream of verifier)
+**T09 — Razorpay Adapter** (Razorpay payment gateway adapter: order creation, payment verification, webhook ingestion, test mode integration)
 
 ## Parallel Candidates
-With T07 complete, the MRDP proof generation layer is verified. T08 (Groq AI) consumes intent specs and MRDP proofs to propose recovery actions, operating strictly within advisory bounds.
+With T08 complete, the AI intent parsing and advisory recovery layer is verified. T09 builds the payment adapter, which consumes validated intent and produces evidence for the deterministic engine. Work proceeds sequentially.
 
 ## Source Documents Consulted
 - `brain/TarkaRaksha_IDEA.md` (§31, §34)
-- `brain/TarkaRaksha_Execution.md` (§7.25, §8.28)
-- `brain/TarkaRaksha_TESTING.md` (§9.25–§9.29)
+- `brain/TarkaRaksha_Execution.md` (§7.27–§7.31, §8.33–§8.36)
+- `brain/TarkaRaksha_TESTING.md` (§9.30–§9.36)
 - `brain/CONTEXT.md`
 - `brain/HANDOFF.md`
 
 ## External Sources Consulted
-- hashlib (Python standard library SHA-256 implementation)
-- RFC 8785 (JSON Canonicalization Scheme reference principles)
+- Groq Cloud API documentation on chat completions, model catalog, and `response_format={'type': 'json_object'}`
+- Official Groq Python SDK v1.7.0 client specification
 
 ## Open Questions
 None
