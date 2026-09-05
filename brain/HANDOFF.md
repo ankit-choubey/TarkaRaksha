@@ -1,11 +1,11 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `I0 — Baseline Freeze`
-- **Current Checkpoint**: `C_I0 — PASS`
-- **Next Task**: `I1 — Evidence Extensions`
+- **Current Task Completed**: `I1 — Evidence Extensions`
+- **Current Checkpoint**: `C_I1 — PASS`
+- **Next Task**: `I2 — Security / Protocol Binding`
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-05T19:15:00+05:30
+- **Handoff Timestamp**: 2026-09-05T19:21:00+05:30
 
 ---
 

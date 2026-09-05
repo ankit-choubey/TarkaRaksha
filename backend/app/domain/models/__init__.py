@@ -26,6 +26,12 @@ from .slice import (
     RecoverTransactionRequest,
     ResolveTransactionRequest,
 )
+from backend.app.domain.evidence.extensions import (
+    FreshnessStatus,
+    EvidenceFreshnessMetadata,
+    MerchantOffer,
+    IntegrityDelta,
+)
 
 __all__ = [
     "ActionType",
@@ -57,4 +63,8 @@ __all__ = [
     "CompleteTransactionResponse",
     "RecoverTransactionRequest",
     "ResolveTransactionRequest",
+    "FreshnessStatus",
+    "EvidenceFreshnessMetadata",
+    "MerchantOffer",
+    "IntegrityDelta",
 ]

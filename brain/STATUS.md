@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I0 — Baseline Freeze
+I1 — Evidence Extensions
 
 ## Task Status
-COMPLETE (C_I0 PASS)
+COMPLETE (C_I1 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -27,14 +27,15 @@ COMPLETE (C_I0 PASS)
 - [x] **T12 — UNKNOWN Resolution** (Completed 2026-09-05)
 - [x] **T13 — Replay Engine** (Completed 2026-09-05)
 - [x] **I0 — Baseline Freeze** (Completed 2026-09-05)
+- [x] **I1 — Evidence Extensions** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T19:15:00+05:30
+2026-09-05T19:21:00+05:30
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (242 passed in 8.84s across all unit, integration, and adversarial suites)
+- `pytest` (258 passed in 1.60s across all unit, integration, and adversarial suites)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -51,6 +52,7 @@ COMPLETE (C_I0 PASS)
 - **Authoritative Engine Reuse**: Replay directly consumes T04 `evaluate_integrity`, T05 `TransactionStateMachine`, T06 authority hierarchy, and T07 `verify_mrdp_integrity` without duplicating business logic.
 - **Three-Way Classification**: Categorizes replay outcomes into `MATCH` (agreement), `MISMATCH` (drift or tampering detected), or `INVALID_REPLAY` (illegal lifecycle transition or ambiguous event ordering).
 - **Additive Innovation**: Completed T01–T13 functionality frozen; innovation extensions added strictly additively.
+- **Evidence Freshness Invariant**: Freshness determined from explicit reference timestamps, not AI confidence. Stale or expired evidence cannot silently produce PASS.
 
 ## Next Task
-**I1 — Evidence Extensions** (STOP — await explicit user prompt before starting I1)
+**I2 — Security / Protocol Binding** (STOP — await explicit user prompt before starting I2)

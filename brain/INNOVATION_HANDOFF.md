@@ -50,4 +50,16 @@
 
 ## Task Progress
 - [x] **I0 — Baseline Freeze** (Verified Green, 242/242 tests passing)
-- [ ] **I1 — Evidence Extensions** (Next task — await explicit user prompt)
+- [x] **I1 — Evidence Extensions** (Verified Green, 258/258 tests passing)
+- [ ] **I2 — Security / Protocol Binding** (Next task — await explicit user prompt)
+
+---
+
+## I1 Verification Record
+- **Implementation Scope**: Additive evidence freshness metadata (`FreshnessStatus`), merchant offer object (`MerchantOffer`), deterministic integrity deltas (`IntegrityDelta`, `compute_economic_delta`, `compute_quantity_delta`), and freshness assessment helper (`assess_evidence_freshness_for_constraint`).
+- **Files Created**: `backend/app/domain/evidence/extensions.py`, `testing/unit/test_evidence_extensions.py`
+- **Files Modified**: `backend/app/domain/evidence/__init__.py`, `backend/app/domain/models/__init__.py`
+- **Tests Added**: 16 focused tests in `test_evidence_extensions.py`
+- **Regression Count**: 258 passed, 0 failed in 1.60s (242 baseline + 16 new)
+- **T01–T13 Preservation**: Fully confirmed; 0 existing tests modified, zero breaking changes to existing domain models or engines.
+

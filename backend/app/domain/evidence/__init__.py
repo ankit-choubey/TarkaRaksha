@@ -18,6 +18,16 @@ from .conflicts import (
     resolve_field_evidence,
     analyze_bundle_conflicts,
 )
+from .extensions import (
+    FreshnessStatus,
+    EvidenceFreshnessMetadata,
+    evaluate_evidence_freshness,
+    MerchantOffer,
+    IntegrityDelta,
+    compute_economic_delta,
+    compute_quantity_delta,
+    assess_evidence_freshness_for_constraint,
+)
 
 __all__ = [
     "normalize_source",
@@ -30,4 +40,13 @@ __all__ = [
     "ConflictReport",
     "resolve_field_evidence",
     "analyze_bundle_conflicts",
+    "FreshnessStatus",
+    "EvidenceFreshnessMetadata",
+    "evaluate_evidence_freshness",
+    "assess_evidence_freshness_for_constraint",
+    "MerchantOffer",
+    "IntegrityDelta",
+    "compute_economic_delta",
+    "compute_quantity_delta",
 ]
+
