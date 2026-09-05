@@ -14,6 +14,11 @@ from .contracts import (
     IntentParsingError,
     UnsafeRecoveryProposalError,
 )
+from .provider import (
+    AIProvider,
+    GroqAIProvider,
+    FakeAIProvider,
+)
 
 __all__ = [
     "AIIntentExtraction",
@@ -26,4 +31,7 @@ __all__ = [
     "StructuredOutputError",
     "IntentParsingError",
     "UnsafeRecoveryProposalError",
+    "AIProvider",
+    "GroqAIProvider",
+    "FakeAIProvider",
 ]
