@@ -57,8 +57,8 @@
 - [x] **I5 — Buyer Agent** (Verified Green, 359/359 tests passing)
 - [x] **I8 — Agent / Transaction / Payment Binding** (Verified Green, 385/385 tests passing)
 - [x] **I6 — TIX: TarkaRaksha Integrity Exchange** (Verified Green, 426/426 tests passing)
+- [x] **I7 — Bounded Agentic Negotiation / Replanning** (Verified Green, 487/487 tests passing)
 - [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Verified Green, 464/464 tests passing)
-- [ ] **I7 — Bounded Agentic Negotiation / Replanning** (Next task — await explicit user prompt)
 
 ---
 
@@ -244,4 +244,34 @@
   - Forbidden Direct Resume: Direct transition `KILLED -> RUNNING` is strictly blocked with `UnauthorizedResumeError`; resumption unconditionally requires passing through authoritative revalidation.
   - Authoritative Revalidation: Resuming requires matching registered context (`transaction_id`, `intent_id`, `agent_id`, `merchant_id`) and at least one `AUTHORITATIVE` or `PROTOCOL_TRUSTED` evidence record.
   - Fail-Closed Execution: Unregistered transactions, repeated UNKNOWN states above tolerance, or missing evidence fail-closed by blocking execution.
+
+---
+
+## I7 Verification Record
+- **Implementation Scope**: Bounded agentic negotiation and replanning engine enabling Buyer Agent and Merchant Agent to resolve commerce mismatches and detected drift within immutable authorization boundaries.
+  - Hard Invariant: "NEGOTIATION MAY CHANGE THE PROPOSAL. NEGOTIATION MUST NEVER CHANGE THE AUTHORIZATION."
+  - Domain models: `NegotiationState`, `NegotiationViolationCode`, `NegotiationPolicy`, `NegotiationRoundRecord`, `NegotiationSession`.
+  - Service: `BoundedNegotiationService` integrating `BuyerAgentService` replanning, `MerchantCatalogService` offer generation, `TIXExchangeService` cryptographic message chaining, and TarkaRaksha's deterministic integrity evaluation (`evaluate_integrity` and `build_mrdp`).
+  - Adversarial protections: Enforces budget ceiling, SKU and authorized substitution boundaries, quantity limits, currency preservation, transaction and intent binding, TIX cryptographic message chaining, termination at `max_rounds`, defense against PASS injection, defense against UNKNOWN coercion, and zero payment authorization authority.
+- **Files Created**:
+  - `backend/app/domain/negotiation/contracts.py`
+  - `backend/app/domain/negotiation/__init__.py`
+  - `backend/app/services/negotiation/service.py`
+  - `backend/app/services/negotiation/__init__.py`
+  - `testing/unit/test_negotiation_contracts.py`
+  - `testing/unit/test_negotiation_service.py`
+  - `testing/unit/test_negotiation_adversarial.py`
+- **Files Modified**:
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+  - `brain/HANDOFF.md`
+- **Tests Added**: 23 focused tests (10 domain contract tests, 4 remediation service tests, 9 adversarial security boundary tests).
+- **Regression Count**: 487 passed, 0 failed in 7.36s (426 baseline + 23 I7 tests + other innovation modules).
+- **Invariants Preserved**:
+  - Proposal vs Authorization Invariant: Negotiation proposals are candidate offers only; authorization limits (`max_total`, allowed SKUs/substitutions, quantity ceiling, currency) remain strictly immutable.
+  - Zero Payment Authority: Negotiation service and participating agents have zero authority to authorize payment, force state transitions, or declare PASS.
+  - Authoritative Revalidation Required: Any accepted counter-proposal must generate fresh evidence and pass deterministic integrity verification before the session can complete.
+  - Deterministic Bounded Loops: Bounded rounds (`max_rounds = 3`, `max_replans = 3`) guarantee clean termination with `ABSTAINED` or `ESCALATED`, eliminating infinite loop or retry exhaustion vulnerabilities.
+  - TIX Audit Trail: All negotiation turns are cryptographically linked in the TIX hash chain (`DRIFT_NOTICE`, `REMEDIATION_REQUEST`, `OFFER`, `OUTCOME`).
+
 

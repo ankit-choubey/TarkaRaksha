@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I9 — Deterministic Kill Switch / Execution Safety Control
+I7 — Bounded Agentic Negotiation / Replanning
 
 ## Task Status
-COMPLETE (C_I9 PASS)
+COMPLETE (C_I7 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -34,15 +34,16 @@ COMPLETE (C_I9 PASS)
 - [x] **I5 — Buyer Agent** (Completed 2026-09-05)
 - [x] **I8 — Agent / Transaction / Payment Binding** (Completed 2026-09-05)
 - [x] **I6 — TIX: TarkaRaksha Integrity Exchange** (Completed 2026-09-05)
+- [x] **I7 — Bounded Agentic Negotiation / Replanning** (Completed 2026-09-05)
 - [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T22:30:00+05:30 — I9 checkpoint
+2026-09-05T22:36:00+05:30 — I7 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (464 passed in 3.60s across all unit, integration, and adversarial suites: 426 baseline + 38 I9 tests)
+- `pytest` (487 passed in 7.36s across all unit, integration, and adversarial suites: 426 baseline + 23 I7 tests + other innovation modules)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -77,7 +78,10 @@ COMPLETE (C_I9 PASS)
 - **Forbidden Direct Resume Invariant**: Direct transition from KILLED to RUNNING is strictly prohibited; resuming a killed transaction unconditionally requires passing through authoritative revalidation.
 - **Authoritative Revalidation Invariant**: Revalidation requires verified registered context matching (transaction_id, intent_id, agent_id, merchant_id) and at least one AUTHORITATIVE or PROTOCOL_TRUSTED evidence record; advisory LLM/agent claims are rejected.
 - **Fail-Closed Execution Gate Invariant**: Unknown transactions, missing evidence, uninitialized context, or repeated UNKNOWNs above tolerance fail-closed by blocking execution.
+- **Negotiation Proposal vs Authorization Invariant**: Negotiation may change the proposal, but negotiation must never change the authorization. The immutable IntentContract remains the authoritative, tamper-proof ceiling (`max_total`, allowed SKUs/substitutions, quantity ceiling, currency). Bounded remediation strictly enforces `max_rounds`, zero payment authorization authority, and mandatory deterministic revalidation.
+- **Deterministic Bounded Loop Invariant**: Negotiation terminates deterministically within configured limits (`max_rounds = 3`, `max_replans = 3`), defaulting to `ABSTAINED` or `ESCALATED` rather than looping indefinitely or exhausting retries.
 
 ## Next Task
-**I7 — Bounded Agentic Negotiation / Replanning** (or next approved innovation task — await explicit user prompt)
+Await user instruction for next innovation extension milestone.
+
 
