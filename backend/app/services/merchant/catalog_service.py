@@ -172,6 +172,10 @@ class MerchantCatalogService:
         """Sets an inventory record directly for a SKU."""
         self._inventory[sku] = record
 
+    def add_item(self, item: CatalogItem) -> None:
+        """Adds or updates an item in the catalog."""
+        self._catalog[item.sku] = item
+
     def process_buyer_request(
         self,
         request: BuyerCommerceRequest,

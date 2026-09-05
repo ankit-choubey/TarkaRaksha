@@ -21,6 +21,7 @@ from .gates import (
     GateCompositionService,
     MerchantGate,
 )
+from .orchestration import AgenticLifecycleOrchestrator
 
 __all__ = [
     "evaluate_integrity",
@@ -41,6 +42,7 @@ __all__ = [
     "ConsumerGate",
     "MerchantGate",
     "GateCompositionService",
+    "AgenticLifecycleOrchestrator",
 ]
 
 
