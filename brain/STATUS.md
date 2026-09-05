@@ -66,8 +66,8 @@ None
 `main`
 
 ## Last Verified Remote Commit
-3c93250 (test: add adversarial and security hardening test suite for evidence layer)
-Prior Remote Commits: 898edc3, 3da5b7f, 855af66, de72092, 4ac842d, 38e0658, cd6af7c, 105dfd0, 812a1c4, d271fec, ...
+5ea1c53 (docs: synchronize persistent brain and handoff for T06 completion)
+Prior Remote Commits: 3c93250, 898edc3, 3da5b7f, 855af66, de72092, 4ac842d, 38e0658, cd6af7c, ...
 
 ## Next Task
 **T07 — MRDP** (Machine-Readable Drift Proof: generate cryptographic/tamper-evident drift proofs containing contract baseline, observed evidence, rule results, and explanations)
