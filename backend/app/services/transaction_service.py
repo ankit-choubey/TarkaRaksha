@@ -66,6 +66,12 @@ from backend.app.services.resolution import (
     diagnose_unknown,
 )
 from backend.app.domain.models.slice import ResolveTransactionRequest
+from backend.app.domain.binding import (
+    BindingContext,
+    BindingVerificationOutcome,
+    PaymentBindingClaim,
+)
+from backend.app.services.binding import TransactionBindingService
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +85,7 @@ class TransactionSession:
         state_machine: TransactionStateMachine,
         order: ProviderOrder,
         created_at: datetime,
+        binding_context: Optional[BindingContext] = None,
     ):
         self.transaction_id = transaction_id
         self.intent = intent
@@ -93,6 +100,8 @@ class TransactionSession:
         self.events: List[CanonicalEvent] = []
         self.recovery_attempts: int = 0
         self.resolution_attempts: int = 0
+        self.binding_context = binding_context
+        self.binding_outcome: Optional[BindingVerificationOutcome] = None
 
 
 class TransactionService:
@@ -102,12 +111,21 @@ class TransactionService:
     bounded provider polling, and strict signature verification.
     """
 
-    def __init__(self, default_provider: Optional[PaymentProvider] = None):
+    def __init__(
+        self,
+        default_provider: Optional[PaymentProvider] = None,
+        binding_service: Optional[TransactionBindingService] = None,
+    ):
         self._default_provider = default_provider
+        self._binding_service = binding_service or TransactionBindingService()
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
         self._recovery_executor = RecoveryExecutor()
         self._unknown_observer = UnknownObserver()
+
+    @property
+    def binding_service(self) -> TransactionBindingService:
+        return self._binding_service
 
     @property
     def recovery_executor(self) -> RecoveryExecutor:
@@ -212,6 +230,19 @@ class TransactionService:
             context={"order_id": order.order_id},
         )
 
+        # 5.5 Register authoritative binding (I8)
+        agent_id = getattr(request, "agent_id", None) or getattr(request, "issued_by", "user_default")
+        merchant_id = getattr(request, "merchant_id", None) or "merchant_default"
+        binding = self._binding_service.register_binding(
+            intent_id=intent.intent_id,
+            agent_id=agent_id,
+            merchant_id=merchant_id,
+            transaction_id=transaction_id,
+            order_id=order.order_id,
+            attempt_id="att_1",
+            created_at=ts,
+        )
+
         # 6. Store session
         session = TransactionSession(
             transaction_id=transaction_id,
@@ -219,6 +250,7 @@ class TransactionService:
             state_machine=state_machine,
             order=order,
             created_at=ts,
+            binding_context=binding,
         )
         self._sessions[transaction_id] = session
         self._intent_to_tx[intent.intent_id] = transaction_id
@@ -421,6 +453,71 @@ class TransactionService:
             events=canonical_events,
             reference_time=verif_ts,
         )
+
+        # 7.5 Deterministic Transaction Binding Verification (I8)
+        agent_id = session.binding_context.agent_id if session.binding_context else "user_default"
+        merchant_id = session.binding_context.merchant_id if session.binding_context else "merchant_default"
+        attempt_id = getattr(request, "attempt_id", None) or (session.binding_context.attempt_id if session.binding_context else "att_1")
+
+        binding_claim = PaymentBindingClaim(
+            intent_id=session.intent.intent_id,
+            agent_id=agent_id,
+            merchant_id=merchant_id,
+            transaction_id=session.transaction_id,
+            order_id=request.order_id,
+            payment_id=request.payment_id,
+            attempt_id=attempt_id,
+        )
+        binding_outcome = self._binding_service.verify_transaction_binding(
+            claim=binding_claim,
+            authoritative_payment=payment,
+            reference_time=verif_ts,
+            require_authoritative_payment=False,
+        )
+        session.binding_outcome = binding_outcome
+        binding_evidence = binding_outcome.to_evidence(
+            intent_id=session.intent.intent_id,
+            transaction_id=session.transaction_id,
+        )
+        evidence_list.append(binding_evidence)
+
+        # If binding verification failed (e.g. cross-order substitution, reused attempt),
+        # deterministic authority enforces DRIFT / UNKNOWN
+        if not binding_outcome.is_valid:
+            merged_violations = list(eval_result.violations)
+            for v in binding_outcome.violations:
+                if v.value not in merged_violations:
+                    merged_violations.append(v.value)
+            if binding_outcome.explanation and binding_outcome.explanation not in merged_violations:
+                merged_violations.append(binding_outcome.explanation)
+
+            merged_rule_results = dict(eval_result.rule_results)
+            merged_rule_results["BindingIntegrityRule"] = False
+
+            new_status = IntegrityStatus.DRIFT if binding_outcome.status == IntegrityStatus.DRIFT else IntegrityStatus.UNKNOWN
+            if eval_result.status == IntegrityStatus.DRIFT:
+                new_status = IntegrityStatus.DRIFT
+
+            eval_result = IntegrityResult(
+                evaluation_id=eval_result.evaluation_id,
+                intent_id=eval_result.intent_id,
+                status=new_status,
+                evaluated_at=eval_result.evaluated_at,
+                rule_results=merged_rule_results,
+                violations=merged_violations,
+                evidence_ids=sorted(list(set(eval_result.evidence_ids + [binding_evidence.evidence_id]))),
+                confidence_score=eval_result.confidence_score,
+                explanation=f"{eval_result.explanation}; {binding_outcome.explanation}",
+            )
+        elif payment and payment.captured:
+            # Verified and captured: consume attempt in binding registry
+            self._binding_service.consume_attempt(
+                transaction_id=session.transaction_id,
+                attempt_id=attempt_id,
+                payment_id=payment.payment_id,
+                now=verif_ts,
+            )
+
         session.integrity_result = eval_result
 
         # 8. Apply Deterministic Result to State Machine
