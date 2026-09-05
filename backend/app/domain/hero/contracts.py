@@ -27,7 +27,6 @@ from backend.app.domain.models import (
 )
 from backend.app.domain.sla.contracts import IntegritySLAMetricsReport
 from backend.app.domain.trace.contracts import IntegrityTrace
-from backend.app.services.replay.contracts import ReplayResult
 
 
 class HeroStage(str, Enum):
@@ -131,7 +130,7 @@ class HeroTransactionRecord(BaseModel):
     checkpoint_timeline: Optional[IntegrityCheckpointTimeline] = None
     sla_report: Optional[IntegritySLAMetricsReport] = None
     explanation: Optional[ExplanationResult] = None
-    replay_result: Optional[ReplayResult] = None
+    replay_result: Optional[Any] = None
     certification_status: Optional[str] = None
 
     # Execution Meta

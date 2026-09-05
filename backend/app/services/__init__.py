@@ -9,6 +9,7 @@ from .certification import GroundTruthCertificationService
 from .trace import IntegrityTraceService
 from .checkpoint import IntegrityCheckpointService
 from .sla import IntegritySLAMetricsService
+from .hero import HeroTransactionOrchestrator
 
 __all__ = [
     "evaluate_integrity",
@@ -21,6 +22,7 @@ __all__ = [
     "IntegrityTraceService",
     "IntegrityCheckpointService",
     "IntegritySLAMetricsService",
+    "HeroTransactionOrchestrator",
 ]
 
 
