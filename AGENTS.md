@@ -56,6 +56,16 @@ At the start of **EVERY** task:
 - Never claim an API works without verified execution or documented evidence.
 - When uncertain: **STOP**, consult official docs, verify, then implement.
 
+### Safe Parallelism Rule
+- Parallel work is allowed only when tasks operate on separate files, isolated responsibilities, and have no shared mutable state or unresolved dependencies.
+- Never parallelize merely for speed; prefer sequential verifiable execution.
+
+### Stop Conditions & Uncertainty Rule
+- When an API endpoint, third-party provider behavior (Razorpay, Groq), financial rule, schema, or security boundary is ambiguous or uncertain:
+  - **STOP** immediately.
+  - Check official documentation and primary technical sources.
+  - Report the ambiguity clearly with facts; do not improvise or invent an answer.
+
 ---
 
 ## 3. Implementation Rules
@@ -63,3 +73,4 @@ At the start of **EVERY** task:
 - **No Overbuilding**: No unnecessary microservices, message queues (Kafka), Redis, Kubernetes, or massive agent frameworks unless explicitly called for by an approved milestone.
 - **Single Canonical Brain**: All authoritative master documents reside exclusively in `brain/`.
 - **Change Management**: If user requirements change, analyze impacts across completed and future tasks, adapt `STATUS.md`, and proceed cleanly.
+

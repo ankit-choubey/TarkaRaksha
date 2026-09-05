@@ -79,11 +79,11 @@ tarkaraksha/
 ├── .agents/                  # Workspace agent configuration & rules
 │   └── rules/
 │       └── tarkaraksha.md    # Workspace guidance & safety principles
-├── backend/                  # FastAPI backend services (T02+)
-├── frontend/                 # Next.js Control Room UI (T02+)
-├── testing/                  # Verification fixtures, scenarios, and tests (T02+)
-└── scripts/                  # Operational scripts (T02+)
 ```
+
+### Module Implementation Status
+- **Current State (T01)**: Repository Bootstrap verified. Only foundational governance, persistent brain, and configuration files are present.
+- **Planned Modules (T02–T18)**: `backend/`, `frontend/`, `testing/`, `scripts/` will be established as their respective sequential milestones are reached. No premature or placeholder code is present.
 
 ---
 

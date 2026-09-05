@@ -16,12 +16,13 @@ COMPLETE
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T13:35:00+05:30
+2026-09-05T13:47:00+05:30
 
 ## Tests Run
-- `make test-bootstrap` (All canonical master documents, control documents, and config files verified)
-- File rename fidelity check: 100% content match via Git tracking
-- Git branch and status verification: `main`, clean tree (untracked secrets checked)
+- `make test-bootstrap` (Verified canonical master documents, control documents, config files, zero root duplicates, pyproject TOML syntax, and credential scan)
+- File rename fidelity check: 100% content match via Git tracking against f605866
+- Secret scan: Live credential patterns checked across git tree; no secrets found
+- Git tree and status: Working tree clean, verified branch `main`
 
 ## Known Failures
 None
@@ -34,12 +35,14 @@ None
 2. **Authority Hierarchy**: AI is advisory; deterministic verification is authoritative.
 3. **Financial Safety**: Monetary amounts must strictly be represented in integer minor units (no floats).
 4. **Agent Guidance**: Established `AGENTS.md` and `.agents/rules/tarkaraksha.md` to govern future agent sessions.
+5. **Commit Tracking Convention**: `Last Verified Remote Commit` represents the latest verified state pushed to remote, avoiding circular in-flight self-reference.
 
 ## Active Branch
 `main`
 
-## Last Commit
-020cf38 (chore: bootstrap tarkaraksha repository)
+## Last Verified Remote Commit
+beca9e8 (chore: update brain/STATUS.md with verified commit hash)
+Prior Bootstrap Commit: 020cf38 (chore: bootstrap tarkaraksha repository)
 
 ## Next Task
 **T02 — Environment** (Install and verify Python, Node.js, FastAPI, Next.js, and baseline dependencies)

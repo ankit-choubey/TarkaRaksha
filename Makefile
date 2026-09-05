@@ -29,6 +29,15 @@ test-bootstrap:
 	@test -f README.md && echo "[✓] README.md exists"
 	@test -f SECURITY.md && echo "[✓] SECURITY.md exists"
 	@test -f LICENSE && echo "[✓] LICENSE exists"
+	@echo "Verifying absence of duplicate master documents in root..."
+	@test ! -f TarkaRaksha_IDEA.md && echo "[✓] No root TarkaRaksha_IDEA.md"
+	@test ! -f TarkaRaksha_Execution.md && echo "[✓] No root TarkaRaksha_Execution.md"
+	@test ! -f TarkaRaksha_PreFinal.md && echo "[✓] No root TarkaRaksha_PreFinal.md"
+	@test ! -f TarkaRaksha_TESTING.md && echo "[✓] No root TarkaRaksha_TESTING.md"
+	@echo "Validating pyproject.toml TOML syntax..."
+	@python3 -c "import tomllib; tomllib.loads(open('pyproject.toml').read())" && echo "[✓] pyproject.toml syntax valid"
+	@echo "Performing credential and secret scan..."
+	@python3 -c "import subprocess, sys; res = subprocess.run(['git', 'grep', '-i', '-E', 'sk_test_[0-9a-zA-Z]{10,}|sk_live_[0-9a-zA-Z]{10,}|rzp_test_[0-9a-zA-Z]{10,}|rzp_live_[0-9a-zA-Z]{10,}|gsk_[a-zA-Z0-9]{20,}|BEGIN PRIVATE KEY', ':(exclude)Makefile'], capture_output=True, text=True); sys.exit(1) if res.stdout.strip() else sys.exit(0)" && echo "[✓] No leaked credentials detected"
 	@echo "[✓] All T01 bootstrap checks passed."
 
 clean:
