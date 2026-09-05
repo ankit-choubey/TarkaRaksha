@@ -9,6 +9,7 @@ from .enums import (
     EvidenceSource,
     IntegrityStatus,
     TransactionState,
+    IntentConsumptionState,
 )
 from .money import Money
 from .intent import IntentItem, IntentContract
@@ -32,6 +33,11 @@ from backend.app.domain.evidence.extensions import (
     MerchantOffer,
     IntegrityDelta,
 )
+from backend.app.domain.security import (
+    AgentTransactionMessage,
+    ProtocolVerificationOutcome,
+    ProtocolViolationCode,
+)
 
 __all__ = [
     "ActionType",
@@ -40,6 +46,7 @@ __all__ = [
     "EvidenceSource",
     "IntegrityStatus",
     "TransactionState",
+    "IntentConsumptionState",
     "Money",
     "IntentItem",
     "IntentContract",
@@ -67,4 +74,8 @@ __all__ = [
     "EvidenceFreshnessMetadata",
     "MerchantOffer",
     "IntegrityDelta",
+    "AgentTransactionMessage",
+    "ProtocolVerificationOutcome",
+    "ProtocolViolationCode",
 ]
+

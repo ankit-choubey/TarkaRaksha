@@ -83,3 +83,15 @@ class ActionType(str, Enum):
     CANCEL = "CANCEL"
     NOTIFY = "NOTIFY"
     HOLD = "HOLD"
+
+
+class IntentConsumptionState(str, Enum):
+    """
+    Lifecycle state tracking consumption/authorization reuse of an IntentContract (I2).
+    Prevents the same authorization context from being silently reused for a second transaction.
+    """
+    ACTIVE = "ACTIVE"
+    CONSUMED = "CONSUMED"
+    EXPIRED = "EXPIRED"
+    REVOKED = "REVOKED"
+

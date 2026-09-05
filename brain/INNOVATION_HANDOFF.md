@@ -51,7 +51,8 @@
 ## Task Progress
 - [x] **I0 — Baseline Freeze** (Verified Green, 242/242 tests passing)
 - [x] **I1 — Evidence Extensions** (Verified Green, 258/258 tests passing)
-- [ ] **I2 — Security / Protocol Binding** (Next task — await explicit user prompt)
+- [x] **I2 — Security / Protocol Binding** (Verified Green, 276/276 tests passing)
+- [ ] **I3 — Governance + Replay Extension** (Next task — await explicit user prompt)
 
 ---
 
@@ -62,4 +63,15 @@
 - **Tests Added**: 16 focused tests in `test_evidence_extensions.py`
 - **Regression Count**: 258 passed, 0 failed in 1.60s (242 baseline + 16 new)
 - **T01–T13 Preservation**: Fully confirmed; 0 existing tests modified, zero breaking changes to existing domain models or engines.
+
+---
+
+## I2 Verification Record
+- **Implementation Scope**: Protocol security & message binding module (`AgentTransactionMessage`, `ProtocolViolationCode`, `ProtocolVerificationOutcome`, `ProtocolSecurityVerifier`, `IntentConsumptionState`). Implemented 7 protocol attack detection dimensions (REPLAY, INTENT_MISMATCH, TRANSACTION_MISMATCH, STALE_MESSAGE, DUPLICATE_MESSAGE, AGENT_ID_MISMATCH, STATE_DESYNC) and canonical SHA-256 hash-chain verification.
+- **Files Created**: `backend/app/domain/security/binding.py`, `backend/app/domain/security/__init__.py`, `testing/unit/test_security_binding.py`
+- **Files Modified**: `backend/app/domain/models/enums.py` (added `IntentConsumptionState`), `backend/app/domain/models/__init__.py`
+- **Tests Added**: 18 focused tests in `test_security_binding.py`
+- **Regression Count**: 276 passed, 0 failed in 3.31s (258 baseline + 18 new)
+- **T01–T13 & I1 Preservation**: Fully confirmed; 0 existing tests modified, zero breaking changes to existing domain models, services, or engines.
+
 
