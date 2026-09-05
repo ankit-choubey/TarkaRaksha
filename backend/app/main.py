@@ -8,7 +8,7 @@ Exposes the first complete real transaction slice:
 """
 from datetime import datetime, timezone
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, Depends, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -43,6 +43,14 @@ from backend.app.services.replay import (
     InvalidReplayInputError,
     ReplayAmbiguityError,
 )
+from backend.app.domain.scenario import (
+    ScenarioDefinition,
+    ScenarioResult,
+    ScenarioSuiteResult,
+    ScenarioId,
+    ScenarioCategory,
+)
+from backend.app.services.scenario import ScenarioLabService
 from backend.app.services import TransactionService
 from backend.app.services.ai import parse_intent, IntentParsingError
 from backend.app.services.payment import (
@@ -71,6 +79,14 @@ def get_payment_provider() -> PaymentProvider:
 def get_transaction_service() -> TransactionService:
     """Dependency provider for TransactionService. Can be overridden in tests."""
     return _global_transaction_service
+
+
+_global_scenario_service = ScenarioLabService()
+
+
+def get_scenario_service() -> ScenarioLabService:
+    """Dependency provider for ScenarioLabService. Can be overridden in tests."""
+    return _global_scenario_service
 
 
 app = FastAPI(
@@ -381,4 +397,34 @@ async def replay_transaction(
     )
     result = ReplayEngine.replay(snapshot)
     return result
+
+
+@app.get("/api/v1/scenarios", response_model=List[ScenarioDefinition])
+async def list_scenarios(
+    category: Optional[ScenarioCategory] = None,
+    service: ScenarioLabService = Depends(get_scenario_service),
+) -> List[ScenarioDefinition]:
+    """Lists canonical scenario definitions in the Scenario Lab (I11)."""
+    return service.get_catalog(category=category)
+
+
+@app.post("/api/v1/scenarios/{scenario_id}/run", response_model=ScenarioResult)
+async def run_scenario_endpoint(
+    scenario_id: str,
+    service: ScenarioLabService = Depends(get_scenario_service),
+) -> ScenarioResult:
+    """Executes a single scenario deterministically against the authoritative pipeline (I11)."""
+    try:
+        return service.run_scenario(scenario_id)
+    except (KeyError, ValueError):
+        raise HTTPException(status_code=404, detail=f"Scenario '{scenario_id}' not found")
+
+
+@app.post("/api/v1/scenarios/run-all", response_model=ScenarioSuiteResult)
+async def run_all_scenarios_endpoint(
+    category: Optional[ScenarioCategory] = None,
+    service: ScenarioLabService = Depends(get_scenario_service),
+) -> ScenarioSuiteResult:
+    """Runs all registered canonical scenarios and returns the suite result (I11)."""
+    return service.run_all(category=category)
 
