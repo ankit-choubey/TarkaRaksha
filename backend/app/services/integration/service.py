@@ -588,3 +588,51 @@ class IntegrationService:
         if not record:
             raise IntegrationBoundaryError(f"Transaction context '{transaction_id}' not found")
         return record
+
+    def orchestrate_lifecycle(
+        self,
+        transaction_id: str,
+        intent: IntentContract,
+        agent_id: str,
+        merchant_id: str,
+        buyer_proposal: Optional[BuyerTransactionProposal] = None,
+        merchant_response: Optional[MerchantResponse] = None,
+        order_id: Optional[str] = None,
+        payment_id: Optional[str] = None,
+        payment_claim: Optional[PaymentBindingClaim] = None,
+        provider_order: Optional[ProviderOrder] = None,
+        provider_payment: Optional[ProviderPayment] = None,
+        action_request: Optional[ActionRequest] = None,
+        execute_payment: bool = False,
+        policy: Optional[Any] = None,
+        reference_time: Optional[datetime] = None,
+        idempotency_key: Optional[str] = None,
+        untrusted_text: Optional[str] = None,
+        attempt_id: str = "att_1",
+    ) -> Any:
+        """
+        Orchestrates an end-to-end bounded transaction lifecycle (E3).
+        Delegates to AgenticLifecycleOrchestrator without moving component authority.
+        """
+        from backend.app.services.orchestration.lifecycle import AgenticLifecycleOrchestrator
+        orchestrator = AgenticLifecycleOrchestrator(integration_service=self)
+        return orchestrator.orchestrate(
+            transaction_id=transaction_id,
+            intent=intent,
+            agent_id=agent_id,
+            merchant_id=merchant_id,
+            buyer_proposal=buyer_proposal,
+            merchant_response=merchant_response,
+            order_id=order_id,
+            payment_id=payment_id,
+            payment_claim=payment_claim,
+            provider_order=provider_order,
+            provider_payment=provider_payment,
+            action_request=action_request,
+            execute_payment=execute_payment,
+            policy=policy,
+            reference_time=reference_time,
+            idempotency_key=idempotency_key,
+            untrusted_text=untrusted_text,
+            attempt_id=attempt_id,
+        )
