@@ -25,11 +25,11 @@
 
 ---
 
-## Implemented Domain & Integrity Foundations (T01–T10)
+## Implemented Domain & Integrity Foundations (T01–T11)
 1. **Domain Contracts (`backend/app/domain/models/`)**:
    - `Money`: Immutable integer minor unit representation (paise, cents) with ISO 4217 validation, rejecting float/bool.
    - Enums: `IntegrityStatus` (PASS, DRIFT, UNKNOWN), `DriftDomain` (ECONOMIC, SEMANTIC, TEMPORAL), `EvidenceSource`, `EvidenceAuthority`, `TransactionState`, `MRDPErrorCode`, `ActionType`.
-   - Frozen immutable Pydantic v2 models: `IntentContract`, `IntentItem`, `Authorization`, `CanonicalEvent`, `Evidence`, `EvidenceBundle`, `IntegrityResult`, `RuleResult`, `RecoveryProposal`, `MRDP`, `ProviderOrder`, `ProviderPayment`, `ProviderWebhookEvent`, `CreateTransactionRequest`, `CreateTransactionResponse`, `CompleteTransactionRequest`, `CompleteTransactionResponse`.
+   - Frozen immutable Pydantic v2 models: `IntentContract`, `IntentItem`, `Authorization`, `CanonicalEvent`, `Evidence`, `EvidenceBundle`, `IntegrityResult`, `RuleResult`, `RecoveryProposal`, `ActionRequest`, `MRDP`, `ProviderOrder`, `ProviderPayment`, `ProviderWebhookEvent`, `CreateTransactionRequest`, `CreateTransactionResponse`, `CompleteTransactionRequest`, `CompleteTransactionResponse`, `RecoverTransactionRequest`.
 
 2. **Deterministic Integrity Engine (`backend/app/domain/rules/` & `backend/app/services/evaluation.py`)**:
    - **Economic Rule (`check_economic`)**: Verifies authorized amount bounds (e.g. ₹50,000 threshold: 49999 PASS, 50000 PASS, 50001 DRIFT), currency match, missing/malformed amounts (`UNKNOWN`), and authority-tier conflict resolution.
@@ -79,10 +79,40 @@
      - `POST /api/v1/webhook/razorpay`: Ingests asynchronous signed webhook notifications.
    - **Interactive Frontend Control Plane**: Clean Next.js dashboard providing interactive intent configuration, real-time checkout simulation with preset attack scenarios (overcharge drift, signature forgery), live state machine inspection, and MRDP visualization.
 
+9. **Recovery Loop Control Plane (T11) (`backend/app/services/recovery/`)**:
+   - **Closed Control Loop**:
+     `DRIFT / RECOVERABLE UNKNOWN → MRDP / Evidence → Recovery Proposal → Deterministic Safety Validation → Bounded Recovery Action → Observe → Deterministic Revalidation → PASS / DRIFT / UNKNOWN / ABSTAIN`.
+   - **Deterministic Policy (`classify_recovery`)**:
+     - Evaluates recoverability purely from explicit inputs (`IntentContract`, `IntegrityResult`, `MRDP`, `attempt_count`).
+     - Classifies outcomes:
+       - `RECOVERABLE`: Overcharge with explicit MRDP discrepancy -> bounded `ActionType.REFUND`.
+       - `NON_RECOVERABLE`: Unauthorized SKU or quantity mismatch outside authorization envelope -> escalates to `ABSTAIN`.
+       - `UNKNOWN`: Missing/delayed evidence -> safe observation query (`ActionType.NOTIFY`).
+       - `ABSTAIN`: Contradictory evidence, expired intent, temporal multi-capture risk, or attempts exhausted.
+   - **ActionRequest Safety Validator (`validate_action_request`)**:
+     - Validates candidate action requests against contract bounds, state machine rules, and MRDP discrepancy facts.
+     - `ActionType.CAPTURE` is strictly forbidden in recovery.
+     - Requested amounts must be positive, match contract currency, not exceed authorized `max_total`, and not exceed MRDP discrepancy.
+     - Rejects expired intents, mismatched intent IDs, and illegal lifecycle states (`CREATED`, `EXECUTING`).
+   - **Bounded Recovery Executor (`RecoveryExecutor`)**:
+     - Re-validates ActionRequest (defense in depth).
+     - Enforces recovery attempt budget (`MAX_RECOVERY_ATTEMPTS = 3`). Attempt 4 raises `RecoveryExhaustedError`.
+     - Enforces deterministic recovery idempotency: repeated executions with identical `idempotency_key` return cached results without repeating side effects.
+     - Emits authoritative `Evidence` and `CanonicalEvent` (`payment.refunded`, `order.cancelled`, etc.).
+   - **Deterministic Revalidation (`revalidate_recovery`)**:
+     - Consolidates compensatory evidence (e.g. refund netting against original overcharge) into authoritative net amount evidence.
+     - Submits canonical evidence to pure T04 `evaluate_integrity`. Recovery action execution alone never declares PASS; only the deterministic engine determines whether integrity has been restored.
+   - **State Machine Integration**:
+     - Follows strict legal progression: `DRIFT → RECOVERING → REVALIDATING → PASS` (or `DRIFT`, `UNKNOWN`, `ABSTAIN`).
+     - State machine `apply_integrity_result` consumes the revalidation outcome.
+   - **FastAPI Endpoint & Frontend Integration**:
+     - Exposes `POST /api/v1/transaction/recover` on the control plane.
+     - Interactive recovery button in `frontend/app/page.tsx` executes the compensatory loop and displays revalidated PASS state.
+
 ---
 
-## Repository State (End of T10)
-- **Current Phase**: First Complete Real Transaction Slice (`T10`)
+## Repository State (End of T11)
+- **Current Phase**: Recovery Loop (`T11`)
 - **Active Branch**: `main`
 - **Core Modules**:
   - `backend/app/core/`: Runtime settings and environment configuration.
@@ -95,7 +125,8 @@
   - `backend/app/services/evaluation.py`: Deterministic integrity orchestration.
   - `backend/app/services/ai/`: AIProvider interface, GroqAIProvider, FakeAIProvider, Intent Parser, and Advisory Recovery Agent.
   - `backend/app/services/payment/`: PaymentProvider interface, RazorpayAdapter, FakePaymentProvider, signature verification, and normalization.
-  - `backend/app/services/transaction_service.py`: Control plane transaction orchestrator.
-  - `backend/app/main.py`: FastAPI application endpoints and custom error handlers.
-  - `frontend/`: Next.js 15 App Router interactive control plane dashboard.
-  - `testing/unit/`: Comprehensive test suites covering all modules (160 passing tests).
+  - `backend/app/services/transaction_service.py`: Control plane transaction orchestrator with complete slice and recovery loop.
+  - `backend/app/services/recovery/`: Recovery contracts, deterministic policy, safety validator, bounded executor, deterministic revalidator.
+  - `backend/app/main.py`: FastAPI application endpoints (create, complete, recover, status, mrdp, webhook).
+  - `frontend/`: Next.js 15 App Router interactive control plane dashboard with slice checkout and autonomous recovery controls.
+  - `testing/unit/`: Comprehensive test suites covering all modules (189 passing tests).
