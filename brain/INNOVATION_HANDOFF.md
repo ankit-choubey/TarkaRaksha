@@ -353,6 +353,48 @@
   - Anti-Reuse Context Boundary: Review decisions are strictly non-reusable across disparate transactions, agents, or merchants.
   - Deterministic Replay Isolation: Historical replays reconstruct the operational mode from snapshot metadata, completely independent of live runtime mode changes.
 
+---
+
+## I19 Verification Record
+- **Implementation Scope**: Merchant-Side Capability Graph providing a deterministic graph representation of merchant capabilities, operations, constraints, policies, and supporting evidence references.
+  - Core Entities:
+    - Node Types: `MERCHANT`, `CAPABILITY`, `OPERATION`, `CONSTRAINT`, `POLICY`, `EVIDENCE`, `RESOURCE`.
+    - Edge Types: `OFFERS_CAPABILITY`, `ENABLES`, `CONSTRAINED_BY`, `GOVERNED_BY`, `SUPPORTED_BY`, `REQUIRES`, `TARGETS_RESOURCE`.
+    - Evaluation Statuses: `SUPPORTED`, `CONSTRAINED`, `UNSUPPORTED`, `UNAVAILABLE`, `UNKNOWN`.
+    - Constraints: `MAX_AMOUNT`, `MAX_QUANTITY`, `ALLOWED_CURRENCIES`, `ALLOWED_REGIONS`, `MAX_DISCOUNT_BPS`, `ALLOWED_SKUS`, `MAX_WINDOW_DAYS`, `DELIVERY_DAYS_WINDOW`, `CUSTOM`.
+  - Hard Scope Boundary (§3, §34): Contains ZERO reputation scores, trust ratings, fraud ratings, or quality scores.
+  - Graph Engine: `MerchantCapabilityGraph` providing in-memory O(1) adjacency lookups, factory construction from I4 `MerchantCapabilityDeclaration` and `MerchantPolicyAsCode`, strict structural validation (§24), and snapshot export/reconstruction.
+  - Evaluator: `CapabilityEvaluator` deterministically evaluating requested operations against graph constraints, enforcing cross-merchant identity defense, and distinguishing `DECLARED CAPABILITY ≠ CURRENT TRANSACTION FACT` (§12).
+  - Services & Integration: `MerchantCapabilityService` managing graph registries, snapshots, and negotiation replanning advice generation (§20); integrated with `MerchantCatalogService` (`capability_graph` property) and `TransactionService`.
+- **Files Created**:
+  - `backend/app/domain/capability/contracts.py`
+  - `backend/app/domain/capability/graph.py`
+  - `backend/app/domain/capability/evaluator.py`
+  - `backend/app/domain/capability/__init__.py`
+  - `backend/app/services/capability/service.py`
+  - `backend/app/services/capability/__init__.py`
+  - `testing/unit/test_capability_contracts.py`
+  - `testing/unit/test_capability_graph.py`
+  - `testing/unit/test_capability_evaluator.py`
+  - `testing/unit/test_capability_service.py`
+  - `testing/unit/test_capability_adversarial.py`
+  - `testing/unit/test_capability_replay.py`
+- **Files Modified**:
+  - `backend/app/services/merchant/catalog_service.py`
+  - `backend/app/services/transaction_service.py`
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+  - `brain/HANDOFF.md`
+- **Tests Added**: 36 focused tests (8 contract tests, 5 graph structure & validation tests, 7 evaluator & constraint tests, 3 service & replanning tests, 11 adversarial security tests, 2 deterministic replay tests).
+- **Regression Count**: 605 passed, 0 failed in 10.31s (569 baseline + 36 I19 tests).
+- **Invariants Preserved**:
+  - Capability Describes What Can Be Done; Evidence Proves What Is True: Declared capabilities do not substitute for transactional facts.
+  - Hard Scope Boundary: Zero reputation scores, trust ratings, or fraud scoring.
+  - Cross-Merchant Isolation: Cross-merchant capability application is strictly rejected with `CrossMerchantCapabilityReuseError`.
+  - Non-Authorization: Capability graphs possess zero payment authorization authority and cannot bypass I9 kill switch or I10 operational review.
+  - Deterministic Historical Replay: Replays use the historical `CapabilityGraphSnapshot` recorded at transaction time, completely unaffected by live runtime graph mutations.
+
+
 
 
 

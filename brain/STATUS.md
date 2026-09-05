@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I10 — Operational Deployment Modes (SHADOW / GUARDED / HUMAN_REVIEW)
+I19 — Merchant-Side Capability Graph
 
 ## Task Status
-COMPLETE (C_I10 PASS)
+COMPLETE (C_I19 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -38,14 +38,15 @@ COMPLETE (C_I10 PASS)
 - [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Completed 2026-09-05)
 - [x] **I21 — Evidence-Aware AI Explanation** (Completed 2026-09-05)
 - [x] **I10 — Operational Deployment Modes** (Completed 2026-09-05)
+- [x] **I19 — Merchant-Side Capability Graph** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T23:03:00+05:30 — I10 checkpoint
+2026-09-05T23:55:00+05:30 — I19 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (569 passed in 11.15s across all unit, integration, and adversarial suites: 516 baseline + 53 I10 tests)
+- `pytest` (605 passed in 10.31s across all unit, integration, and adversarial suites: 569 baseline + 36 I19 tests)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -93,6 +94,13 @@ COMPLETE (C_I10 PASS)
 - **Review Non-Bypass & Revalidation Invariant**: Human approval for a `DRIFT` transaction cannot fabricate `PASS` and unconditionally requires authoritative revalidation before payment execution can proceed. Human approval on a `KILLED` transaction cannot bypass execution safety revalidation.
 - **Anti-Reuse Context Invariant**: Human review approvals and decisions are cryptographically bound to the 4-tuple (`transaction_id`, `intent_id`, `agent_id`, `merchant_id`) and can never be reused across disparate transactions, agents, or merchants.
 - **Historical Replay Mode Isolation**: Historical replays strictly reconstruct transactions under their recorded operational mode from snapshot metadata, completely isolated from runtime deployment mode changes.
+- **Merchant Capability Graph Representation Invariant**: The capability graph deterministically represents what a merchant can do, under what conditions (constraints), governed by which policy, and supported by which evidence.
+- **Hard Scope Boundary — Zero Reputation / Trust Score Invariant**: TarkaRaksha strictly forbids and rejects merchant trust scores, agent reputation ratings, fraud ratings, or quality scores (§3, §34). Capability evaluation answers what is possible and permitted, not how trustworthy a merchant is.
+- **Declared Capability ≠ Current Transaction Fact Invariant**: Declaring a capability (e.g. `INVENTORY` or `EXPRESS_SHIPPING`) does not establish current transaction truth. Capability evaluation verifies boundary conformance; authoritative evidence establishes transaction facts.
+- **Cross-Merchant Capability Reuse Rejection Invariant**: Capabilities belonging to merchant A can never be evaluated, substituted, or applied to merchant B; evaluations are strictly bound to `merchant_id`.
+- **Capability Graph Non-Authorization Invariant**: Capability graphs possess zero payment authorization authority and cannot bypass deterministic integrity (T04), I9 kill switch states (`KILLED`), or I10 operational review gates (`HUMAN_REVIEW`).
+- **Negotiation Constraint Replanning Invariant**: Capability constraint failures produce structured replanning advice for Buyer Agent and I7 negotiation without altering immutable intent authorization bounds.
+- **Historical Capability Graph Replay Invariant**: Replay strictly utilizes the historical `CapabilityGraphSnapshot` and version recorded at transaction time, guaranteeing that runtime merchant graph updates do not alter historical verification.
 
 ## Next Task
 Await user instruction for next innovation extension milestone.
