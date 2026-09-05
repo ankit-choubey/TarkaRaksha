@@ -9,6 +9,11 @@ from .models import (
     StateTransitionRecord,
     StateTransitionRequest,
 )
+from .transitions import (
+    PERMITTED_TRANSITIONS,
+    can_transition,
+    validate_transition,
+)
 
 __all__ = [
     "StateMachineError",
@@ -16,4 +21,7 @@ __all__ = [
     "SafetyInvariantViolationError",
     "StateTransitionRecord",
     "StateTransitionRequest",
+    "PERMITTED_TRANSITIONS",
+    "can_transition",
+    "validate_transition",
 ]
