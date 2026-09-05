@@ -20,6 +20,7 @@ from .invariants import (
     assert_ai_proposal_safety,
     assert_intent_immutability,
 )
+from .machine import TransactionStateMachine
 
 __all__ = [
     "StateMachineError",
@@ -34,4 +35,5 @@ __all__ = [
     "assert_financial_action_permitted",
     "assert_ai_proposal_safety",
     "assert_intent_immutability",
+    "TransactionStateMachine",
 ]
