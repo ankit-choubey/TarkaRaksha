@@ -51,6 +51,13 @@ from backend.app.domain.scenario import (
     ScenarioCategory,
 )
 from backend.app.services.scenario import ScenarioLabService
+from backend.app.domain.certification import (
+    CertificationMatrixRow,
+    CertificationResult,
+    CertificationSuiteResult,
+    GroundTruthDefinition,
+)
+from backend.app.services.certification import GroundTruthCertificationService
 from backend.app.services import TransactionService
 from backend.app.services.ai import parse_intent, IntentParsingError
 from backend.app.services.payment import (
@@ -87,6 +94,15 @@ _global_scenario_service = ScenarioLabService()
 def get_scenario_service() -> ScenarioLabService:
     """Dependency provider for ScenarioLabService. Can be overridden in tests."""
     return _global_scenario_service
+
+
+_global_certification_service = GroundTruthCertificationService()
+
+
+def get_certification_service() -> GroundTruthCertificationService:
+    """Dependency provider for GroundTruthCertificationService. Can be overridden in tests."""
+    return _global_certification_service
+
 
 
 app = FastAPI(
@@ -349,6 +365,7 @@ async def get_transaction_explanation(
         raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
 
 
+
 @app.post("/api/v1/webhook/razorpay")
 async def receive_razorpay_webhook(
     request: Request,
@@ -427,4 +444,33 @@ async def run_all_scenarios_endpoint(
 ) -> ScenarioSuiteResult:
     """Runs all registered canonical scenarios and returns the suite result (I11)."""
     return service.run_all(category=category)
+
+
+@app.get("/api/v1/certifications", response_model=List[GroundTruthDefinition])
+async def list_certifications_endpoint(
+    service: GroundTruthCertificationService = Depends(get_certification_service),
+) -> List[GroundTruthDefinition]:
+    """Lists canonical ground truth definitions for certification (I12)."""
+    return service.list_ground_truths()
+
+
+@app.post("/api/v1/certifications/{scenario_id}/run", response_model=CertificationResult)
+async def run_certification_endpoint(
+    scenario_id: str,
+    service: GroundTruthCertificationService = Depends(get_certification_service),
+) -> CertificationResult:
+    """Certifies a scenario deterministically against its canonical ground truth (I12)."""
+    try:
+        return service.certify_scenario(scenario_id)
+    except (KeyError, ValueError):
+        raise HTTPException(status_code=404, detail=f"Scenario or ground truth for '{scenario_id}' not found")
+
+
+@app.post("/api/v1/certifications/run-all", response_model=CertificationSuiteResult)
+async def run_all_certifications_endpoint(
+    service: GroundTruthCertificationService = Depends(get_certification_service),
+) -> CertificationSuiteResult:
+    """Runs all canonical scenario certifications and returns the suite result with matrix (I12)."""
+    return service.certify_all()
+
 

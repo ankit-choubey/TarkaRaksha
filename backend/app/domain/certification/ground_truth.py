@@ -59,7 +59,7 @@ CANONICAL_GROUND_TRUTH: Dict[ScenarioId, GroundTruthDefinition] = {
         expected_terminal_state=None,
         expected_mrdp_presence=True,
         expected_abstention=False,
-        expected_violation_codes=["MissingItem"],
+        expected_violation_codes=["MissingAuthorizedItem"],
         metadata={"category": "AGENTIC"},
     ),
     ScenarioId.DELIVERY_DRIFT: GroundTruthDefinition(

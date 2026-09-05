@@ -130,6 +130,30 @@ class CertificationResult(BaseModel):
         return dt
 
 
+class CertificationMatrixRow(BaseModel):
+    """
+    Typed, machine-readable matrix row for scenario certification results (I12).
+    """
+    scenario_id: str
+    ground_truth_id: str
+    actual_verdict: str
+    expected_verdict: str
+    integrity_match: bool
+    security_match: bool
+    state_match: bool
+    mrdp_match: bool
+    abstention_match: bool
+    violation_match: bool
+    authority_match: bool
+    overall_certification: str
+    certification_hash: str
+
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
+
+
 class CertificationSuiteResult(BaseModel):
     """
     Deterministic summary of certifying an entire scenario suite against ground truth.
@@ -142,9 +166,10 @@ class CertificationSuiteResult(BaseModel):
     results: List[CertificationResult]
     is_fully_certified: bool
     summary: str
-    matrix: List[Dict[str, Any]] = Field(default_factory=list)
+    matrix: List[CertificationMatrixRow] = Field(default_factory=list)
 
     model_config = ConfigDict(
         frozen=True,
         extra="forbid",
     )
+

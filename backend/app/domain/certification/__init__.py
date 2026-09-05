@@ -2,6 +2,7 @@
 Certification Domain Package for TarkaRaksha (I12).
 """
 from backend.app.domain.certification.contracts import (
+    CertificationMatrixRow,
     CertificationResult,
     CertificationStatus,
     CertificationSuiteResult,
@@ -18,6 +19,7 @@ from backend.app.domain.certification.comparator import (
 )
 
 __all__ = [
+    "CertificationMatrixRow",
     "CertificationResult",
     "CertificationStatus",
     "CertificationSuiteResult",
