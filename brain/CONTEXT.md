@@ -36,13 +36,22 @@
    - **Temporal Rule (`check_temporal`)**: Validates contract validity window (`not_before`/`expires_at`), detects duplicate event IDs, multi-capture double execution risk, and timeout with late success conflict.
    - **Overall Evaluation (`evaluate_integrity`)**: Pure deterministic evaluation with explicit `reference_time`. Priority semantics: DRIFT dominates (confirmed violation), followed by UNKNOWN (missing or ambiguous evidence cannot PASS), and PASS only when all sub-checks pass cleanly.
 
+3. **Lifecycle State Machine (`backend/app/domain/states/`)**:
+   - **11 Lifecycle States**: `CREATED`, `EXECUTING`, `OBSERVING`, `VERIFYING`, `PASS`, `DRIFT`, `UNKNOWN`, `RESOLVING`, `ABSTAIN`, `RECOVERING`, `REVALIDATING`.
+   - **Transition Enforcement**: Authoritative transition graph (`PERMITTED_TRANSITIONS`). Self-transitions, skipped states, and illegal pathways (e.g. `PASS -> EXECUTING`, `ABSTAIN -> CAPTURE`) are rejected with `InvalidStateTransitionError`.
+   - **Financial Safety Guards**: `request_action` permanently blocks financial capture in `UNKNOWN`, `DRIFT`, `ABSTAIN`, and non-verified states. Enforces amount and currency alignment against `IntentContract.max_total`.
+   - **Advisory AI Boundary**: Untrusted agent/AI triggers cannot force state transitions without deterministic verification (`is_verified=True`).
+   - **Deterministic Consumption**: `apply_integrity_result` consumes T04 `IntegrityResult` to drive transitions from `VERIFYING` or `REVALIDATING` to `PASS`, `DRIFT`, or `UNKNOWN`.
+
 ---
 
-## Repository State (End of T04)
-- **Current Phase**: Deterministic Integrity Engine (`T04`)
+## Repository State (End of T05)
+- **Current Phase**: Lifecycle State Machine (`T05`)
 - **Active Branch**: `main`
 - **Core Modules**:
-  - `backend/app/domain/`: Immutable contracts, financial math, and deterministic rule engines.
+  - `backend/app/domain/models/`: Immutable contracts, financial math, enums.
+  - `backend/app/domain/rules/`: Deterministic economic, semantic, and temporal rule engines.
+  - `backend/app/domain/states/`: Lifecycle state machine, transitions, invariants, and audit history.
   - `backend/app/services/evaluation.py`: Deterministic integrity orchestration.
-  - `testing/unit/`: Test suites covering environment, domain models, money constraints, and rule engine.
+  - `testing/unit/`: Comprehensive test suites covering environment, models, money, engine, and state machine (73 passing tests).
   - `frontend/`: Next.js 15 App Router scaffold verified and build-ready.
