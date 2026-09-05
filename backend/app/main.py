@@ -26,6 +26,7 @@ from backend.app.domain.models import (
 )
 from backend.app.domain.explanation import ExplanationResult
 from backend.app.domain.trace import IntegrityTrace
+from backend.app.domain.checkpoint import IntegrityCheckpointTimeline
 from backend.app.services.recovery import (
     InvalidRecoveryStateError,
     RecoveryExhaustedError,
@@ -380,6 +381,23 @@ async def get_transaction_integrity_trace(
         return service.get_integrity_trace(transaction_id)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
+
+
+@app.get("/api/v1/transactions/{transaction_id}/integrity-checkpoints", response_model=IntegrityCheckpointTimeline)
+async def get_transaction_integrity_checkpoints(
+    transaction_id: str,
+    service: TransactionService = Depends(get_transaction_service),
+) -> IntegrityCheckpointTimeline:
+    """
+    Integrity Checkpoints endpoint (I14).
+    Deterministic 8-boundary lifecycle verification, last-valid boundary,
+    first-invalid boundary, and cryptographic hash chain integrity.
+    """
+    try:
+        return service.get_integrity_checkpoints(transaction_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
+
 
 
 

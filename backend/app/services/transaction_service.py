@@ -105,6 +105,8 @@ from backend.app.services.explanation import (
 from backend.app.services.ai.provider import AIProvider
 from backend.app.domain.trace import IntegrityTrace
 from backend.app.services.trace import IntegrityTraceService
+from backend.app.domain.checkpoint import IntegrityCheckpointTimeline
+from backend.app.services.checkpoint import IntegrityCheckpointService
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +158,7 @@ class TransactionService:
         operational_mode_service: Optional[OperationalModeService] = None,
         capability_service: Optional[MerchantCapabilityService] = None,
         trace_service: Optional[IntegrityTraceService] = None,
+        checkpoint_service: Optional[IntegrityCheckpointService] = None,
     ):
         self._default_provider = default_provider
         self._binding_service = binding_service or TransactionBindingService()
@@ -164,6 +167,7 @@ class TransactionService:
         self._operational_mode_service = operational_mode_service or OperationalModeService()
         self._capability_service = capability_service or MerchantCapabilityService()
         self._trace_service = trace_service or IntegrityTraceService()
+        self._checkpoint_service = checkpoint_service or IntegrityCheckpointService(trace_service=self._trace_service)
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
         self._recovery_executor = RecoveryExecutor()
@@ -172,6 +176,10 @@ class TransactionService:
     @property
     def capability_service(self) -> MerchantCapabilityService:
         return self._capability_service
+
+    @property
+    def checkpoint_service(self) -> IntegrityCheckpointService:
+        return self._checkpoint_service
 
     @property
     def trace_service(self) -> IntegrityTraceService:
@@ -321,6 +329,27 @@ class TransactionService:
             reference_time=reference_time,
         )
 
+    def get_integrity_checkpoints(
+        self,
+        transaction_id: str,
+        reference_time: Optional[datetime] = None,
+    ) -> IntegrityCheckpointTimeline:
+        """
+        Builds an authoritative, deterministic IntegrityCheckpointTimeline for a transaction.
+        Tracks verification boundaries, last valid checkpoint, first invalid checkpoint,
+        and hash chain integrity without altering any decisions (I14).
+        """
+        session = self.get_session(transaction_id)
+        if not session:
+            raise KeyError(f"Transaction '{transaction_id}' not found")
+
+        ks_state = self.get_kill_switch_state(transaction_id)
+        return self._checkpoint_service.build_timeline_from_session(
+            session=session,
+            kill_switch_state=ks_state,
+            reference_time=reference_time,
+        )
+
     def explain_transaction(
         self,
         transaction_id: str,
@@ -337,6 +366,7 @@ class TransactionService:
 
         ks_state = self.get_kill_switch_state(transaction_id)
         trace = self.get_integrity_trace(transaction_id, reference_time=reference_time)
+        checkpoints = self.get_integrity_checkpoints(transaction_id, reference_time=reference_time)
 
         context = ExplanationContextBuilder.build_context(
             transaction_id=session.transaction_id,
@@ -352,6 +382,7 @@ class TransactionService:
             mrdp=session.completed_response.mrdp if session.completed_response else None,
             reference_time=reference_time,
             integrity_trace=trace,
+            integrity_checkpoints=checkpoints,
         )
 
         service = self._explanation_service

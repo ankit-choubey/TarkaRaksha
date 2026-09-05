@@ -56,6 +56,7 @@ class ExplanationContextBuilder:
         certificate_id: Optional[str] = None,
         reference_time: Optional[datetime] = None,
         integrity_trace: Optional[Any] = None,
+        integrity_checkpoints: Optional[Any] = None,
     ) -> ExplanationContext:
         """
         Builds a frozen ExplanationContext.
@@ -266,6 +267,47 @@ class ExplanationContextBuilder:
                 missing_evidence.extend(integrity_trace.missing_evidence)
             if hasattr(integrity_trace, "uncertainties") and integrity_trace.uncertainties:
                 uncertainty_notes.extend(integrity_trace.uncertainties)
+
+        if integrity_checkpoints:
+            last_val = getattr(integrity_checkpoints, "last_valid_checkpoint", None)
+            if last_val:
+                ev_refs.append(
+                    EvidenceReference(
+                        evidence_id=f"ev_{last_val.checkpoint_id}",
+                        field_name="last_valid_checkpoint",
+                        source=EvidenceSource.SYSTEM,
+                        authority=EvidenceAuthority.AUTHORITATIVE,
+                        observed_value={
+                            "checkpoint_type": last_val.checkpoint_type.value,
+                            "sequence": last_val.sequence,
+                            "status": last_val.status.value,
+                        },
+                        expected_value={"status": "VALID"},
+                        is_authoritative=True,
+                        description=f"Last verified valid boundary: {last_val.checkpoint_type.value} (sequence {last_val.sequence})",
+                    )
+                )
+            first_inv = getattr(integrity_checkpoints, "first_invalid_checkpoint", None)
+            if first_inv:
+                ev_refs.append(
+                    EvidenceReference(
+                        evidence_id=f"ev_{first_inv.checkpoint_id}",
+                        field_name="first_invalid_checkpoint",
+                        source=EvidenceSource.SYSTEM,
+                        authority=EvidenceAuthority.AUTHORITATIVE,
+                        observed_value={
+                            "checkpoint_type": first_inv.checkpoint_type.value,
+                            "sequence": first_inv.sequence,
+                            "status": first_inv.status.value,
+                            "findings": first_inv.findings,
+                        },
+                        expected_value={"status": "VALID"},
+                        is_authoritative=True,
+                        description=f"First invalid boundary: {first_inv.checkpoint_type.value} (sequence {first_inv.sequence})",
+                    )
+                )
+            if getattr(integrity_checkpoints, "has_unknown_checkpoints", False):
+                uncertainty_notes.append("Transaction timeline contains UNKNOWN checkpoint boundaries awaiting authoritative evidence")
 
         # 7. Extract identifiers
         agent_id = getattr(intent, "issued_by", None)

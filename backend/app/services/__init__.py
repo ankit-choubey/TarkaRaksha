@@ -7,6 +7,7 @@ from .transaction_service import TransactionService, TransactionSession
 from .scenario import ScenarioLabService
 from .certification import GroundTruthCertificationService
 from .trace import IntegrityTraceService
+from .checkpoint import IntegrityCheckpointService
 
 __all__ = [
     "evaluate_integrity",
@@ -17,6 +18,7 @@ __all__ = [
     "ScenarioLabService",
     "GroundTruthCertificationService",
     "IntegrityTraceService",
+    "IntegrityCheckpointService",
 ]
 
 
