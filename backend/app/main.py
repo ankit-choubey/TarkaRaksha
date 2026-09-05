@@ -34,6 +34,14 @@ from backend.app.services.resolution import (
     ResolutionConflictError,
     ResolutionExhaustedError,
 )
+from backend.app.services.replay import (
+    ReplayEngine,
+    ReplaySnapshot,
+    ReplayResult,
+    ReplayError,
+    InvalidReplayInputError,
+    ReplayAmbiguityError,
+)
 from backend.app.services import TransactionService
 from backend.app.services.ai import parse_intent, IntentParsingError
 from backend.app.services.payment import (
@@ -111,6 +119,14 @@ async def intent_parsing_error_handler(request: Request, exc: IntentParsingError
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": str(exc), "error_type": "INTENT_PARSING_FAILED"},
+    )
+
+
+@app.exception_handler(ReplayError)
+async def replay_error_handler(request: Request, exc: ReplayError):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": str(exc), "error_type": type(exc).__name__},
     )
 
 
@@ -327,3 +343,25 @@ async def receive_razorpay_webhook(
         raise HTTPException(status_code=400, detail=f"Invalid webhook signature: {exc}")
     except WebhookValidationError as exc:
         raise HTTPException(status_code=422, detail=f"Invalid webhook payload: {exc}")
+
+
+@app.post("/api/v1/replay", response_model=ReplayResult)
+async def replay_transaction(
+    snapshot: ReplaySnapshot,
+) -> ReplayResult:
+    """
+    Deterministic transaction replay and audit endpoint (T13).
+    Reconstructs what the system should have decided from recorded history.
+    - Zero live network or provider calls.
+    - Zero live AI calls.
+    - Zero financial side effects.
+    - Strictly deterministic MATCH / MISMATCH / INVALID_REPLAY verdict.
+    """
+    logger.info(
+        "Initiating deterministic replay for transaction %s (replay_id=%s)",
+        snapshot.transaction_id,
+        snapshot.replay_id,
+    )
+    result = ReplayEngine.replay(snapshot)
+    return result
+
