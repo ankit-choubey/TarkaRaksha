@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I19 — Merchant-Side Capability Graph
+I11 — Deterministic Scenario Lab
 
 ## Task Status
-COMPLETE (C_I19 PASS)
+COMPLETE (C_I11 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -39,14 +39,15 @@ COMPLETE (C_I19 PASS)
 - [x] **I21 — Evidence-Aware AI Explanation** (Completed 2026-09-05)
 - [x] **I10 — Operational Deployment Modes** (Completed 2026-09-05)
 - [x] **I19 — Merchant-Side Capability Graph** (Completed 2026-09-05)
+- [x] **I11 — Deterministic Scenario Lab** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-05T23:55:00+05:30 — I19 checkpoint
+2026-09-06T00:26:00+05:30 — I11 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (605 passed in 10.31s across all unit, integration, and adversarial suites: 569 baseline + 36 I19 tests)
+- `pytest` (639 passed in 8.43s across all unit, integration, and adversarial suites: 605 baseline + 34 I11 tests)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -101,6 +102,11 @@ COMPLETE (C_I19 PASS)
 - **Capability Graph Non-Authorization Invariant**: Capability graphs possess zero payment authorization authority and cannot bypass deterministic integrity (T04), I9 kill switch states (`KILLED`), or I10 operational review gates (`HUMAN_REVIEW`).
 - **Negotiation Constraint Replanning Invariant**: Capability constraint failures produce structured replanning advice for Buyer Agent and I7 negotiation without altering immutable intent authorization bounds.
 - **Historical Capability Graph Replay Invariant**: Replay strictly utilizes the historical `CapabilityGraphSnapshot` and version recorded at transaction time, guaranteeing that runtime merchant graph updates do not alter historical verification.
+- **Scenario Lab Input-Generation Layer Invariant**: The Scenario Lab is strictly an input-generation and experiment-runner layer; it NEVER implements a second business logic or decision engine.
+- **Production-Shaped Authoritative Pipeline Reuse**: All scenario evaluations are executed by the real production-shaped components (`evaluate_integrity`, `TransactionStateMachine`, `build_mrdp`, `ReplayEngine`, `TransactionBindingService`, `KillSwitchService`, `OperationalModeService`).
+- **Expected vs Actual Separation Invariant**: Expected verdict is a test assertion. Actual verdict is computed by the authoritative engine. If expected != actual, the Scenario Lab flags `ScenarioStatus.FAIL` and never modifies engine outputs.
+- **Zero Live Financial Side Effects**: Scenario Lab executes strictly on offline, synthetic/reference fixtures with zero live network calls, zero live Razorpay orders, and zero live AI dependencies.
+- **Canonical 12 Scenarios Completeness**: All 12 canonical scenarios (`HAPPY_PATH`, `PRICE_DRIFT`, `WRONG_SKU`, `INVENTORY_DISAPPEARS`, `DELIVERY_DRIFT`, `DUPLICATE_PAYMENT`, `DELAYED_WEBHOOK`, `REPLAY_ATTACK`, `PROMPT_INJECTION_IN_EVIDENCE`, `MERCHANT_AGENT_COMPROMISED`, `BUYER_AGENT_REUSE`, `UNKNOWN_PROVIDER_STATE`) are implemented, verified, and pass deterministically.
 
 ## Next Task
 Await user instruction for next innovation extension milestone.

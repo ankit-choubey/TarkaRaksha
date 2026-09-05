@@ -394,7 +394,50 @@
   - Non-Authorization: Capability graphs possess zero payment authorization authority and cannot bypass I9 kill switch or I10 operational review.
   - Deterministic Historical Replay: Replays use the historical `CapabilityGraphSnapshot` recorded at transaction time, completely unaffected by live runtime graph mutations.
 
+---
 
-
-
-
+## I11 Verification Record
+- **Implementation Scope**: Deterministic Scenario Lab providing controlled input generation and isolated execution running against the authoritative, production-shaped TarkaRaksha pipeline (T04, T05, T07, T13, I8, I9, I10, I19).
+  - Canonical 12 Scenarios:
+    1. `HAPPY_PATH`: Valid intent, matching order, captured payment, consistent evidence -> `PASS`.
+    2. `PRICE_DRIFT`: Captured amount exceeds authorized intent ceiling -> `DRIFT` + verifiable MRDP proof.
+    3. `WRONG_SKU`: Unauthorized SKU substitution in order/evidence -> `DRIFT` (semantic violation) + MRDP proof.
+    4. `INVENTORY_DISAPPEARS`: Declared inventory capability vs 0 executed stock -> `DRIFT` (capability ≠ fact).
+    5. `DELIVERY_DRIFT`: Observed delivery SLA (120h) exceeds authorized delivery window -> `DRIFT` (temporal violation).
+    6. `DUPLICATE_PAYMENT`: Multiple captures for single-capture intent -> `DRIFT` (double execution risk violation).
+    7. `DELAYED_WEBHOOK`: Payment confirmation arrives after intent expiration -> `DRIFT` (expired execution violation).
+    8. `REPLAY_ATTACK`: Historical replay with divergent recorded state vs replayed execution -> `MISMATCH` via `ReplayEngine`.
+    9. `PROMPT_INJECTION_IN_EVIDENCE`: Injection string in advisory note treated strictly as raw data; missing provider evidence -> `UNKNOWN`.
+    10. `MERCHANT_AGENT_COMPROMISED`: Rogue merchant attestation claiming capture without gateway evidence -> `UNKNOWN` (merchant cannot authorize).
+    11. `BUYER_AGENT_REUSE`: Cross-transaction context reuse caught by `TransactionBindingService` -> `REJECTED`.
+    12. `UNKNOWN_PROVIDER_STATE`: Gateway payment pending; missing capture confirmation -> `UNKNOWN` preserved without guessing.
+  - Zero Second Decision Engine: All scenario runs feed directly into `evaluate_integrity`, `build_mrdp`, `ReplayEngine`, `TransactionBindingService`, and `KillSwitchService`.
+  - Expected vs Actual Separation: Expected verdicts are test assertions. Actual verdicts are computed authoritatively.
+  - Deterministic Versioning & Identity: SHA-256 digests computed over canonical scenario definition and snapshot contents.
+  - REST API Endpoints: Exposed `GET /api/v1/scenarios`, `POST /api/v1/scenarios/{scenario_id}/run`, and `POST /api/v1/scenarios/run-all`.
+- **Files Created**:
+  - `backend/app/domain/scenario/contracts.py`
+  - `backend/app/domain/scenario/catalog.py`
+  - `backend/app/domain/scenario/__init__.py`
+  - `backend/app/services/scenario/definitions.py`
+  - `backend/app/services/scenario/runner.py`
+  - `backend/app/services/scenario/service.py`
+  - `backend/app/services/scenario/__init__.py`
+  - `testing/unit/test_scenario_contracts.py`
+  - `testing/unit/test_scenario_runner.py`
+  - `testing/unit/test_scenario_adversarial.py`
+  - `testing/unit/test_scenario_determinism.py`
+- **Files Modified**:
+  - `backend/app/services/__init__.py`
+  - `backend/app/main.py`
+  - `brain/STATUS.md`
+  - `brain/HANDOFF.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 34 focused tests across 4 test suites (6 contract tests, 19 runner & API tests, 6 adversarial security tests, 3 determinism & isolation tests).
+- **Regression Count**: 639 passed, 0 failed in 8.43s (605 baseline + 34 I11 tests).
+- **Invariants Preserved**:
+  - Input Layer Only: The Scenario Lab never implements custom verification logic.
+  - Expected vs Actual Invariant: Lying scenario assertions cannot alter authoritative engine outputs.
+  - Authority Hierarchy: Advisory prompt injection and merchant claims cannot force PASS or escalate authority.
+  - Zero Side Effects: Zero live network requests, zero live Razorpay orders, and zero live AI calls.
+  - Determinism & Isolation: Bit-for-bit identical digests and results across repeated runs and arbitrary execution order.
