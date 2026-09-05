@@ -1,9 +1,14 @@
-.PHONY: help status test-bootstrap clean
+.PHONY: help status test-bootstrap test-env test clean
+
+VENV_PYTHON = .venv/bin/python
+VENV_PYTEST = .venv/bin/pytest
 
 help:
 	@echo "TarkaRaksha Control Plane - Commands"
 	@echo "  make status         - Display persistent status and git state"
-	@echo "  make test-bootstrap - Verify repository bootstrap integrity"
+	@echo "  make test-bootstrap - Verify repository bootstrap integrity (C01)"
+	@echo "  make test-env       - Verify environment setup end-to-end (C02)"
+	@echo "  make test           - Run backend automated test suite"
 	@echo "  make clean          - Clean transient build and cache artifacts"
 
 status:
@@ -39,10 +44,19 @@ test-bootstrap:
 	@echo "Validating pyproject.toml TOML syntax..."
 	@python3 -c "import tomllib; tomllib.loads(open('pyproject.toml').read())" && echo "[✓] pyproject.toml syntax valid"
 	@echo "Performing credential and secret scan..."
-	@python3 -c "import subprocess, sys; res = subprocess.run(['git', 'grep', '-i', '-E', 'sk_test_[0-9a-zA-Z]{10,}|sk_live_[0-9a-zA-Z]{10,}|rzp_test_[0-9a-zA-Z]{10,}|rzp_live_[0-9a-zA-Z]{10,}|gsk_[a-zA-Z0-9]{20,}|BEGIN PRIVATE KEY', ':(exclude)Makefile'], capture_output=True, text=True); sys.exit(1) if res.stdout.strip() else sys.exit(0)" && echo "[✓] No leaked credentials detected"
+	@python3 -c "import subprocess, sys; res = subprocess.run(['git', 'grep', '-i', '-E', 'sk_test_[0-9a-zA-Z]{10,}|sk_live_[0-9a-zA-Z]{10,}|rzp_test_[0-9a-zA-Z]{10,}|rzp_live_[0-9a-zA-Z]{10,}|gsk_[a-zA-Z0-9]{20,}|BEGIN PRIVATE KEY', ':(exclude)Makefile', ':(exclude)testing/unit/test_environment.py'], capture_output=True, text=True); sys.exit(1) if res.stdout.strip() else sys.exit(0)" && echo "[✓] No leaked credentials detected"
 	@echo "[✓] All T01 bootstrap checks passed."
+
+test-env:
+	@test -x $(VENV_PYTHON) || (echo "[✗] Virtual environment .venv not found. Run python3 -m venv .venv" && exit 1)
+	@$(VENV_PYTHON) scripts/verify_env.py
+	@$(VENV_PYTEST) testing/unit/test_environment.py
+
+test:
+	@$(VENV_PYTEST)
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 	find . -type f -name ".DS_Store" -delete
+	rm -rf frontend/.next frontend/out
