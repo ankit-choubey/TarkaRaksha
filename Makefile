@@ -44,7 +44,7 @@ test-bootstrap:
 	@echo "Validating pyproject.toml TOML syntax..."
 	@python3 -c "import tomllib; tomllib.loads(open('pyproject.toml').read())" && echo "[✓] pyproject.toml syntax valid"
 	@echo "Performing credential and secret scan..."
-	@python3 -c "import subprocess, sys; res = subprocess.run(['git', 'grep', '-i', '-E', 'sk_test_[0-9a-zA-Z]{10,}|sk_live_[0-9a-zA-Z]{10,}|rzp_test_[0-9a-zA-Z]{10,}|rzp_live_[0-9a-zA-Z]{10,}|gsk_[a-zA-Z0-9]{20,}|BEGIN PRIVATE KEY', ':(exclude)Makefile', ':(exclude)testing/unit/test_environment.py'], capture_output=True, text=True); sys.exit(1) if res.stdout.strip() else sys.exit(0)" && echo "[✓] No leaked credentials detected"
+	@python3 -c "import subprocess, sys; res = subprocess.run(['git', 'grep', '-i', '-E', 'sk_test_[0-9a-zA-Z]{10,}|sk_live_[0-9a-zA-Z]{10,}|rzp_test_[0-9a-zA-Z]{10,}|rzp_live_[0-9a-zA-Z]{10,}|gsk_[a-zA-Z0-9]{20,}|BEGIN PRIVATE KEY', ':(exclude)Makefile'], capture_output=True, text=True); sys.exit(1) if res.stdout.strip() else sys.exit(0)" && echo "[✓] No leaked credentials detected"
 	@echo "[✓] All T01 bootstrap checks passed."
 
 test-env:

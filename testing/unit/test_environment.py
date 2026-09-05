@@ -21,10 +21,10 @@ def test_httpx_import():
 
 def test_groq_sdk_import_and_init():
     import groq
-    client = groq.Client(api_key="gsk_test_placeholder_key_env_smoke_test")
+    client = groq.Client(api_key="mock_env_smoke_test_key")
     assert client is not None
 
 def test_razorpay_sdk_import_and_init():
     import razorpay
-    client = razorpay.Client(auth=("rzp_test_placeholder", "dummy_secret"))
+    client = razorpay.Client(auth=("mock_env_key_id", "mock_env_key_secret"))
     assert client is not None

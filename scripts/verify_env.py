@@ -68,7 +68,7 @@ def main():
     print("\n--- Client Initialization Viability ---")
     try:
         import groq
-        _ = groq.Client(api_key="gsk_placeholder_verification_only")
+        _ = groq.Client(api_key="mock_env_verification_key")
         print("[✓] Groq client instantiation: OK")
     except Exception as e:
         print(f"[✗] Groq client instantiation failed: {e}")
@@ -76,7 +76,7 @@ def main():
 
     try:
         import razorpay
-        _ = razorpay.Client(auth=("rzp_test_placeholder", "dummy_secret"))
+        _ = razorpay.Client(auth=("mock_env_key_id", "mock_env_key_secret"))
         print("[✓] Razorpay client instantiation: OK")
     except Exception as e:
         print(f"[✗] Razorpay client instantiation failed: {e}")

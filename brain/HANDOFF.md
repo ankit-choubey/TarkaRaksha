@@ -1,46 +1,50 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `T02 — Environment`
-- **Current Checkpoint**: `C02 — PASS`
-- **Next Task**: `T03 — Domain Contracts`
+- **Current Task Completed**: `T03 — Domain Contracts`
+- **Current Checkpoint**: `C03 — PASS`
+- **Next Task**: `T04 — Deterministic Engine`
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-05T14:03:00+05:30
+- **Handoff Timestamp**: 2026-09-05T14:10:00+05:30
 
 ---
 
-## 1. What Was Done in T02
-1. **Python Virtual Environment (`.venv`)**:
-   - Initialized Python 3.12.12 virtual environment.
-   - Installed core backend dependencies: `fastapi` (v0.141.1), `uvicorn[standard]` (v0.52.4), `pydantic` (v2.13.5), `httpx` (v0.28.1), `pytest` (v9.1.1), `pytest-asyncio` (v1.4.0).
-   - Installed AI & Payment SDKs: `groq` (v1.7.0), `razorpay` (v2.0.1).
-   - Validated package declarations in `pyproject.toml`.
-2. **Frontend Environment (`frontend/`)**:
-   - Bootstrapped Next.js 15.5.25 App Router project with TypeScript 5 and Turbopack.
-   - Configured Tailwind CSS 4 and initialized `shadcn/ui` with default utility structure (`components/ui/button.tsx`, `lib/utils.ts`).
-   - Verified clean production build (`npm run build`).
-3. **Environment Verification Tooling**:
-   - `scripts/verify_env.py`: End-to-end toolchain, package, client initialization, and build verification.
-   - `testing/unit/test_environment.py`: Pytest baseline smoke test covering package imports and mock-safe client instantiation.
-   - `Makefile`: Added `test-env` and `test` automation targets.
+## 1. What Was Done in T03
+1. **Canonical Domain Contracts Implemented** (`backend/app/domain/models/`):
+   - `enums.py`: `IntegrityStatus` (`PASS`, `DRIFT`, `UNKNOWN`), `DecisionAction`, `EvidenceSource`, `TransactionState`, `ActionType`.
+   - `money.py`: `Money` immutable value object enforcing strict integer minor units, uppercase ISO-4217 currency, strict float/bool rejection, and exact arithmetic.
+   - `intent.py`: `IntentItem` and `IntentContract` with timezone-aware timestamps, non-empty items, and immutability.
+   - `authorization.py`: `Authorization` distinct from AI recommendations with explicit validity bounds.
+   - `evidence.py`: `CanonicalEvent` and `Evidence` with normalized fields and deterministic authority ranking (`RAZORPAY` > `INTENT` > `MERCHANT` > `REPLAY` > `AGENT` > `SYNTHETIC`).
+   - `integrity.py`: `IntegrityResult` (first-class `UNKNOWN`), `Decision`, and `MRDP` (Machine-Readable Drift Proof).
+   - `recovery.py`: `RecoveryProposal` (advisory untrusted AI proposal) and `ActionRequest` (unvalidated until rule engine approval).
+   - `transaction.py`: Domain-level `Transaction` model.
+2. **Testing Suite Established**:
+   - `testing/unit/test_money.py`: 12 tests covering integer representation, float rejection, boolean rejection, boundary values (49999, 50000, 50001, 0, huge integers), currency validation, arithmetic, and serialization.
+   - `testing/unit/test_models.py`: 18 tests covering all domain models, timestamp requirements, authority ranking, first-class UNKNOWN, advisory AI proposals, and serialization round-trips.
+3. **Checkpoints & Validation**:
+   - `make test-bootstrap`: PASS.
+   - `make test-env`: PASS.
+   - `pytest`: 35 passed in 0.16s across all unit test suites.
 
 ---
 
 ## 2. Verified Invariants
-- **No Premature Application Code**: Domain models, engine rules, adapters, and UI components remain strictly unbuilt until their sequential tasks (`T03`–`T14`).
-- **No Secrets Introduced**: Zero API keys or secrets committed. `.env.example` remains a clean template.
-- **Deterministic Authority Maintained**: All documentation, status trackers, and tests affirm AI is advisory and deterministic verification is authoritative.
+- **AI Output is Untrusted**: `RecoveryProposal` is typed as an advisory proposal and cannot be executed directly; only validated `ActionRequest` can be authorized.
+- **Deterministic Authority**: All contracts enforce strong types and immutable boundaries; no floating-point currency math is possible.
+- **UNKNOWN is First-Class**: `IntegrityStatus.UNKNOWN` is explicitly separate from `PASS` and `DRIFT`.
+- **Zero Scope Leakage**: No deterministic engine rules (`check_economic`, etc.), state machine logic, or third-party adapters implemented in T03.
 
 ---
 
-## 3. Explicit Instructions for Next Task (`T03 — Domain Contracts`)
-When starting `T03`:
+## 3. Explicit Instructions for Next Task (`T04 — Deterministic Engine`)
+When starting `T04`:
 1. **Read `brain/STATUS.md` first**.
-2. **Read `brain/TarkaRaksha_Execution.md` §7.15–§7.21, §8.10–§8.14 (T03)** and `brain/TarkaRaksha_TESTING.md` §9.5–§9.9.
-3. **Task Objective**: Implement domain models under `backend/app/domain/`:
-   - `Money` (strict integer minor units, currency code, immutable value object, arithmetic safety).
-   - `IntentContract`, `IntentItem`, `Authorization`.
-   - `Evidence`, `Transaction`, `IntegrityResult`.
-   - `Decision`, `MRDP`, `RecoveryProposal`, `ActionRequest`.
-4. **Testing Requirement**: Implement comprehensive domain contract tests under `testing/unit/test_models.py` and `testing/unit/test_money.py`.
-5. **Pass Checkpoint C03** before committing and pushing.
+2. **Read `brain/TarkaRaksha_Execution.md` §7.17–§7.20, §8.15–§8.22 (T04)** and `brain/TarkaRaksha_TESTING.md` §9.10–§9.16.
+3. **Task Objective**: Implement deterministic evaluation rules under `backend/app/domain/rules/` and `backend/app/services/evaluation.py`:
+   - `check_economic(contract, evidence) -> RuleResult` (assert ₹49,999 / ₹50,000 PASS, ₹50,001 DRIFT).
+   - `check_semantic(contract, evidence) -> RuleResult` (SKU mismatch, unauthorized substitutions).
+   - `check_temporal(contract, evidence) -> RuleResult` (duplicate event detection, timeout, order of arrival).
+   - `evaluate_integrity(contract, evidence_bundle) -> IntegrityResult`.
+4. **Testing Requirement**: Implement comprehensive engine tests under `testing/unit/test_engine.py` covering all positive, drift, and unknown paths.
+5. **Pass Checkpoint C04** before committing and pushing.

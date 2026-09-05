@@ -4,10 +4,10 @@
 **TarkaRaksha** — Agentic Transaction Integrity & Recovery Control Plane
 
 ## Current Phase
-Environment
+Domain Contracts
 
 ## Current Task
-T02 — Environment
+T03 — Domain Contracts
 
 ## Task Status
 COMPLETE
@@ -15,14 +15,18 @@ COMPLETE
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
 - [x] **T02 — Environment** (Completed 2026-09-05)
+- [x] **T03 — Domain Contracts** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T14:03:00+05:30
+2026-09-05T14:10:00+05:30
 
 ## Tests Run
-- `make test-bootstrap` (C01 verification intact: canonical documents, brain memory, config files, zero secrets)
-- `make test-env` (C02 end-to-end environment validation: Python 3.12, Node.js 25.2, npm 11.6, Git 2.50, backend packages, AI/payment client imports, Next.js 15 build, pytest 5/5 passing)
-- `testing/unit/test_environment.py` (FastAPI, Pydantic, HTTPX, Groq SDK, Razorpay SDK smoke tests)
+- `make test-bootstrap`: PASS (canonical docs in brain/, zero root copies, pyproject valid, zero secrets)
+- `make test-env`: PASS (Python 3.12, Node.js 25.2, npm 11.6, Git 2.50, backend packages, AI/payment client imports, Next.js 15 build, pytest smoke)
+- `pytest` (35 passed in 0.16s):
+  - `testing/unit/test_money.py` (12 tests): strict integer minor units, float rejection, bool rejection, currency ISO-4217, immutability, exact arithmetic, comparisons, serialization round-trip
+  - `testing/unit/test_models.py` (18 tests): IntentItem, IntentContract, Authorization, CanonicalEvent, Evidence, IntegrityResult, Decision, MRDP, RecoveryProposal, ActionRequest, Transaction, round-trip serialization for all models
+  - `testing/unit/test_environment.py` (5 tests): baseline runtime smoke tests
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -39,34 +43,36 @@ None
 None
 
 ## Important Decisions
-1. **Python Virtual Environment**: Established project-local `.venv` using Python 3.12 (`/opt/homebrew/bin/python3.12`) for stable Pydantic and C-extension compatibility.
-2. **Frontend Initialization**: Established clean Next.js 15 App Router structure with Tailwind CSS 4 and shadcn/ui defaults in `frontend/`.
-3. **Smoke Verification**: Implemented `scripts/verify_env.py` and `testing/unit/test_environment.py` managed via `make test-env` for repeatable verification.
+1. **Pydantic v2 Idiomatic Typing**: Enforced `frozen=True`, `extra='forbid'`, and `strict=True` across domain contracts.
+2. **Strict Integer Minor Units**: `Money` strictly rejects `float` and `bool` (subclass of int in Python) via custom `@field_validator(..., mode='before')` returning clear validation errors.
+3. **First-Class UNKNOWN**: `IntegrityStatus.UNKNOWN` is explicitly distinct from `PASS` and `DRIFT`.
+4. **Untrusted AI Invariant**: `RecoveryProposal` is typed as an advisory proposal and cannot be executed directly; only validated `ActionRequest` can be authorized.
+5. **Evidence Authority Hierarchy**: Implemented deterministic `authority_rank` on `Evidence` (`RAZORPAY` > `INTENT` > `MERCHANT` > `REPLAY` > `AGENT` > `SYNTHETIC`).
 
 ## Active Branch
 `main`
 
 ## Last Verified Remote Commit
-17e99c9 (chore: synchronize T01 execution status and establish persistent context and handoff files)
-Prior Remote Commits: 1a740b0, beca9e8, 020cf38
+f9fa88c (chore: configure development environment)
+Prior Remote Commits: 17e99c9, 1a740b0, beca9e8, 020cf38
 
 ## Next Task
-**T03 — Domain Contracts** (Implement domain models: Money, IntentContract, Evidence, Decision, MRDP)
+**T04 — Deterministic Engine** (Implement core verification functions: economic_check, semantic_check, temporal_check, evaluate_integrity)
 
 ## Parallel Candidates
-After T02, the environment prerequisites for T03, T08 (Groq AI), and T09 (Razorpay Adapter) are verified. However, per the Execution plan, T03 (Domain Contracts) must proceed first to establish the contracts and types upon which the adapters depend.
+With T03 complete, the domain boundary is established. However, T04 directly depends on T03 contracts to build the deterministic rule evaluation logic, so T04 should proceed sequentially.
 
 ## Source Documents Consulted
 - `brain/TarkaRaksha_IDEA.md`
-- `brain/TarkaRaksha_Execution.md` (§7.13, §7.14, §8.6, §8.7)
-- `brain/TarkaRaksha_TESTING.md` (§9.62, §9.109)
+- `brain/TarkaRaksha_Execution.md` (§7.15–§7.21, §8.10–§8.14)
+- `brain/TarkaRaksha_TESTING.md` (§9.5–§9.9)
 - `brain/CONTEXT.md`
 - `brain/HANDOFF.md`
 
 ## External Sources Consulted
-- Groq SDK official Python documentation (verified client initialization and structured output requirements)
-- Razorpay Python SDK official documentation (verified `razorpay.Client` initialization)
-- Next.js 15 / shadcn official CLI documentation (verified non-interactive initialization flags)
+- Pydantic v2 documentation on `ConfigDict(frozen=True, extra='forbid', strict=True)` and `@field_validator(..., mode='before')`
+- ISO 4217 Currency Code specifications (3-letter alpha representation)
+- Razorpay Payment API documentation (verified currency minor subunits representation for amounts)
 
 ## Open Questions
 None
