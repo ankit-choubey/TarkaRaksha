@@ -58,8 +58,21 @@ class MerchantCatalogService:
         self._inventory: Dict[str, InventoryRecord] = {}
         # Pre-configured shipping options
         self._shipping_options: Dict[str, ShippingOption] = {}
+        self._capability_graph = None
 
         self._seed_default_catalog()
+
+    @property
+    def capability_graph(self):
+        """Returns the deterministic MerchantCapabilityGraph for this merchant."""
+        if self._capability_graph is None:
+            from backend.app.domain.capability.graph import MerchantCapabilityGraph
+            self._capability_graph = MerchantCapabilityGraph.from_declaration_and_policy(
+                merchant_id=self.merchant_id,
+                declaration=self.capabilities,
+                policy=self.policy,
+            )
+        return self._capability_graph
 
     def _seed_default_catalog(self) -> None:
         """Seeds initial synthetic/reference merchandise."""

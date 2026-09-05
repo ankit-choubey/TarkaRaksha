@@ -95,6 +95,8 @@ from backend.app.domain.operational_mode import (
     OperationalModePolicy,
 )
 from backend.app.services.operational_mode import OperationalModeService
+from backend.app.domain.capability import CapabilityTransactionContext, CapabilityEvaluationResult
+from backend.app.services.capability import MerchantCapabilityService
 from backend.app.domain.explanation import ExplanationResult
 from backend.app.services.explanation import (
     EvidenceAwareExplanationService,
@@ -150,16 +152,22 @@ class TransactionService:
         kill_switch_service: Optional[KillSwitchService] = None,
         explanation_service: Optional[EvidenceAwareExplanationService] = None,
         operational_mode_service: Optional[OperationalModeService] = None,
+        capability_service: Optional[MerchantCapabilityService] = None,
     ):
         self._default_provider = default_provider
         self._binding_service = binding_service or TransactionBindingService()
         self._kill_switch_service = kill_switch_service or KillSwitchService()
         self._explanation_service = explanation_service or EvidenceAwareExplanationService()
         self._operational_mode_service = operational_mode_service or OperationalModeService()
+        self._capability_service = capability_service or MerchantCapabilityService()
         self._sessions: Dict[str, TransactionSession] = {}
         self._intent_to_tx: Dict[str, str] = {}
         self._recovery_executor = RecoveryExecutor()
         self._unknown_observer = UnknownObserver()
+
+    @property
+    def capability_service(self) -> MerchantCapabilityService:
+        return self._capability_service
 
     @property
     def explanation_service(self) -> EvidenceAwareExplanationService:
