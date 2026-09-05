@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I3 — Governance + Replay Extension
+I4 — Merchant Agent
 
 ## Task Status
-COMPLETE (C_I3 PASS)
+COMPLETE (C_I4 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -30,14 +30,16 @@ COMPLETE (C_I3 PASS)
 - [x] **I1 — Evidence Extensions** (Completed 2026-09-05)
 - [x] **I2 — Security / Protocol Binding** (Completed 2026-09-05)
 - [x] **I3 — Governance + Replay Extension** (Completed 2026-09-05)
+- [x] **I4 — Merchant Agent** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T19:50:00+05:30
+2026-09-05T20:10:00+05:30
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (298 passed in 2.49s across all unit, integration, and adversarial suites)
+- `pytest` (335 passed in 1.58s across all unit, integration, and adversarial suites)
+
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -57,6 +59,10 @@ COMPLETE (C_I3 PASS)
 - **Evidence Freshness Invariant**: Freshness determined from explicit reference timestamps, not AI confidence. Stale or expired evidence cannot silently produce PASS.
 - **Protocol Binding Invariant**: Explicit binding of intent_id, transaction_id, attempt_id, and agent identity. Tamper-evident message chaining via SHA-256 canonical hashing. Replayed consumed intents strictly blocked.
 - **Governance & Replay Invariant**: Explicit attribution of every decision to rules_version and policy_version. Same inputs + same rules + same policy = same decision. Cryptographically verifiable Decision Reproducibility Certificate and side-effect-free counterfactual replay analysis.
+- **Merchant Agent Authority Invariant**: Merchant proposals and offers are merchant-attested evidence (`MERCHANT_ATTESTED`, rank 50). The merchant agent cannot declare transaction PASS, override authoritative gateway evidence, convert UNKNOWN into PASS, or bypass deterministic rules.
+- **Dynamic Offer Expiry Invariant**: Offers contain explicit `offer_expires_at` timestamps. Expired offers are rejected deterministically and prompt a refresh request.
+- **Inventory & Fulfillment Integrity Invariant**: State transitions (e.g. stock depletion) trigger inventory drift detection. Deliveries breaching buyer deadlines trigger temporal fulfillment drift.
 
 ## Next Task
-**I4 — Merchant Agent** (STOP — await explicit user prompt before starting I4)
+**I5 — Buyer Agent** (STOP — await explicit user prompt before starting I5)
+
