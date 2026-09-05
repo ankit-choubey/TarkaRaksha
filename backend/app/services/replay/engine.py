@@ -105,11 +105,11 @@ class ReplayEngine:
                 replay_id=snapshot.replay_id,
                 transaction_id=snapshot.transaction_id,
                 verdict=ReplayVerdict.INVALID_REPLAY,
-                replayed_state=TransactionState.FAILED,
+                replayed_state=TransactionState.UNKNOWN,
                 replayed_integrity_result=IntegrityResult(
                     evaluation_id=f"replay-eval-{snapshot.transaction_id}",
+                    intent_id=snapshot.contract.intent_id,
                     status=IntegrityStatus.UNKNOWN,
-                    is_valid=False,
                     evaluated_at=executed_at,
                     rule_results={},
                     violations=[str(err)],
@@ -189,6 +189,20 @@ class ReplayEngine:
                         ),
                     )
                 )
+
+        # If recorded final state was PASS but replayed evaluation detects DRIFT or UNKNOWN, record discrepancy
+        if snapshot.recorded_final_state == TransactionState.PASS and replayed_integrity.status != IntegrityStatus.PASS:
+            discrepancies.append(
+                ReplayDiscrepancy(
+                    field="transaction_state.integrity_divergence",
+                    recorded_value=TransactionState.PASS.value,
+                    replayed_value=replayed_integrity.status.value,
+                    explanation=(
+                        f"Fraud/tamper detected: recorded transaction reached terminal PASS, "
+                        f"but deterministic replay evaluated integrity as {replayed_integrity.status.value}."
+                    ),
+                )
+            )
 
         # 5. MRDP proof verification & reconstruction (T07)
         replayed_mrdp: Optional[MRDP] = None
