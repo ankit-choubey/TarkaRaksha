@@ -481,6 +481,8 @@ class TransactionService:
         ts = now or datetime.now(timezone.utc)
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=timezone.utc)
+        if ts <= session.state_machine.updated_at:
+            ts = session.state_machine.updated_at + timedelta(milliseconds=10)
 
         # 1. State Guard: only DRIFT, UNKNOWN, RESOLVING, RECOVERING are legal
         current_state = session.state_machine.current_state

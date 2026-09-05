@@ -144,11 +144,13 @@ def classify_recovery(
     # Case B: Semantic Drift (Unauthorized SKU or Quantity Mismatch)
     is_semantic_drift = (
         error_code in (
-            MRDPErrorCode.SEMANTIC_UNAUTHORIZED_SKU.value,
+            MRDPErrorCode.SEMANTIC_SKU_MISMATCH.value,
+            MRDPErrorCode.SEMANTIC_UNAUTHORIZED_SUBSTITUTION.value,
             MRDPErrorCode.SEMANTIC_QUANTITY_MISMATCH.value,
         )
         or "unauthorizedsku" in violations_text
         or "quantity" in violations_text
+        or "sku" in violations_text
     )
 
     if is_semantic_drift:
@@ -165,11 +167,14 @@ def classify_recovery(
     # Case C: Temporal Drift (Double Capture or Expired Event)
     is_temporal_drift = (
         error_code in (
-            MRDPErrorCode.TEMPORAL_WINDOW_VIOLATION.value,
-            MRDPErrorCode.TEMPORAL_ORDERING_VIOLATION.value,
+            MRDPErrorCode.TEMPORAL_CONTRACT_EXPIRED.value,
+            MRDPErrorCode.TEMPORAL_DUPLICATE_EVENT.value,
+            MRDPErrorCode.TEMPORAL_EXCESSIVE_CAPTURES.value,
+            MRDPErrorCode.TEMPORAL_TIMEOUT_LATE_SUCCESS.value,
         )
         or "doubleexecutionrisk" in violations_text
         or "expiredexecution" in violations_text
+        or "temporal" in violations_text
     )
 
     if is_temporal_drift:
