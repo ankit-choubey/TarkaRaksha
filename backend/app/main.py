@@ -6,14 +6,16 @@ Exposes the first complete real transaction slice:
 - Webhook Ingestion
 - Real-Time Control Plane State Inspection
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, Depends, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from backend.app.core.config import settings
+from backend.app.domain.hero import HeroTransactionRecord, HeroStage
 from backend.app.domain.models import (
     CreateTransactionRequest,
     CreateTransactionResponse,
@@ -22,12 +24,15 @@ from backend.app.domain.models import (
     RecoverTransactionRequest,
     ResolveTransactionRequest,
     IntentContract,
+    IntentItem,
+    Money,
     TransactionState,
 )
 from backend.app.domain.explanation import ExplanationResult
 from backend.app.domain.trace import IntegrityTrace
 from backend.app.domain.checkpoint import IntegrityCheckpointTimeline
 from backend.app.domain.sla import IntegritySLAMetricsReport
+from backend.app.services.hero import HeroTransactionOrchestrator
 from backend.app.services.recovery import (
     InvalidRecoveryStateError,
     RecoveryExhaustedError,
@@ -105,6 +110,14 @@ _global_certification_service = GroundTruthCertificationService()
 def get_certification_service() -> GroundTruthCertificationService:
     """Dependency provider for GroundTruthCertificationService. Can be overridden in tests."""
     return _global_certification_service
+
+
+_global_hero_orchestrator = HeroTransactionOrchestrator()
+
+
+def get_hero_orchestrator() -> HeroTransactionOrchestrator:
+    """Dependency provider for HeroTransactionOrchestrator (I22). Can be overridden in tests."""
+    return _global_hero_orchestrator
 
 
 
@@ -524,5 +537,73 @@ async def run_all_certifications_endpoint(
 ) -> CertificationSuiteResult:
     """Runs all canonical scenario certifications and returns the suite result with matrix (I12)."""
     return service.certify_all()
+
+
+# --- I22 Complete Hero Transaction Endpoints ---
+
+class RunHeroTransactionRequest(BaseModel):
+    """Payload to trigger a hero transaction journey run."""
+    intent: Optional[IntentContract] = None
+    simulate_mutation: bool = True
+    reference_time: Optional[datetime] = None
+
+
+def _default_hero_intent(ref_time: datetime) -> IntentContract:
+    """Canonical hero purchase intent: 1TB external SSD under ₹8,000."""
+    return IntentContract(
+        intent_id=f"intent_hero_ssd_{int(ref_time.timestamp())}",
+        issued_by="buyer_agent_alice",
+        items=[
+            IntentItem(
+                item_id="item_ssd_1",
+                sku="SKU-SSD-1TB",
+                name="1TB External SSD",
+                quantity=1,
+                unit_price=Money(amount=750000, currency="INR"),
+                total_price=Money(amount=750000, currency="INR"),
+            )
+        ],
+        max_total=Money(amount=800000, currency="INR"),
+        allowed_substitutions=["SKU-SSD-1TB-PRO"],
+        issued_at=ref_time,
+        expires_at=ref_time + timedelta(hours=4),
+    )
+
+
+@app.post("/api/v1/hero-transaction/run", response_model=HeroTransactionRecord)
+async def run_hero_transaction_endpoint(
+    request: Optional[RunHeroTransactionRequest] = None,
+    orchestrator: HeroTransactionOrchestrator = Depends(get_hero_orchestrator),
+) -> HeroTransactionRecord:
+    """
+    Executes the complete, end-to-end TarkaRaksha Hero Transaction (I22):
+    Detect -> Prove -> Repair -> Revalidate -> Execute -> Verify.
+    Composes Buyer Agent, Merchant Agent, TIX, T04 Integrity, T07 MRDP, I8 Binding,
+    I9 Safety Control, Trace, Checkpoints, SLA, Replay, and Explanation.
+    """
+    req = request or RunHeroTransactionRequest()
+    ref_time = req.reference_time or datetime.now(timezone.utc)
+    intent = req.intent or _default_hero_intent(ref_time)
+    try:
+        return orchestrator.execute_hero_journey(
+            intent=intent,
+            reference_time=ref_time,
+            simulate_mutation=req.simulate_mutation,
+        )
+    except Exception as e:
+        logger.error(f"Hero transaction execution failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/hero-transaction/{hero_transaction_id}", response_model=HeroTransactionRecord)
+async def get_hero_transaction_endpoint(
+    hero_transaction_id: str,
+    orchestrator: HeroTransactionOrchestrator = Depends(get_hero_orchestrator),
+) -> HeroTransactionRecord:
+    """Retrieves a previously executed hero transaction record (I22)."""
+    record = orchestrator.get_hero_record(hero_transaction_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Hero transaction '{hero_transaction_id}' not found")
+    return record
 
 
