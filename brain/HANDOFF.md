@@ -1,11 +1,11 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `I5 — Buyer Agent`
-- **Current Checkpoint**: `C_I5 — PASS`
-- **Next Task**: `I6 — TIX: TarkaRaksha Integrity Exchange`
+- **Current Task Completed**: `I6 — TIX: TarkaRaksha Integrity Exchange`
+- **Current Checkpoint**: `C_I6 — PASS`
+- **Next Task**: `I7 — Bounded Agentic Negotiation / Replanning`
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-05T20:26:00+05:30
+- **Handoff Timestamp**: 2026-09-05T22:15:00+05:30
 
 ---
 

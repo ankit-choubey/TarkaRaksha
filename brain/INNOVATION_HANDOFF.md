@@ -56,7 +56,8 @@
 - [x] **I4 — Merchant Agent** (Verified Green, 335/335 tests passing)
 - [x] **I5 — Buyer Agent** (Verified Green, 359/359 tests passing)
 - [x] **I8 — Agent / Transaction / Payment Binding** (Verified Green, 385/385 tests passing)
-- [ ] **I6 — TIX: TarkaRaksha Integrity Exchange** (Next task — await explicit user prompt)
+- [x] **I6 — TIX: TarkaRaksha Integrity Exchange** (Verified Green, 426/426 tests passing)
+- [ ] **I7 — Bounded Agentic Negotiation / Replanning** (Next task — await explicit user prompt)
 
 ---
 
@@ -189,3 +190,28 @@
   - Zero LLM Involvement: Pure deterministic rule verification produces authoritative `Evidence` records feeding TarkaRaksha's 3-way authority model (`PASS`, `DRIFT`, `UNKNOWN`).
   - Global Order and Payment Uniqueness: Prevents cross-transaction reuse of order IDs or payment IDs.
   - Attempt Bounding & Replay Defense: Consumed checkout attempts cannot be reused for payment completion.
+
+---
+
+## I6 Verification Record
+- **Implementation Scope**: Bounded internal integrity exchange protocol connecting Buyer Agent, Merchant Agent, and TarkaRaksha control plane across 12 canonical message types (`INTENT`, `OFFER`, `EVIDENCE_REQUEST`, `EVIDENCE_RESPONSE`, `INTEGRITY_CHECK`, `DRIFT_NOTICE`, `REMEDIATION_REQUEST`, `REMEDIATION_RESPONSE`, `REVALIDATION`, `AUTHORIZATION`, `EXECUTION`, `OUTCOME`). Provides deterministic cryptographic SHA-256 hash chaining, replay defense, temporal expiration verification, context binding, anti-spoofing authority boundary enforcement, and deterministic integrity evaluation bridge.
+- **Files Created**:
+  - `backend/app/domain/tix/contracts.py`
+  - `backend/app/domain/tix/verifier.py`
+  - `backend/app/domain/tix/__init__.py`
+  - `backend/app/services/tix/exchange_service.py`
+  - `backend/app/services/tix/__init__.py`
+  - `testing/unit/test_tix_contracts.py`
+  - `testing/unit/test_tix_exchange.py`
+  - `testing/unit/test_tix_adversarial.py`
+- **Files Modified**:
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+  - `brain/HANDOFF.md`
+- **Tests Added**: 41 focused tests (15 domain contract tests, 15 exchange and bridge tests, 11 adversarial and authority boundary tests).
+- **Regression Count**: 426 passed, 0 failed in 2.98s (385 baseline + 41 new).
+- **Invariants Preserved**:
+  - TIX is Advisory Transport: TIX transports claims; deterministic TarkaRaksha logic verifies claims; zero payment authorization authority resides in TIX.
+  - Cryptographic Hash Chain Continuity: Sequential messages within a transaction exchange are deterministically hashed (SHA-256) and chained via `previous_message_hash`; any in-transit payload tampering or insertion breaks the chain and is rejected.
+  - Anti-Spoofing & Authority Invariant: Non-TarkaRaksha participants (buyer_agent, merchant_agent) cannot emit `AUTHORIZATION` messages, claim authoritative `OUTCOME`, or embed rogue payment authorizations.
+  - Deterministic Evaluation Unmodified: TIX cannot convert `UNKNOWN` or `DRIFT` to `PASS`; deterministic verdicts and violation descriptions pass through faithfully.

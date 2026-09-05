@@ -25,6 +25,7 @@
 5. **Observation vs Recovery**: UNKNOWN resolution (T12) performs strictly non-side-effecting observation without moving money. If DRIFT is established, it hands off to the established T11 recovery loop.
 6. **Replay Determinism & Isolation (T13)**: The replay engine is a pure verification and audit capability. Zero live network calls, zero live AI queries, zero Razorpay API mutations, and zero production database state alterations.
 7. **Zero Premature Code**: Minimal infrastructure, maximum verifiable engineering. No Kafka, Redis, or microservice overbuilding.
+8. **TIX Advisory Transport (I6)**: TIX transports claims across participants; deterministic TarkaRaksha logic verifies claims; zero payment authorization authority resides in TIX. Sequential messages within a transaction exchange are cryptographically chained (SHA-256).
 
 ---
 

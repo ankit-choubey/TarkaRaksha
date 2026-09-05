@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I8 — Agent / Transaction / Payment Binding
+I6 — TIX: TarkaRaksha Integrity Exchange
 
 ## Task Status
-COMPLETE (C_I8 PASS)
+COMPLETE (C_I6 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -33,14 +33,15 @@ COMPLETE (C_I8 PASS)
 - [x] **I4 — Merchant Agent** (Completed 2026-09-05)
 - [x] **I5 — Buyer Agent** (Completed 2026-09-05)
 - [x] **I8 — Agent / Transaction / Payment Binding** (Completed 2026-09-05)
+- [x] **I6 — TIX: TarkaRaksha Integrity Exchange** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T20:33:00+05:30 — I8 checkpoint
+2026-09-05T22:15:00+05:30 — I6 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (385 passed in 2.33s across all unit, integration, and adversarial suites: 359 baseline + 26 I8 tests)
+- `pytest` (426 passed in 2.98s across all unit, integration, and adversarial suites: 385 baseline + 41 I6 tests)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -68,7 +69,10 @@ COMPLETE (C_I8 PASS)
 - **Agent / Transaction / Payment Binding Invariant**: intent_id, agent_id, merchant_id, transaction_id, order_id, payment_id, and attempt_id are deterministically bound and strictly verified; matching amount alone is never sufficient to establish validity.
 - **Global Order and Payment Uniqueness Invariant**: Order ID and Payment ID reuse across different transactions is strictly rejected with DRIFT / DUPLICATE errors.
 - **Attempt Bounding & Replay Defense Invariant**: Consumed attempts cannot be reused for payment completion.
+- **TIX Advisory Transport Invariant**: TIX transports claims across buyer, merchant, and control plane; TarkaRaksha deterministic logic verifies claims; zero payment authorization authority resides in TIX.
+- **TIX Cryptographic Chain Continuity**: Sequential messages within a transaction exchange are deterministically hashed (SHA-256) and chained via previous_message_hash; any in-transit payload tampering or insertion is deterministically detected and rejected.
+- **TIX Anti-Spoofing & Authority Invariant**: Non-TarkaRaksha participants (buyer_agent, merchant_agent) cannot emit AUTHORIZATION messages, claim authoritative OUTCOME, or embed rogue payment authorizations.
 
 ## Next Task
-**I6 — TIX: TarkaRaksha Integrity Exchange** (STOP — await explicit user prompt before starting I6)
+**I7 — Bounded Agentic Negotiation / Replanning** (STOP — await explicit user prompt before starting I7)
 
