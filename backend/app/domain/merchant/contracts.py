@@ -198,6 +198,19 @@ class MerchantOfferItem(BaseModel):
     )
 
 
+class FulfillmentTerms(BaseModel):
+    """Fulfillment terms promised by the merchant."""
+    carrier: str
+    estimated_delivery_days: int
+    guaranteed_delivery: bool = False
+
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        strict=True,
+    )
+
+
 class MerchantResponse(BaseModel):
     """
     Standard structured response from the Merchant Agent.
@@ -244,3 +257,25 @@ class MerchantResponse(BaseModel):
         if dt.tzinfo is None:
             raise ValueError("Timestamp must be timezone-aware (e.g. UTC)")
         return dt
+
+    def is_expired(self, as_of: Optional[datetime] = None) -> bool:
+        """Check whether the offer is expired relative to as_of (default now UTC)."""
+        ref = as_of or datetime.now(timezone.utc)
+        if ref.tzinfo is None:
+            ref = ref.replace(tzinfo=timezone.utc)
+        return ref >= self.offer_expires_at
+
+    @property
+    def fulfillment(self) -> FulfillmentTerms:
+        """Convenience property extracting fulfillment terms."""
+        carrier = self.shipping.carrier if self.shipping else "Standard Courier"
+        return FulfillmentTerms(
+            carrier=carrier,
+            estimated_delivery_days=self.estimated_delivery_days,
+            guaranteed_delivery=False,
+        )
+
+
+# Alias for semantic clarity across offer integrity workflows
+MerchantOffer = MerchantResponse
+

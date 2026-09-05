@@ -5,8 +5,10 @@ from backend.app.domain.merchant.contracts import (
     BuyerCommerceRequest,
     BuyerItemRequest,
     CatalogItem,
+    FulfillmentTerms,
     InventoryRecord,
     InventoryStatus,
+    MerchantOffer,
     MerchantOfferItem,
     MerchantResponse,
     ShippingOption,
@@ -18,6 +20,11 @@ from backend.app.domain.merchant.capabilities import (
     MerchantCapabilityDeclaration,
     MerchantPolicyAsCode,
 )
+from backend.app.domain.merchant.integrity import (
+    MerchantIntegrityVerifier,
+    OfferVerificationResult,
+    OfferVerificationStatus,
+)
 
 __all__ = [
     "InventoryStatus",
@@ -28,9 +35,15 @@ __all__ = [
     "BuyerItemRequest",
     "BuyerCommerceRequest",
     "MerchantOfferItem",
+    "MerchantOffer",
+    "FulfillmentTerms",
     "MerchantResponse",
     "CommerceCapabilityType",
     "MerchantCapability",
     "MerchantCapabilityDeclaration",
     "MerchantPolicyAsCode",
+    "OfferVerificationStatus",
+    "OfferVerificationResult",
+    "MerchantIntegrityVerifier",
 ]
+
