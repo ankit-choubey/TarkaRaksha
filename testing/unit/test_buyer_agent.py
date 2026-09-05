@@ -127,13 +127,29 @@ def test_replan_preserves_authorized_constraints(intent):
         request_id="replan-1",
         buyer_agent_id="buyer-agent-1",
         intent=intent,
+        transaction_id="tx-1",
         integrity_feedback="Price drift detected",
     )
     result = service.replan(request, transaction_id="tx-1")
     assert result.decision == BuyerAgentDecisionType.REPLAN
     assert result.proposal is not None
+    assert result.proposal.transaction_id == "tx-1"
     assert result.proposal.max_total == intent.max_total
     assert result.proposal.sku == intent.items[0].sku
+
+
+def test_replan_mismatched_transaction_id_abstains(intent):
+    service = BuyerAgentService()
+    request = BuyerReplanRequest(
+        request_id="replan-2",
+        buyer_agent_id="buyer-agent-1",
+        intent=intent,
+        transaction_id="tx-orig-1",
+        integrity_feedback="Price drift",
+    )
+    result = service.replan(request, transaction_id="tx-different-99")
+    assert result.decision == BuyerAgentDecisionType.ABSTAIN
+    assert "Mismatched transaction_id" in result.reason
 
 
 def test_clarification_does_not_guess_missing_constraint():
@@ -147,3 +163,95 @@ def test_clarification_does_not_guess_missing_constraint():
 def test_empty_clarification_is_rejected():
     with pytest.raises(ValueError):
         BuyerAgentService.clarification("intent-1", "", "budget")
+
+
+def test_multi_item_intent_proposal_projection(reference_time):
+    multi_intent = IntentContract(
+        intent_id="intent-multi-1",
+        issued_by="user-bob",
+        issued_at=reference_time,
+        expires_at=reference_time + timedelta(hours=1),
+        currency="INR",
+        max_total=Money(amount=7000000, currency="INR"),
+        items=[
+            IntentItem(
+                item_id="item-phone",
+                sku="SKU-PHONE-1",
+                name="Phone",
+                quantity=1,
+                unit_price=Money(amount=5000000, currency="INR"),
+                total_price=Money(amount=5000000, currency="INR"),
+            ),
+            IntentItem(
+                item_id="item-case",
+                sku="SKU-CASE-1",
+                name="Case",
+                quantity=2,
+                unit_price=Money(amount=1000000, currency="INR"),
+                total_price=Money(amount=2000000, currency="INR"),
+            ),
+        ],
+        allowed_substitutions=["SKU-PHONE-1-BLACK"],
+    )
+
+    service = BuyerAgentService()
+    proposal = service.propose(multi_intent, "buyer-agent-1", "tx-multi-1")
+
+    assert len(proposal.items) == 2
+    assert proposal.items[0].sku == "SKU-PHONE-1"
+    assert proposal.items[1].sku == "SKU-CASE-1"
+    assert proposal.quantity == 3  # 1 + 2
+    assert proposal.max_total == multi_intent.max_total
+    assert proposal.transaction_id == "tx-multi-1"
+    assert proposal.intent_id == "intent-multi-1"
+
+
+def test_formulate_merchant_request(intent):
+    service = BuyerAgentService()
+    req = service.formulate_merchant_request(
+        intent=intent,
+        buyer_agent_id="buyer-agent-1",
+        transaction_id="tx-1",
+        delivery_deadline_days=3,
+        preferred_shipping_id="ship_express",
+    )
+
+    assert req.intent_id == intent.intent_id
+    assert req.transaction_id == "tx-1"
+    assert req.buyer_agent_id == "buyer-agent-1"
+    assert req.max_budget == intent.max_total
+    assert req.delivery_deadline_days == 3
+    assert req.preferred_shipping_id == "ship_express"
+    assert len(req.items) == 1
+    assert req.items[0].sku == "SKU-PHONE-1"
+    assert req.items[0].quantity == 1
+
+
+def test_expired_merchant_offer_causes_replan(intent, reference_time):
+    service = BuyerAgentService()
+    # Offer created and expired in the past relative to evaluation
+    expired_resp = MerchantResponse(
+        response_id="merchant-resp-exp",
+        merchant_id="merchant-reference-1",
+        request_id="request-1",
+        intent_id=intent.intent_id,
+        transaction_id="tx-1",
+        is_success=True,
+        offer_id="offer-exp",
+        total_amount=Money(amount=4000000, currency="INR"),
+        offer_created_at=reference_time - timedelta(minutes=30),
+        offer_expires_at=reference_time - timedelta(minutes=10),
+        estimated_delivery_days=2,
+    )
+
+    decision = service.evaluate_merchant_response(
+        intent,
+        "buyer-agent-1",
+        "tx-1",
+        expired_resp,
+        reference_time=reference_time,
+    )
+
+    assert decision.decision == BuyerAgentDecisionType.REPLAN
+    assert "expired" in decision.explanation.lower()
+

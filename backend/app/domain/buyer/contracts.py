@@ -27,6 +27,7 @@ class BuyerTransactionProposal(BaseModel):
     buyer_agent_id: str
     intent_id: str
     transaction_id: str
+    items: List[Any] = Field(default_factory=list)
     sku: str
     quantity: int
     max_total: Money
@@ -61,12 +62,21 @@ class BuyerReplanRequest(BaseModel):
     request_id: str
     buyer_agent_id: str
     intent: IntentContract
+    transaction_id: str
     merchant_response: Optional[MerchantResponse] = None
     integrity_feedback: Optional[str] = None
     permitted_action: str = "REPLAN"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    @field_validator("transaction_id", "buyer_agent_id", "request_id")
+    @classmethod
+    def validate_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("ID fields cannot be empty")
+        return v
+
 
 
 class BuyerReplanResult(BaseModel):
