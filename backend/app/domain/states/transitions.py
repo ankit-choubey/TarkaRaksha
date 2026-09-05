@@ -49,12 +49,13 @@ PERMITTED_TRANSITIONS: Dict[TransactionState, Set[TransactionState]] = {
         TransactionState.REVALIDATING,
         TransactionState.ABSTAIN,
     },
-    # 10. REVALIDATING: re-running deterministic checks post-resolution/recovery; yields PASS, DRIFT, UNKNOWN, or re-enters VERIFYING
+    # 10. REVALIDATING: re-running deterministic checks post-resolution/recovery; yields PASS, DRIFT, UNKNOWN, VERIFYING, or ABSTAIN
     TransactionState.REVALIDATING: {
         TransactionState.PASS,
         TransactionState.DRIFT,
         TransactionState.UNKNOWN,
         TransactionState.VERIFYING,
+        TransactionState.ABSTAIN,
     },
     # 11. ABSTAIN: terminal safety state; control plane refuses further action to prevent loss
     TransactionState.ABSTAIN: set(),
