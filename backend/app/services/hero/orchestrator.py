@@ -280,6 +280,7 @@ class HeroTransactionOrchestrator:
         initial_offer = merchant_catalog.convert_response_to_merchant_offer(initial_merchant_resp)
         if initial_offer is None:
             raise RuntimeError("Failed to convert merchant response to offer evidence")
+        initial_offer = initial_offer.model_copy(update={"offer_id": f"off_init_{transaction_id}"})
 
         # Normalize offer evidence items
         initial_offer_ev_list = [
@@ -367,7 +368,7 @@ class HeroTransactionOrchestrator:
 
             # Mutated evidence generated: merchant attests new mutated total
             mutated_total_ev = Evidence(
-                evidence_id=f"evi_mutated_price_{uuid.uuid4().hex[:8]}",
+                evidence_id=f"evi_mutated_price_{transaction_id}",
                 intent_id=intent.intent_id,
                 transaction_id=transaction_id,
                 source=EvidenceSource.MERCHANT,
@@ -576,7 +577,7 @@ class HeroTransactionOrchestrator:
         # ----------------------------------------------------------------------
         if inject_kill_switch_state == KillSwitchState.KILLED:
             record_stage(HeroStage.PAYMENT_EXECUTED, "Execution blocked by Kill Switch KILLED state")
-            raise ExecutionBlockedError("Execution blocked: Transaction safety state is KILLED")
+            raise ExecutionBlockedError("Execution blocked: Transaction safety state is KILLED", state=KillSwitchState.KILLED)
 
         ks_state = inject_kill_switch_state or KillSwitchState.RUNNING
 
