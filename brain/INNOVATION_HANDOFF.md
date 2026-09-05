@@ -314,5 +314,45 @@
   - Uncertainty Preservation: UNKNOWN decisions strictly preserve missing evidence and uncertainty disclosures.
   - Privacy and Redaction: API keys, tokens, and credentials are automatically redacted from explanation payloads.
 
+---
+
+## I10 Verification Record
+- **Implementation Scope**: Operational Deployment Modes (`SHADOW` / `GUARDED` / `HUMAN_REVIEW`) providing deterministic control-plane policies, execution safety gating, and human review boundaries.
+  - Core Semantics:
+    - `SHADOW`: Observe and evaluate; detection active; enforcement disabled; factual verdicts (`PASS`, `DRIFT`, `UNKNOWN`) and MRDP preserved; zero financial intervention; automated remediation strictly prohibited.
+    - `GUARDED`: Evaluate; detect; apply bounded automated controls (I7 negotiation, T11 recovery, T12 resolution, I9 safety gating); continue only when policy permits.
+    - `HUMAN_REVIEW`: Evaluate; detect; require explicit authenticated human review for sensitive actions (high-value threshold, drift, kill switch events); stop sensitive automated action; approval strictly bound to 4-tuple (`transaction_id`, `intent_id`, `agent_id`, `merchant_id`); approval requires authoritative revalidation before continuation; approval does not fabricate `PASS`; cannot bypass `KILLED` safety state without revalidation.
+  - Domain models: `OperationalMode`, `HumanReviewStatus`, `OperationalAction`, `OperationalModePolicy`, `ModeTransitionRecord`, `HumanReviewRequirement`, `HumanReviewDecision`, `OperationalEvaluationResult`.
+  - Deterministic Evaluation Engine: `OperationalModeEngine.evaluate()` implementing the complete Mode × Integrity Behavior Matrix.
+  - Service: `OperationalModeService` managing policy updates, auditable transitions (rejecting agent/LLM tamper), review requirement lifecycles, cross-transaction reuse defenses, and payment execution assertions.
+  - Integration: `TransactionService` (step 8.6 operational evaluation gating) and `BoundedNegotiationService` (immediate abstention in SHADOW mode).
+- **Files Created**:
+  - `backend/app/domain/operational_mode/contracts.py`
+  - `backend/app/domain/operational_mode/policy.py`
+  - `backend/app/domain/operational_mode/__init__.py`
+  - `backend/app/services/operational_mode/service.py`
+  - `backend/app/services/operational_mode/__init__.py`
+  - `testing/unit/test_operational_mode_contracts.py`
+  - `testing/unit/test_operational_mode_policy.py`
+  - `testing/unit/test_operational_mode_service.py`
+  - `testing/unit/test_operational_mode_adversarial.py`
+  - `testing/unit/test_operational_mode_replay.py`
+- **Files Modified**:
+  - `backend/app/services/transaction_service.py`
+  - `backend/app/services/negotiation/service.py`
+  - `brain/STATUS.md`
+  - `brain/INNOVATION_HANDOFF.md`
+  - `brain/HANDOFF.md`
+- **Tests Added**: 53 focused tests (9 contract tests, 17 policy matrix tests, 5 service lifecycle tests, 18 adversarial security tests, 4 deterministic replay tests).
+- **Regression Count**: 569 passed, 0 failed in 11.15s (516 baseline + 53 I10 tests).
+- **Invariants Preserved**:
+  - AI Is Advisory, Deterministic Policy Decides: AI models, buyer agents, merchant agents, or TIX participants cannot alter operational deployment modes or approve human reviews.
+  - SHADOW Non-Intervention: Detection is active and unsuppressed (`DRIFT` is not overwritten to `PASS`), but financial execution is never intervened with, and automated remediation abstains.
+  - GUARDED Bounded Actions: Automated remediation respects all I7 boundaries; I9 kill switch remains authoritative over execution.
+  - HUMAN_REVIEW Non-Bypass: Human approval on `DRIFT` requires authoritative revalidation and never fabricates `PASS`. Approval cannot resume a `KILLED` transaction without revalidation.
+  - Anti-Reuse Context Boundary: Review decisions are strictly non-reusable across disparate transactions, agents, or merchants.
+  - Deterministic Replay Isolation: Historical replays reconstruct the operational mode from snapshot metadata, completely independent of live runtime mode changes.
+
+
 
 

@@ -7,10 +7,10 @@
 Innovation Extension
 
 ## Current Task
-I21 — Evidence-Aware AI Explanation
+I10 — Operational Deployment Modes (SHADOW / GUARDED / HUMAN_REVIEW)
 
 ## Task Status
-COMPLETE (C_I21 PASS)
+COMPLETE (C_I10 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -37,14 +37,15 @@ COMPLETE (C_I21 PASS)
 - [x] **I7 — Bounded Agentic Negotiation / Replanning** (Completed 2026-09-05)
 - [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Completed 2026-09-05)
 - [x] **I21 — Evidence-Aware AI Explanation** (Completed 2026-09-05)
+- [x] **I10 — Operational Deployment Modes** (Completed 2026-09-05)
 
 ## Last Verified
-2026-09-05T22:50:00+05:30 — I21 checkpoint
+2026-09-05T23:03:00+05:30 — I10 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (516 passed in 7.87s across all unit, integration, and adversarial suites: 487 baseline + 29 I21 tests)
+- `pytest` (569 passed in 11.15s across all unit, integration, and adversarial suites: 516 baseline + 53 I10 tests)
 
 ## Environment & Toolchains Verified
 - **Python**: 3.12.12 (via project-local `.venv`)
@@ -85,6 +86,13 @@ COMPLETE (C_I21 PASS)
 - **Claim-to-Evidence Traceability Invariant**: Every substantive explanation claim must be anchored to verified `EvidenceReference` records with explicit authority rankings; hallucinated evidence IDs (e.g. `EVIDENCE-999`) or unsupported assertions fail post-generation validation.
 - **Deterministic Fallback Guarantee**: If the AI model fails, times out, rate limits, returns malformed JSON, contradicts deterministic state, or attempts prompt injection, a structured deterministic fallback explanation is automatically produced. AI failure never causes transaction failure.
 - **Uncertainty Preservation Invariant**: When deterministic status is `UNKNOWN`, explanations cannot manufacture certainty or claim transaction validity; missing evidence and uncertainties must be explicitly articulated.
+- **Operational Mode Determinism & Separation Invariant**: Operational deployment modes (`SHADOW`, `GUARDED`, `HUMAN_REVIEW`) are deterministic control-plane policies. Detection remains active across all modes.
+- **SHADOW Financial Non-Intervention Invariant**: In `SHADOW` mode, facts (`PASS`, `DRIFT`, `UNKNOWN`) and MRDP records are faithfully computed and recorded, but payment execution is never intervened with, and automated remediation is strictly prohibited.
+- **GUARDED Bounded Control Invariant**: In `GUARDED` mode, automated remediation operates strictly within bounded policy limits (I7 negotiation); I9 safety gating (`KILLED`, `PAUSED`, `REQUIRES_REVALIDATION`) remains authoritative.
+- **HUMAN_REVIEW Decision Boundary Invariant**: Human review is an explicit deterministic decision boundary requiring authenticated human operator review. AI models and autonomous agents are strictly forbidden from acting as reviewers.
+- **Review Non-Bypass & Revalidation Invariant**: Human approval for a `DRIFT` transaction cannot fabricate `PASS` and unconditionally requires authoritative revalidation before payment execution can proceed. Human approval on a `KILLED` transaction cannot bypass execution safety revalidation.
+- **Anti-Reuse Context Invariant**: Human review approvals and decisions are cryptographically bound to the 4-tuple (`transaction_id`, `intent_id`, `agent_id`, `merchant_id`) and can never be reused across disparate transactions, agents, or merchants.
+- **Historical Replay Mode Isolation**: Historical replays strictly reconstruct transactions under their recorded operational mode from snapshot metadata, completely isolated from runtime deployment mode changes.
 
 ## Next Task
 Await user instruction for next innovation extension milestone.
