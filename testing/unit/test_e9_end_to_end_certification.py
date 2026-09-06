@@ -127,3 +127,67 @@ def test_e9_03_remediation_bounded_within_ceiling(cert_service, ref_time):
     assert proof.recovery_summary is not None
     assert "5,000" in proof.recovery_summary["original_ceiling"]
     assert proof.recovery_summary["replan_bounded_by_ceiling"] is True
+
+
+# ==============================================================================
+# 3. MERCHANT AGENT ABUSE & THREAT CONTAINMENT
+# ==============================================================================
+
+def test_e9_04_merchant_agent_abuse_containment(cert_service):
+    """
+    Certifies that compromised merchant agent proposals cannot substitute
+    for authoritative gateway evidence or force a financial PASS.
+    """
+    item = cert_service.certify_merchant_abuse()
+    assert item.status == "PASS"
+    assert item.evidence_type == "SYNTHETIC_OFFLINE_FIXTURE"
+    assert "blocked" in item.verified_fact.lower()
+
+    # Direct proof inspection
+    proof = cert_service.proof_service.generate_proof(ScenarioId.MERCHANT_AGENT_COMPROMISED)
+    assert proof.actual_verdict == "UNKNOWN"
+    assert proof.actual_verdict != "PASS"
+    assert proof.security_findings.get("kill_switch_state") == "SAFETY_PAUSED"
+    # Verify no fake payment capture was certified
+    assert proof.scenario_id == ScenarioId.MERCHANT_AGENT_COMPROMISED
+
+
+# ==============================================================================
+# 4. UNKNOWN PROVIDER STATE SAFETY PATH
+# ==============================================================================
+
+def test_e9_05_unknown_provider_state_safety_path(cert_service):
+    """
+    Certifies that UNKNOWN is preserved as a first-class state and is NEVER
+    coerced directly into PASS.
+    """
+    item = cert_service.certify_unknown_resolution()
+    assert item.status == "PASS"
+    assert "never coerced to pass" in item.verified_fact.lower()
+
+    # Direct proof inspection
+    proof = cert_service.proof_service.generate_proof(ScenarioId.UNKNOWN_PROVIDER_STATE)
+    assert proof.actual_verdict == "UNKNOWN"
+    assert proof.actual_verdict != "PASS"
+    assert any("UNKNOWN" in stage.status for stage in proof.proof_chain)
+
+
+# ==============================================================================
+# 5. DETERMINISTIC REPLAY & TAMPER RESISTANCE
+# ==============================================================================
+
+def test_e9_06_deterministic_replay_and_tamper_detection(cert_service):
+    """
+    Certifies that T13 CPU-only ReplayEngine detects historical state mutation
+    yielding MISMATCH without network or payment side effects.
+    """
+    item = cert_service.certify_replay_tamper()
+    assert item.status == "PASS"
+    assert "mismatch" in item.verified_fact.lower()
+
+    # Direct proof inspection
+    proof = cert_service.proof_service.generate_proof(ScenarioId.REPLAY_ATTACK)
+    assert proof.actual_verdict == "MISMATCH"
+    assert proof.replay_verdict == "MISMATCH"
+    assert proof.security_findings.get("replay_divergence_detected") is True
+
