@@ -19,6 +19,7 @@ from backend.app.services.scenario.definitions import (
 )
 from backend.app.services.scenario.runner import ScenarioRunner
 from backend.app.services.scenario.service import ScenarioLabService
+from backend.app.services.scenario.proof import ScenarioProofService
 
 __all__ = [
     "CANONICAL_SCENARIO_BUILDERS",
@@ -37,4 +38,5 @@ __all__ = [
     "build_unknown_provider_snapshot",
     "ScenarioRunner",
     "ScenarioLabService",
+    "ScenarioProofService",
 ]

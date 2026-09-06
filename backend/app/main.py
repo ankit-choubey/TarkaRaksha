@@ -57,8 +57,9 @@ from backend.app.domain.scenario import (
     ScenarioSuiteResult,
     ScenarioId,
     ScenarioCategory,
+    ScenarioProof,
 )
-from backend.app.services.scenario import ScenarioLabService
+from backend.app.services.scenario import ScenarioLabService, ScenarioProofService
 from backend.app.domain.certification import (
     CertificationMatrixRow,
     CertificationResult,
@@ -148,9 +149,18 @@ def get_integration_service() -> IntegrationService:
     return _global_integration_service
 
 
+_global_scenario_proof_service = ScenarioProofService()
+
+
+def get_scenario_proof_service() -> ScenarioProofService:
+    """Dependency provider for ScenarioProofService (E8). Can be overridden in tests."""
+    return _global_scenario_proof_service
+
+
 _global_control_room_service = ControlRoomService(
     hero_orchestrator=_global_hero_orchestrator,
     integration_service=_global_integration_service,
+    scenario_proof_service=_global_scenario_proof_service,
 )
 
 
@@ -564,6 +574,42 @@ async def run_all_scenarios_endpoint(
 ) -> ScenarioSuiteResult:
     """Runs all registered canonical scenarios and returns the suite result (I11)."""
     return service.run_all(category=category)
+
+
+@app.get("/api/v1/scenarios/{scenario_id}/proof", response_model=ScenarioProof)
+async def get_scenario_proof_endpoint(
+    scenario_id: str,
+    service: ScenarioProofService = Depends(get_scenario_proof_service),
+) -> ScenarioProof:
+    """Retrieves or generates an authoritative proof projection for a canonical scenario (E8)."""
+    proof = service.get_proof(scenario_id)
+    if not proof:
+        raise HTTPException(status_code=404, detail=f"Scenario '{scenario_id}' not found")
+    return proof
+
+
+@app.post("/api/v1/scenarios/{scenario_id}/prove", response_model=ScenarioProof)
+async def prove_scenario_endpoint(
+    scenario_id: str,
+    proof_service: ScenarioProofService = Depends(get_scenario_proof_service),
+    cr_service: ControlRoomService = Depends(get_control_room_service),
+) -> ScenarioProof:
+    """Executes a canonical scenario and returns its complete tamper-evident ScenarioProof (E8)."""
+    try:
+        proof = proof_service.generate_proof(scenario_id)
+        cr_snap = cr_service.compose_from_scenario_proof(proof)
+        cr_service.register_scenario_snapshot(cr_snap)
+        return proof
+    except (KeyError, ValueError):
+        raise HTTPException(status_code=404, detail=f"Scenario '{scenario_id}' not found")
+
+
+@app.get("/api/v1/scenarios/proofs", response_model=List[ScenarioProof])
+async def list_scenario_proofs_endpoint(
+    service: ScenarioProofService = Depends(get_scenario_proof_service),
+) -> List[ScenarioProof]:
+    """Returns all generated scenario proofs in the current session (E8)."""
+    return service.list_proofs()
 
 
 @app.get("/api/v1/certifications", response_model=List[GroundTruthDefinition])

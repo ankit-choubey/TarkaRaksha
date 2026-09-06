@@ -24,6 +24,7 @@ from .gates import (
 from .orchestration import AgenticLifecycleOrchestrator
 from .passport import TransactionPassportService
 from .control_room import ControlRoomService
+from .scenario import ScenarioProofService
 
 __all__ = [
     "evaluate_integrity",
@@ -32,6 +33,7 @@ __all__ = [
     "TransactionService",
     "TransactionSession",
     "ScenarioLabService",
+    "ScenarioProofService",
     "GroundTruthCertificationService",
     "IntegrityTraceService",
     "IntegrityCheckpointService",
