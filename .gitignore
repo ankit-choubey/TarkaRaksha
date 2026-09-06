@@ -79,3 +79,5 @@ design/
 # Cloned references
 saas-kit/
 reference-*/
+
+DEPLOYMENT_RENDER_STEP_BY_STEP.md
