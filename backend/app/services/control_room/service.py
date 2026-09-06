@@ -577,18 +577,30 @@ class ControlRoomService:
         buyer_agent = ControlRoomBuyerAgent(
             agent_id=proof.agent_id,
             intent_id=proof.intent_id,
+            proposed_sku="SKU-BOOK-001",
+            proposed_quantity=1,
+            proposed_unit_price=auth_max,
+            proposal_rationale="Buyer agent proposal bounded strictly within authorized IntentContract.",
             advisory_model="openai/gpt-oss-20b",
-            status="ACTIVE",
-            budget_ceiling=auth_max,
+            gate_status="VALID",
+            replanning_status="NOT_REQUIRED",
         )
 
         # 5. Merchant Agent
         merchant_agent = ControlRoomMerchantAgent(
             merchant_id=proof.merchant_id,
-            capabilities=["CATALOG_OFFER", "INVENTORY_LOOKUP", "FULFILLMENT_SLA"],
-            active_offer_sku="SKU-BOOK-001",
-            active_offer_total=auth_max,
-            offer_valid=True,
+            offer_id=f"offer_{proof.transaction_id}",
+            sku="SKU-BOOK-001",
+            quantity=1,
+            unit_price=auth_max,
+            shipping=Money(amount=0, currency="INR"),
+            discount=Money(amount=0, currency="INR"),
+            tax=Money(amount=0, currency="INR"),
+            total=auth_max,
+            inventory_status="AVAILABLE",
+            delivery_estimate="2-3 business days",
+            capabilities=["CATALOG_BROWSING", "PRICE_QUOTING", "INVENTORY_RESERVATION"],
+            gate_status="VALID",
         )
 
         # 6. Integrity
@@ -607,30 +619,30 @@ class ControlRoomService:
             economic_verdict=(st == IntegrityStatus.PASS),
             semantic_verdict=(st == IntegrityStatus.PASS),
             temporal_verdict=(st == IntegrityStatus.PASS),
-            rules_evaluated=3,
         )
 
         # 7. Drift Proof
         drift_proof = None
         if proof.mrdp_digest:
             drift_proof = ControlRoomDriftProof(
-                proof_digest=proof.mrdp_digest,
+                mrdp_id=f"mrdp_{proof.transaction_id}",
                 error_code=proof.mrdp_error_code or "PRICE_DISCREPANCY_DETECTED",
+                drift_source="SCENARIO_MUTATION",
                 expected_value="₹5,000",
                 observed_value="₹6,000",
-                discrepancy_delta="+₹1,000",
-                rule_name="MAX_TOTAL_EXCEEDED",
-                explanation="Economic threshold breach captured by cryptographic MRDP",
+                remediation="BOUNDED_REPLAN_WITHIN_IMMUTABLE_CEILING",
+                proof_digest=proof.mrdp_digest,
             )
 
         # 8. Recovery
         recovery = ControlRoomRecovery(
             recovery_invoked=proof.recovery_summary is not None,
+            action_type="BOUNDED_REPLAN" if proof.recovery_summary else None,
+            action_amount=None,
+            recovery_status="RECOVERED" if (proof.actual_verdict == "PASS" and getattr(proof.scenario_id, "value", str(proof.scenario_id)) == "PRICE_DRIFT") else ("DRIFT_DETECTED" if proof.recovery_summary else "NOT_REQUIRED"),
             replan_rounds=1 if proof.recovery_summary else 0,
+            revalidation_verdict=IntegrityStatus.PASS if (proof.actual_verdict == "PASS" and getattr(proof.scenario_id, "value", str(proof.scenario_id)) == "PRICE_DRIFT") else None,
             revalidated_pass=(proof.actual_verdict == "PASS" and getattr(proof.scenario_id, "value", str(proof.scenario_id)) == "PRICE_DRIFT"),
-            remediation_proposal="Bounded replan within immutable ceiling" if proof.recovery_summary else None,
-            counter_offer_sku="SKU-BOOK-001",
-            counter_offer_total=auth_max,
             attempts_count=1 if proof.recovery_summary else 0,
             max_attempts=3,
         )
@@ -640,37 +652,37 @@ class ControlRoomService:
         is_captured = (scen_str == "HAPPY_PATH")
         pay_st = "captured" if is_captured else ("pending" if scen_str == "UNKNOWN_PROVIDER_STATE" else "blocked")
         payment = ControlRoomPayment(
+            provider="razorpay",
             order_id=identity.order_id,
             payment_id=identity.payment_id,
             payment_status=pay_st,
             amount=auth_max,
-            currency="INR",
             payment_captured=is_captured,
-            signature_verified=is_captured,
+            integrity_vs_payment_distinction="CAPTURED_IS_NOT_PASS",
         )
 
         # 10. Security
         threat_st = "CLEAN"
         if scen_str in ["PROMPT_INJECTION_IN_EVIDENCE", "REPLAY_ATTACK", "BUYER_AGENT_REUSE"]:
-            threat_st = "SUSPICIOUS"
+            threat_st = "BLOCKED"
         security = ControlRoomSecurity(
             binding_verified=proof.security_findings.get("binding_verified", True),
             kill_switch_state=proof.security_findings.get("kill_switch_state", "RUNNING"),
             threat_status=threat_st,
+            threats_detected=["SUSPICIOUS_MUTATION"] if threat_st != "CLEAN" else [],
             prompt_injection_detected=proof.security_findings.get("prompt_injection_intercepted", False),
-            capability_abuse_detected=proof.security_findings.get("capability_stockout_detected", False),
+            tampering_detected=proof.security_findings.get("replay_divergence_detected", False),
         )
 
         # 11. Evidence
         evidence_items = [
             ControlRoomEvidenceItem(
                 evidence_id=e.get("evidence_id", f"evi_{idx}"),
-                source=e.get("source", "SYSTEM"),
-                authority_tier=e.get("authority", "SYSTEM_DERIVED"),
                 field_name=e.get("field_name", "parameter"),
-                field_value=str(e.get("field_value", "")),
-                digest=e.get("digest", ""),
-                is_authoritative=e.get("is_authoritative", False),
+                field_value_repr=str(e.get("field_value", "")),
+                source=e.get("source", "SYSTEM"),
+                authority=e.get("authority", "SYSTEM_DERIVED"),
+                recorded_at=now,
                 is_synthetic=(proof.execution_mode != "REAL_RAZORPAY_TEST_MODE"),
             )
             for idx, e in enumerate(proof.evidence_records)
@@ -682,12 +694,10 @@ class ControlRoomService:
             replay_verdict=proof.replay_verdict or ("MATCH" if proof.actual_verdict == "PASS" else "MISMATCH"),
             is_cpu_only=True,
             discrepancy_count=1 if proof.replay_verdict == "MISMATCH" else 0,
-            replay_digest=proof.proof_digest,
         )
 
         # 13. Observability
         observability = ControlRoomObservability(
-            trace_available=True,
             checkpoints_count=len(proof.proof_chain),
             checkpoints_timeline_valid=True,
             time_to_detect_ms=12.4,
@@ -697,12 +707,13 @@ class ControlRoomService:
         # 14. Timeline
         timeline = [
             ControlRoomTimelineStage(
+                stage_id=f"stg_{idx}",
                 stage_name=stage.stage_name,
                 status=stage.status,
                 timestamp=stage.timestamp or now,
                 description=stage.description,
             )
-            for stage in proof.proof_chain
+            for idx, stage in enumerate(proof.proof_chain)
         ]
 
         snapshot = ControlRoomSnapshot(

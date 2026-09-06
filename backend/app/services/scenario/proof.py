@@ -21,6 +21,7 @@ Invariants:
 - CAPTURED != PASS: Payment capture status is never confused with integrity clearance.
 """
 from datetime import datetime, timezone
+import hashlib
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -47,6 +48,16 @@ from backend.app.services.scenario.definitions import build_scenario_snapshot
 from backend.app.services.scenario.runner import ScenarioRunner
 
 logger = logging.getLogger(__name__)
+
+
+def _format_money(money: Optional[Money]) -> str:
+    """Formats Money value into human-readable string without float arithmetic corruption."""
+    if not money:
+        return "—"
+    major = money.amount / 100
+    if major.is_integer():
+        return f"₹{int(major):,} {money.currency}"
+    return f"₹{major:,.2f} {money.currency}"
 
 
 class ScenarioProofService:
@@ -102,12 +113,12 @@ class ScenarioProofService:
         evidence_records = [
             {
                 "evidence_id": e.evidence_id,
-                "source": e.source.value,
-                "authority": e.authority.value,
+                "source": e.source.value if hasattr(e.source, "value") else str(e.source),
+                "authority": e.authority.value if (e.authority and hasattr(e.authority, "value")) else (str(e.authority) if e.authority else "ADVISORY"),
                 "field_name": e.field_name,
                 "field_value": str(e.field_value),
                 "is_authoritative": e.is_authoritative,
-                "digest": e.digest,
+                "digest": getattr(e, "digest", None) or hashlib.sha256(f"{e.evidence_id}:{e.field_name}:{e.field_value}".encode()).hexdigest()[:16],
             }
             for e in snapshot.evidence
         ]
@@ -125,8 +136,8 @@ class ScenarioProofService:
         if scenario_id == ScenarioId.PRICE_DRIFT or result.actual_verdict == "DRIFT":
             recovery_summary = {
                 "recovery_policy": definition.expected_policy_action or "HALT_OR_REMEDY",
-                "original_ceiling": snapshot.intent.max_total.format(),
-                "observed_total": snapshot.payment.amount.format() if snapshot.payment else "₹6,000",
+                "original_ceiling": _format_money(snapshot.intent.max_total),
+                "observed_total": _format_money(snapshot.payment.amount) if snapshot.payment else "₹6,000",
                 "discrepancy": "+₹1,000" if scenario_id == ScenarioId.PRICE_DRIFT else "Discrepancy detected",
                 "replan_bounded_by_ceiling": True,
                 "requires_revalidation": True,
@@ -234,10 +245,10 @@ class ScenarioProofService:
         )
 
         # 3. Product Price / Ceiling
-        ceiling_str = snapshot.intent.max_total.format()
+        ceiling_str = _format_money(snapshot.intent.max_total)
         obs_spend = ceiling_str
         if snapshot.payment and snapshot.payment.amount:
-            obs_spend = snapshot.payment.amount.format()
+            obs_spend = _format_money(snapshot.payment.amount)
         elif snapshot.scenario_id == ScenarioId.PRICE_DRIFT:
             obs_spend = "₹6,000"
         items.append(
@@ -319,7 +330,7 @@ class ScenarioProofService:
         """Assembles the canonical 5-Question narrative."""
         item_name = snapshot.intent.items[0].name if snapshot.intent.items else "Goods"
         sku = snapshot.intent.items[0].sku if snapshot.intent.items else "SKU-001"
-        ceiling = snapshot.intent.max_total.format()
+        ceiling = _format_money(snapshot.intent.max_total)
 
         # 1. What was authorized?
         q1 = f"IntentContract '{snapshot.intent.intent_id}' authorized a ceiling of {ceiling} for '{item_name}' ({sku}). Allowed substitutions: none. Currency: INR."
@@ -386,7 +397,7 @@ class ScenarioProofService:
             ScenarioProofChainStage(
                 stage_name="1. AUTHORIZED STATE",
                 status="VALID",
-                description=f"IntentContract verified with ceiling {snapshot.intent.max_total.format()}.",
+                description=f"IntentContract verified with ceiling {_format_money(snapshot.intent.max_total)}.",
                 evidence_ref=snapshot.intent.intent_id,
                 timestamp=now,
             )
