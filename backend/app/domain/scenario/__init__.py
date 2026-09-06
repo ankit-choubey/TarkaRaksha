@@ -9,6 +9,10 @@ from backend.app.domain.scenario.contracts import (
     ScenarioResult,
     ScenarioStatus,
     ScenarioSuiteResult,
+    ScenarioProof,
+    ScenarioProofComparisonItem,
+    ScenarioProofChainStage,
+    ScenarioNarrative,
 )
 from backend.app.domain.scenario.catalog import (
     CANONICAL_SCENARIO_DEFINITIONS,
@@ -25,6 +29,10 @@ __all__ = [
     "ScenarioResult",
     "ScenarioStatus",
     "ScenarioSuiteResult",
+    "ScenarioProof",
+    "ScenarioProofComparisonItem",
+    "ScenarioProofChainStage",
+    "ScenarioNarrative",
     "CANONICAL_SCENARIO_DEFINITIONS",
     "get_scenario_catalog",
     "get_scenario_definition",

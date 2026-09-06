@@ -169,6 +169,12 @@ class ScenarioDefinition(BaseModel):
     expected_policy_action: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
     fault_description: Optional[str] = None
+    initial_conditions: Optional[str] = None
+    mutation_input: Optional[str] = None
+    expected_behavior: Optional[str] = None
+    expected_proof: Optional[str] = None
+    provider_mode: str = "SYNTHETIC_OFFLINE_FIXTURE_RUN"
+    related_capability: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(
@@ -209,3 +215,109 @@ class ScenarioSuiteResult(BaseModel):
         frozen=True,
         extra="forbid",
     )
+
+
+class ScenarioProofComparisonItem(BaseModel):
+    """Row in the proof comparison table (Expected vs Observed)."""
+    parameter: str
+    expected_value: str
+    observed_value: str
+    is_match: bool
+    notes: Optional[str] = None
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class ScenarioProofChainStage(BaseModel):
+    """Stage in the deterministic proof chain."""
+    stage_name: str
+    status: str  # e.g., "VALID", "MUTATED", "DETECTED", "VERIFIED", "CONTAINED"
+    description: str
+    evidence_ref: Optional[str] = None
+    timestamp: Optional[datetime] = None
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class ScenarioNarrative(BaseModel):
+    """
+    Authoritative 5-Question narrative explaining the scenario journey:
+    1. What was authorized?
+    2. What happened?
+    3. Did it match?
+    4. Why?
+    5. What happened next?
+    """
+    what_was_authorized: str
+    what_happened: str
+    did_it_match: str
+    why: str
+    what_happened_next: str
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class ScenarioProof(BaseModel):
+    """
+    Read-only, observational proof projection for an executed scenario.
+    Provides complete tamper-evident audit trail connecting the scenario
+    input to authoritative backend verdicts, MRDP, evidence, and E7 Control Room.
+    """
+    proof_id: str
+    scenario_id: ScenarioId
+    scenario_name: str
+    category: ScenarioCategory
+    transaction_id: str
+    intent_id: str
+    agent_id: str
+    merchant_id: str
+    order_id: Optional[str] = None
+    payment_id: Optional[str] = None
+    attempt_id: Optional[str] = None
+    execution_mode: str = "SYNTHETIC_OFFLINE_FIXTURE_RUN"
+    expected_verdict: str
+    actual_verdict: str
+    scenario_status: ScenarioStatus
+    integrity_status: Optional[IntegrityStatus] = None
+    transaction_state: Optional[TransactionState] = None
+    mrdp_digest: Optional[str] = None
+    mrdp_error_code: Optional[str] = None
+    violations: List[str] = Field(default_factory=list)
+    evidence_count: int = 0
+    evidence_records: List[Dict[str, Any]] = Field(default_factory=list)
+    security_findings: Dict[str, Any] = Field(default_factory=dict)
+    recovery_summary: Optional[Dict[str, Any]] = None
+    replay_verdict: Optional[str] = None
+    comparison: List[ScenarioProofComparisonItem] = Field(default_factory=list)
+    narrative: ScenarioNarrative
+    proof_chain: List[ScenarioProofChainStage] = Field(default_factory=list)
+    proof_digest: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
+
+    def compute_digest(self) -> str:
+        """Computes a tamper-evident SHA-256 digest over the authoritative proof projection."""
+        canonical_data = {
+            "proof_id": self.proof_id,
+            "scenario_id": self.scenario_id.value,
+            "transaction_id": self.transaction_id,
+            "intent_id": self.intent_id,
+            "agent_id": self.agent_id,
+            "merchant_id": self.merchant_id,
+            "expected_verdict": self.expected_verdict,
+            "actual_verdict": self.actual_verdict,
+            "scenario_status": self.scenario_status.value,
+            "integrity_status": self.integrity_status.value if self.integrity_status else None,
+            "mrdp_digest": self.mrdp_digest,
+            "violations": sorted(self.violations),
+            "evidence_count": self.evidence_count,
+            "execution_mode": self.execution_mode,
+            "comparison_count": len(self.comparison),
+            "proof_chain_count": len(self.proof_chain),
+        }
+        encoded = json.dumps(canonical_data, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
