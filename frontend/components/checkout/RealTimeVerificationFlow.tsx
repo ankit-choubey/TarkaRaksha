@@ -103,17 +103,14 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
   const [countdown, setCountdown] = useState<number>(4);
   const [copied, setCopied] = useState<boolean>(false);
 
-  // Floating Pop-Up Alert Text Box State (User Request: "pop up message as text box")
-  const [isAlertModalOpen, setIsAlertModalOpen] = useState<boolean>(true);
+  // Floating Pop-Up Alert Text Box State (User Request: "pop msg to appear for only a problem or issue is detected")
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState<boolean>(false);
+  const [userClickedAction, setUserClickedAction] = useState<string | null>(null);
+  const [postClickCountdown, setPostClickCountdown] = useState<number | null>(null);
 
   // Pipeline Completion & Auto-Redirect to Control Room (User Request: "control panel shall open right after auto and manual mode completes")
   const [completionModalOpen, setCompletionModalOpen] = useState<boolean>(false);
   const [redirectCountdown, setRedirectCountdown] = useState<number>(5);
-
-  // Re-open alert box whenever step changes
-  useEffect(() => {
-    setIsAlertModalOpen(true);
-  }, [currentStep]);
 
   // Handle completion auto-redirect when reaching Step 8
   useEffect(() => {
@@ -469,6 +466,69 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
     },
   ];
 
+  // Helper to check if current stage is an actual problem / issue (User Request: "pop msg to appear for only a problem of issue is detected")
+  const isProblemStage = (stage: VerificationStageInfo) => {
+    if (!stage) return false;
+    return (
+      stage.status === "DRIFT_FLAGGED" ||
+      stage.status === "BLOCKED" ||
+      stage.status === "UNKNOWN" ||
+      stage.popupMessage.type === "warning" ||
+      (isQualityTradeoff && stage.stepNumber === 3 && qualityChoice === "pending")
+    );
+  };
+
+  // Only pop up message when an issue/problem is detected!
+  useEffect(() => {
+    const stage = stages[currentStep];
+    if (stage && isProblemStage(stage)) {
+      setIsAlertModalOpen(true);
+      setIsPaused(true); // pause auto-stepper so user can click
+      setUserClickedAction(null);
+      setPostClickCountdown(null);
+    } else {
+      setIsAlertModalOpen(false);
+      setUserClickedAction(null);
+      setPostClickCountdown(null);
+    }
+  }, [currentStep, stages, isQualityTradeoff, qualityChoice]);
+
+  // Handle 5-second post-click countdown: waits 5s only, then pop box disappears and moves to next step automatically (User Request)
+  useEffect(() => {
+    if (postClickCountdown === null) return;
+
+    if (postClickCountdown <= 0) {
+      setIsAlertModalOpen(false);
+      setPostClickCountdown(null);
+      setUserClickedAction(null);
+      setIsPaused(false);
+      setCountdown(4);
+      setCurrentStep((s) => Math.min(s + 1, stages.length - 1));
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setPostClickCountdown((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [postClickCountdown, stages.length]);
+
+  const handleUserClickAction = (actionLabel: string, onExecute?: () => void) => {
+    if (onExecute) onExecute();
+    setUserClickedAction(actionLabel);
+    setPostClickCountdown(5);
+  };
+
+  const handleProceedImmediately = () => {
+    setIsAlertModalOpen(false);
+    setPostClickCountdown(null);
+    setUserClickedAction(null);
+    setIsPaused(false);
+    setCountdown(4);
+    setCurrentStep((s) => Math.min(s + 1, stages.length - 1));
+  };
+
   // Progressive timer: 4 seconds per step
   useEffect(() => {
     if (!isAutonomous || isPaused || currentStep >= stages.length - 1) return;
@@ -488,6 +548,9 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
 
   const handleManualNextStep = () => {
     if (currentStep < stages.length - 1) {
+      setIsAlertModalOpen(false);
+      setUserClickedAction(null);
+      setPostClickCountdown(null);
       setCurrentStep(currentStep + 1);
       setCountdown(4);
     }
@@ -495,6 +558,9 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
 
   const handleManualPrevStep = () => {
     if (currentStep > 0) {
+      setIsAlertModalOpen(false);
+      setUserClickedAction(null);
+      setPostClickCountdown(null);
       setCurrentStep(currentStep - 1);
       setCountdown(4);
     }
@@ -507,7 +573,10 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
     setIsPaused(false);
     setQualityChoice("pending");
     setCompletionModalOpen(false);
-    setIsAlertModalOpen(true);
+    setIsAlertModalOpen(false);
+    setUserClickedAction(null);
+    setPostClickCountdown(null);
+    setRedirectCountdown(5);
   };
 
   const activeStage = stages[currentStep];
@@ -670,83 +739,189 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
                   <p className="text-neutral-700 leading-relaxed">{activeStage.decisionExplanation}</p>
                 </div>
 
-                {/* SPECIAL CASE: AI Quality vs Budget Tradeoff Interactive Choices (User Request: "budget 50k but 52k is delivering quality") */}
-                {isQualityTradeoff && currentStep >= 2 && currentStep <= 4 && (
-                  <div className="rounded-2xl border-2 border-violet-400 bg-violet-50/90 p-5 space-y-3 shadow-sm">
+                {/* When User has clicked an action: show 5-second auto-advance countdown (User Request) */}
+                {postClickCountdown !== null ? (
+                  <div className="rounded-2xl bg-emerald-950 text-white p-5 border-2 border-emerald-500 space-y-3 animate-in zoom-in-95">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono font-bold uppercase text-violet-900 flex items-center gap-1.5">
-                        <Sparkles className="h-4 w-4 text-violet-600" />
-                        Interactive AI Quality Tradeoff Suggestion
+                      <span className="font-mono text-xs uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+                        <span>User Command Confirmed &amp; Ingested</span>
                       </span>
-                      <span className="text-xs font-mono font-bold bg-violet-200 text-violet-900 px-2.5 py-0.5 rounded-full">
-                        User Command Required
+                      <span className="rounded-full bg-emerald-500 text-neutral-950 px-3 py-1 text-xs font-mono font-bold shrink-0">
+                        Auto-advancing in {postClickCountdown}s...
                       </span>
                     </div>
-                    <div className="text-xs text-neutral-800 space-y-1.5">
-                      <p className="font-semibold text-violet-950">
-                        Budget Ceiling: ₹50,000 (5,000,000 paise) · Observed Product: ₹52,000 (+₹2,000 delta)
-                      </p>
-                      <p className="text-neutral-600">
-                        The AI discovered a premium display delivering 100% AdobeRGB + 120Hz at ₹52,000. Under TarkaRaksha invariants, <strong className="text-neutral-900">AI has ZERO financial authority</strong> and cannot authorize money without explicit user command.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                    <p className="text-sm font-semibold text-emerald-200">
+                      {userClickedAction}
+                    </p>
+                    <p className="text-xs text-neutral-400 font-mono">
+                      Pop-up box will automatically disappear in {postClickCountdown} seconds and move to the next step.
+                    </p>
+                    <div className="flex items-center justify-between pt-1 border-t border-emerald-900/60">
+                      <span className="text-[11px] font-mono text-neutral-400">
+                        Applies automatically on both manual and auto modes
+                      </span>
                       <button
-                        onClick={() => {
-                          setQualityChoice("approved_upgrade");
-                          setIsPaused(false);
-                          setIsAlertModalOpen(false);
-                        }}
-                        className={`rounded-xl p-3 text-xs font-bold text-left shadow-xs transition space-y-1 ${
-                          qualityChoice === "approved_upgrade"
-                            ? "bg-emerald-600 text-white ring-2 ring-emerald-700"
-                            : "bg-violet-600 hover:bg-violet-700 text-white"
-                        }`}
+                        onClick={handleProceedImmediately}
+                        className="px-4 py-2 rounded-xl bg-white text-neutral-950 text-xs font-bold hover:bg-neutral-100 flex items-center space-x-1.5 shadow-md active:scale-95 transition"
                       >
-                        <span className="block text-[10px] font-mono uppercase text-violet-200">
-                          {qualityChoice === "approved_upgrade" ? "✓ Command Applied" : "Option 1 (Approve)"}
-                        </span>
-                        <span className="block leading-tight">✓ Approve ₹52,000 Quality Amendment</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setQualityChoice("enforce_discount");
-                          setIsPaused(false);
-                          setIsAlertModalOpen(false);
-                        }}
-                        className={`rounded-xl p-3 text-xs font-bold text-left shadow-xs transition space-y-1 ${
-                          qualityChoice === "enforce_discount"
-                            ? "bg-emerald-600 text-white ring-2 ring-emerald-700"
-                            : "bg-neutral-900 hover:bg-neutral-800 text-white"
-                        }`}
-                      >
-                        <span className="block text-[10px] font-mono uppercase text-neutral-400">
-                          {qualityChoice === "enforce_discount" ? "✓ Command Applied" : "Option 2 (Enforce & Coupon)"}
-                        </span>
-                        <span className="block leading-tight">Enforce ₹50,000 &amp; Request Discount</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setQualityChoice("revert_base");
-                          setIsPaused(false);
-                          setIsAlertModalOpen(false);
-                        }}
-                        className={`rounded-xl p-3 text-xs font-bold text-left shadow-2xs transition space-y-1 ${
-                          qualityChoice === "revert_base"
-                            ? "bg-neutral-800 text-white"
-                            : "bg-white hover:bg-neutral-100 text-neutral-900 border border-neutral-300"
-                        }`}
-                      >
-                        <span className="block text-[10px] font-mono uppercase text-neutral-500">
-                          {qualityChoice === "revert_base" ? "✓ Command Applied" : "Option 3 (Reject)"}
-                        </span>
-                        <span className="block leading-tight">Reject: Revert to ₹48,000 Base</span>
+                        <span>Proceed Immediately</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
+                ) : (
+                  <>
+                    {/* SPECIAL CASE: AI Quality vs Budget Tradeoff Interactive Choices (User Request: "budget 50k but 52k is delivering quality") */}
+                    {isQualityTradeoff && currentStep >= 2 && currentStep <= 4 && (
+                      <div className="rounded-2xl border-2 border-violet-400 bg-violet-50/90 p-5 space-y-3 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-mono font-bold uppercase text-violet-900 flex items-center gap-1.5">
+                            <Sparkles className="h-4 w-4 text-violet-600" />
+                            Interactive AI Quality Tradeoff Suggestion
+                          </span>
+                          <span className="text-xs font-mono font-bold bg-violet-200 text-violet-900 px-2.5 py-0.5 rounded-full">
+                            User Command Required
+                          </span>
+                        </div>
+                        <div className="text-xs text-neutral-800 space-y-1.5">
+                          <p className="font-semibold text-violet-950">
+                            Budget Ceiling: ₹50,000 (5,000,000 paise) · Observed Product: ₹52,000 (+₹2,000 delta)
+                          </p>
+                          <p className="text-neutral-600">
+                            The AI discovered a premium display delivering 100% AdobeRGB + 120Hz at ₹52,000. Under TarkaRaksha invariants, <strong className="text-neutral-900">AI has ZERO financial authority</strong> and cannot authorize money without explicit user command.
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                          <button
+                            onClick={() => {
+                              handleUserClickAction("✓ Quality Amendment Approved: Authorized ceiling raised to ₹52,000.", () =>
+                                setQualityChoice("approved_upgrade")
+                              );
+                            }}
+                            className={`rounded-xl p-3 text-xs font-bold text-left shadow-xs transition space-y-1 ${
+                              qualityChoice === "approved_upgrade"
+                                ? "bg-emerald-600 text-white ring-2 ring-emerald-700"
+                                : "bg-violet-600 hover:bg-violet-700 text-white"
+                            }`}
+                          >
+                            <span className="block text-[10px] font-mono uppercase text-violet-200">
+                              {qualityChoice === "approved_upgrade" ? "✓ Command Applied" : "Option 1 (Approve)"}
+                            </span>
+                            <span className="block leading-tight">✓ Approve ₹52,000 Quality Amendment</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              handleUserClickAction("✓ Policy Enforced: Demanded ₹2,000 merchant discount voucher.", () =>
+                                setQualityChoice("enforce_discount")
+                              );
+                            }}
+                            className={`rounded-xl p-3 text-xs font-bold text-left shadow-xs transition space-y-1 ${
+                              qualityChoice === "enforce_discount"
+                                ? "bg-emerald-600 text-white ring-2 ring-emerald-700"
+                                : "bg-neutral-900 hover:bg-neutral-800 text-white"
+                            }`}
+                          >
+                            <span className="block text-[10px] font-mono uppercase text-neutral-400">
+                              {qualityChoice === "enforce_discount" ? "✓ Command Applied" : "Option 2 (Enforce & Coupon)"}
+                            </span>
+                            <span className="block leading-tight">Enforce ₹50,000 &amp; Request Discount</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              handleUserClickAction("✓ Upgrade Rejected: Reverted to baseline ₹48,000 SKU.", () =>
+                                setQualityChoice("revert_base")
+                              );
+                            }}
+                            className={`rounded-xl p-3 text-xs font-bold text-left shadow-2xs transition space-y-1 ${
+                              qualityChoice === "revert_base"
+                                ? "bg-neutral-800 text-white"
+                                : "bg-white hover:bg-neutral-100 text-neutral-900 border border-neutral-300"
+                            }`}
+                          >
+                            <span className="block text-[10px] font-mono uppercase text-neutral-500">
+                              {qualityChoice === "revert_base" ? "✓ Command Applied" : "Option 3 (Reject)"}
+                            </span>
+                            <span className="block leading-tight">Reject: Revert to ₹48,000 Base</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Problem Action Buttons for Non-Tradeoff Scenarios */}
+                    {!isQualityTradeoff && isDriftScenario && (
+                      <div className="rounded-2xl border-2 border-rose-400 bg-rose-50/90 p-4 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-mono font-bold uppercase text-rose-900 flex items-center gap-1.5">
+                            <AlertTriangle className="h-4 w-4 text-rose-600" />
+                            Unbudgeted Price Surge Detected (+₹5,000 Drift)
+                          </span>
+                          <span className="text-xs font-mono font-bold bg-rose-200 text-rose-900 px-2.5 py-0.5 rounded-full">
+                            Click Required
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-700">
+                          Merchant checkout charged ₹55,000 against authorized ₹50,000 ceiling. Click to authorize T11 autonomous partial refund recovery:
+                        </p>
+                        <button
+                          onClick={() => handleUserClickAction("✓ Recovery Authorized: T11 loop engaged to refund +₹5,000 unbudgeted drift.")}
+                          className="w-full sm:w-auto rounded-xl bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 transition cursor-pointer"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          <span>✓ Authorize T11 Recovery &amp; Compensatory Partial Refund</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {!isQualityTradeoff && isBlockedScenario && (
+                      <div className="rounded-2xl border-2 border-neutral-700 bg-neutral-100 p-4 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-mono font-bold uppercase text-neutral-900 flex items-center gap-1.5">
+                            <AlertTriangle className="h-4 w-4 text-neutral-800" />
+                            Unauthorized Refurbished SKU Blocked
+                          </span>
+                          <span className="text-xs font-mono font-bold bg-neutral-300 text-neutral-900 px-2.5 py-0.5 rounded-full">
+                            Click Required
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-700">
+                          Merchant substituted authorized SKU with refurbished SKU-MON-4K-REFURB. Click to confirm settlement blockage:
+                        </p>
+                        <button
+                          onClick={() => handleUserClickAction("✓ Boundary Enforced: Refurbished SKU substitution blocked, settlement safely aborted.")}
+                          className="w-full sm:w-auto rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white px-5 py-2.5 text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 transition cursor-pointer"
+                        >
+                          <span>✓ Enforce Semantic Boundary &amp; Abort Settlement</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {!isQualityTradeoff && isTimeoutScenario && (
+                      <div className="rounded-2xl border-2 border-amber-400 bg-amber-50/90 p-4 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-mono font-bold uppercase text-amber-900 flex items-center gap-1.5">
+                            <HelpCircle className="h-4 w-4 text-amber-600" />
+                            Indeterminate Gateway 504 Timeout
+                          </span>
+                          <span className="text-xs font-mono font-bold bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-full">
+                            Click Required
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-700">
+                          Gateway connection dropped. Click to enforce deliberate abstention (NO SECOND PAYMENT debit):
+                        </p>
+                        <button
+                          onClick={() => handleUserClickAction("✓ Abstention Enforced: No second debit permitted. Reconciling gateway.")}
+                          className="w-full sm:w-auto rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 transition cursor-pointer"
+                        >
+                          <span>✓ Enforce Deliberate Abstention (No Second Payment)</span>
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -777,17 +952,15 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
                   >
                     Dismiss Pop-up Box
                   </button>
-                  <button
-                    onClick={() => {
-                      setIsAlertModalOpen(false);
-                      handleManualNextStep();
-                    }}
-                    disabled={currentStep >= stages.length - 1}
-                    className="px-5 py-2 rounded-xl bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 disabled:opacity-40 flex items-center space-x-1.5 shadow-sm"
-                  >
-                    <span>Acknowledge &amp; Proceed</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
+                  {postClickCountdown === null && (
+                    <button
+                      onClick={() => handleUserClickAction(`✓ Issue Acknowledged: ${activeStage.popupMessage.title}`)}
+                      className="px-5 py-2 rounded-xl bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 flex items-center space-x-1.5 shadow-sm"
+                    >
+                      <span>Acknowledge Issue &amp; Continue (5s Timer)</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
