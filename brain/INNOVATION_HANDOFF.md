@@ -1061,6 +1061,42 @@ E1 — Integration Boundary
 
 ---
 
+## E8 Verification Record (Scenario / Proof Surface)
+
+- **Implementation Scope**:
+  - Establishes the canonical Scenario / Proof Surface allowing reviewers, developers, and judges to execute 12 canonical transaction failure and security scenarios and inspect resulting deterministic proof.
+  - Scenario Lab != Decision Engine boundary: Scenario Lab is strictly an input and observational demonstration surface; it possesses zero authority to calculate PASS/DRIFT/UNKNOWN, authorize payments, or override backend results.
+  - Core principle maintained: "AI proposes. Evidence proves. Deterministic logic decides."
+  - 12 Canonical Scenarios fully defined with initial conditions, mutation inputs, expected behaviors, and proof specs (`HAPPY_PATH`, `PRICE_DRIFT`, `WRONG_SKU`, `INVENTORY_DISAPPEARS`, `DELIVERY_DRIFT`, `DUPLICATE_PAYMENT`, `DELAYED_WEBHOOK`, `REPLAY_ATTACK`, `PROMPT_INJECTION_IN_EVIDENCE`, `MERCHANT_AGENT_COMPROMISED`, `BUYER_AGENT_REUSE`, `UNKNOWN_PROVIDER_STATE`).
+  - Read-Only Proof Projection DTO: `ScenarioProof` aggregates comparison ledger, 5-Question narrative, 6-stage proof chain, security findings, recovery summary, and tamper-evident SHA-256 proof digest.
+  - Observational Scenario Proof Engine: `ScenarioProofService` executes scenarios against existing authoritative pipelines (`evaluate_integrity`, `build_mrdp`, `TransactionBindingService`, `ReplayEngine`, `ScenarioRunner`).
+  - REST APIs: `GET /api/v1/scenarios/{scenario_id}/proof`, `POST /api/v1/scenarios/{scenario_id}/prove`, `GET /api/v1/scenarios/proofs`.
+  - Control Room Integration: One-click "Inspect in Control Room" dynamically registers scenario snapshot and updates E7 telemetry and 5 deep-dive tabs.
+  - Production Next.js UI (`frontend/app/page.tsx`) with catalog filter matrix, scenario inspector, 5-Question narrative, comparison table, 6-stage proof chain stepper, tamper-evident hash copy, and deep-link integration.
+- **Files Created**:
+  - `backend/app/services/scenario/proof.py`
+  - `testing/unit/test_scenario_proof_surface.py`
+- **Files Modified**:
+  - `backend/app/domain/scenario/contracts.py` (ScenarioProof, Comparison, Chain, Narrative models)
+  - `backend/app/domain/scenario/catalog.py` (enriched 12 canonical scenario definitions)
+  - `backend/app/domain/scenario/__init__.py` (re-exports)
+  - `backend/app/services/control_room/service.py` (compose_from_scenario_proof, register_scenario_snapshot)
+  - `backend/app/main.py` (registered scenario proof REST endpoints)
+  - `frontend/app/page.tsx` (Scenario & Proof Lab UI with view switcher)
+  - `brain/STATUS.md`
+  - `brain/HANDOFF.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 30 comprehensive unit and adversarial tests in `testing/unit/test_scenario_proof_surface.py`.
+- **Regression Count**: 1047 passed, 2 warnings in full regression suite.
+- **Core Invariant Verification**:
+  - `make test-bootstrap`: PASS
+  - `make test-env`: PASS (including Next.js production build)
+  - `scripts/verify_api_smoke.py`: PASS
+  - `git diff --check`: PASS
+
+---
+
 ## Next Task
-**E8 — Scenario / Proof Surface** (Await human owner instruction and approval).
+**E9 — Final End-to-End Demonstration Certification** (Await human owner instruction and approval).
+
 

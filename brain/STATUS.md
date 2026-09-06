@@ -7,10 +7,10 @@
 E-Series Final Extension
 
 ## Current Task
-E7 — Real-time Control-Room Data Surface
+E8 — Scenario / Proof Surface
 
 ## Task Status
-COMPLETE (C_E7 PASS)
+COMPLETE (C_E8 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -53,9 +53,10 @@ COMPLETE (C_E7 PASS)
 - [x] **E5 — Transaction Passport** (Completed 2026-09-06)
 - [x] **E6 — Failure → Recovery → Revalidation Hero Loop** (Completed 2026-09-06)
 - [x] **E7 — Real-time Control-Room Data Surface** (Completed 2026-09-06)
+- [x] **E8 — Scenario / Proof Surface** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T15:35:30+05:30 — E7 final certification (25/25 E7 tests passed, 1017 total regression)
+2026-09-06T15:53:30+05:30 — E8 final certification (30/30 E8 tests passed, 56/56 E6/E7 regression passed, 1047 total regression)
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
@@ -176,6 +177,11 @@ COMPLETE (C_E7 PASS)
 - **E7 CAPTURED ≠ PASS Separation Invariant**: Payment gateway status (e.g. `captured`) and deterministic integrity verdict (e.g. `PASS` / `DRIFT`) are rendered across completely distinct visual cards and telemetry streams. Captured payment state is never portrayed as an integrity clearance.
 - **E7 Read-Only Projection Invariant**: `ControlRoomSnapshot` and all control room APIs (`/api/v1/control-room/*`) are strictly read-only projections over underlying authoritative backend records (`HeroTransactionRecord`, `IntegrationExecutionRecord`, `TransactionPassport`). No secondary mutable state or competing state machine is introduced.
 - **E7 Real vs Synthetic Boundary Invariant**: The Control Room strictly labels and visualizes execution mode (`SYNTHETIC_OFFLINE_HERO_RUN` vs `REAL_RAZORPAY_TEST_MODE`). Real Razorpay Test Mode is never claimed unless real sandbox credentials were authenticated and verified.
+- **E8 Scenario Lab Non-Decision Engine Invariant**: The Scenario Lab and Proof Surface are purely input and observational demonstration surfaces. They never calculate PASS/DRIFT/UNKNOWN, authorize payments, decide merchant trust, create authoritative evidence, override backend results, or bypass revalidation.
+- **E8 Tamper-Evident Proof Chain Projection Invariant**: `ScenarioProof` is a strictly read-only observational projection composing authoritative facts from the deterministic engine (T04), MRDP (T07), state machine (T05), binding (I8), kill switch (I9), replay (T13), and control room (E7). Every proof contains a cryptographic SHA-256 digest over its factual evidence chain.
+- **E8 Canonical 12-Scenario Completeness Invariant**: All 12 canonical scenarios (`HAPPY_PATH`, `PRICE_DRIFT`, `WRONG_SKU`, `INVENTORY_DISAPPEARS`, `DELIVERY_DRIFT`, `DUPLICATE_PAYMENT`, `DELAYED_WEBHOOK`, `REPLAY_ATTACK`, `PROMPT_INJECTION_IN_EVIDENCE`, `MERCHANT_AGENT_COMPROMISED`, `BUYER_AGENT_REUSE`, `UNKNOWN_PROVIDER_STATE`) are defined with stable IDs, initial conditions, mutations, expected behaviors, and proof specifications.
+- **E8 Real vs Synthetic Mode Distinction Invariant**: Scenarios visibly distinguish between `REAL_RAZORPAY_TEST_MODE` and fixture runs (`SYNTHETIC_OFFLINE_FIXTURE_RUN`). Offline simulation is never claimed or portrayed as live gateway capture.
+- **E8 AI Advisory Demarcation Invariant**: AI explanations and proposal rationales are labeled strictly as `ADVISORY` (model: `openai/gpt-oss-20b`); models possess zero financial or verification authority.
 
 ## Next Task
-E8 — Scenario / Proof Surface
+E9 — Final End-to-End Demonstration Certification
