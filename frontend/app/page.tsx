@@ -228,6 +228,7 @@ export default function Home() {
         onOpenScenarioModal={() => setActiveDrawer("scenarios")}
         onRunHeroJourney={handleRunHeroJourney}
         isRunningHero={isRunningHero}
+        apiUrl={apiUrl}
         isBackendConnected={isBackendConnected}
         executionMode={snapshot.execution_mode}
         advisoryModel={snapshot.buyer_agent.advisory_model}

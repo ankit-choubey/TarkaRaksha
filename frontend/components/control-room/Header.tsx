@@ -28,6 +28,7 @@ interface HeaderProps {
   onOpenScenarioModal: () => void;
   onRunHeroJourney: () => void;
   isRunningHero: boolean;
+  apiUrl?: string;
   isBackendConnected: boolean;
   executionMode: string;
   advisoryModel?: string;
@@ -42,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenScenarioModal,
   onRunHeroJourney,
   isRunningHero,
+  apiUrl = "",
   isBackendConnected,
   executionMode,
   advisoryModel = "llama-3.3-70b-versatile (Groq)",
@@ -122,13 +124,22 @@ export const Header: React.FC<HeaderProps> = ({
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                 : "bg-amber-50 text-amber-700 border-amber-200"
             }`}
+            title={apiUrl ? `Connected to: ${apiUrl}` : undefined}
           >
             <span
               className={`h-2 w-2 rounded-full ${
                 isBackendConnected ? "bg-emerald-500 animate-ping" : "bg-amber-500"
               }`}
             />
-            <span>{isBackendConnected ? "API 8000 Live" : "Offline"}</span>
+            <span>
+              {isBackendConnected
+                ? apiUrl.includes("onrender.com")
+                  ? "API Cloud Live"
+                  : apiUrl.includes("8000") || apiUrl.includes("localhost")
+                  ? "API Local Live"
+                  : "API Live"
+                : "Offline"}
+            </span>
           </div>
         </div>
 
