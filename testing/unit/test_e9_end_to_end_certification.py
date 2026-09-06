@@ -191,3 +191,105 @@ def test_e9_06_deterministic_replay_and_tamper_detection(cert_service):
     assert proof.replay_verdict == "MISMATCH"
     assert proof.security_findings.get("replay_divergence_detected") is True
 
+
+# ==============================================================================
+# 6. 7-TUPLE CONTEXT BINDING ENFORCEMENT
+# ==============================================================================
+
+def test_e9_07_seven_tuple_binding_enforcement(cert_service):
+    """
+    Certifies that 7-tuple context (intent_id, agent_id, merchant_id,
+    transaction_id, order_id, payment_id, attempt_id) is enforced, rejecting
+    cross-context agent reuse.
+    """
+    item = cert_service.certify_seven_tuple_binding()
+    assert item.status == "PASS"
+    assert "rejected" in item.verified_fact.lower()
+
+    # Direct proof inspection
+    proof = cert_service.proof_service.generate_proof(ScenarioId.BUYER_AGENT_REUSE)
+    assert proof.actual_verdict == "REJECTED"
+    assert proof.security_findings.get("binding_status") in ("DRIFT", "MISMATCH")
+    assert "TRANSACTION_MISMATCH" in proof.violations
+
+
+# ==============================================================================
+# 7. TRANSACTION PASSPORT OBSERVATIONAL PROJECTION
+# ==============================================================================
+
+def test_e9_08_transaction_passport_observational_composition(cert_service):
+    """
+    Certifies that E5 Transaction Passport composes complete audit story
+    purely observationally without creating secondary mutable state.
+    """
+    item = cert_service.certify_transaction_passport()
+    assert item.status == "PASS"
+    assert "read-only" in item.verified_fact.lower()
+
+    # Inspect proof chain as passport observational baseline
+    proof = cert_service.proof_service.generate_proof(ScenarioId.HAPPY_PATH)
+    assert proof.transaction_id is not None
+    assert proof.intent_id is not None
+    assert len(proof.proof_chain) >= 6
+    assert proof.proof_digest is not None
+
+
+# ==============================================================================
+# 8. CONTROL ROOM LIVE TELEMETRY SYNC
+# ==============================================================================
+
+def test_e9_09_control_room_live_telemetry_integration(cert_service):
+    """
+    Certifies that E7 Control Room snapshot accurately exposes all 5
+    observability deep-dive tabs synchronized from authoritative proof.
+    """
+    item = cert_service.certify_control_room_sync()
+    assert item.status == "PASS"
+    assert "synchronized" in item.verified_fact.lower()
+
+    # Deep verification of Control Room projection
+    latest = cert_service.control_room_service.get_latest_snapshot()
+    assert latest is not None
+    assert latest.identity.transaction_id is not None
+    assert latest.integrity.status.value in ("PASS", "DRIFT", "UNKNOWN")
+    assert latest.drift_proof is not None or latest.integrity.status.value == "PASS"
+    assert latest.security is not None
+    assert latest.replay is not None
+    assert latest.observability is not None
+
+
+# ==============================================================================
+# 9. SCENARIO / PROOF SURFACE CATALOG COMPLETENESS
+# ==============================================================================
+
+def test_e9_10_scenario_proof_surface_catalog_completeness(cert_service):
+    """
+    Certifies that all 12 canonical scenarios exist, have stable IDs,
+    and generate verifiable proofs.
+    """
+    item = cert_service.certify_scenario_surface()
+    assert item.status == "PASS"
+    assert "12 canonical scenarios" in item.verified_fact.lower()
+
+    # Verify all 12 IDs directly
+    expected_ids = {
+        ScenarioId.HAPPY_PATH,
+        ScenarioId.PRICE_DRIFT,
+        ScenarioId.WRONG_SKU,
+        ScenarioId.INVENTORY_DISAPPEARS,
+        ScenarioId.DELIVERY_DRIFT,
+        ScenarioId.DUPLICATE_PAYMENT,
+        ScenarioId.DELAYED_WEBHOOK,
+        ScenarioId.REPLAY_ATTACK,
+        ScenarioId.PROMPT_INJECTION_IN_EVIDENCE,
+        ScenarioId.MERCHANT_AGENT_COMPROMISED,
+        ScenarioId.BUYER_AGENT_REUSE,
+        ScenarioId.UNKNOWN_PROVIDER_STATE,
+    }
+    assert len(expected_ids) == 12
+    for sc_id in expected_ids:
+        proof = cert_service.proof_service.generate_proof(sc_id)
+        assert proof.scenario_id == sc_id
+        assert len(proof.proof_digest) == 64
+
+
