@@ -7,10 +7,10 @@
 E-Series Final Extension
 
 ## Current Task
-E3 — Agentic Transaction Lifecycle Orchestration
+E5 — Transaction Passport
 
 ## Task Status
-COMPLETE (C_E3 PASS)
+COMPLETE (C_E5 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -50,14 +50,17 @@ COMPLETE (C_E3 PASS)
 - [x] **E2 — Consumer + Merchant Gate Composition** (Completed 2026-09-06)
 - [x] **E3 — Agentic Transaction Lifecycle Orchestration** (Completed 2026-09-06)
 - [x] **E4 — Security / Threat Guard Composition** (Completed 2026-09-06)
+- [x] **E5 — Transaction Passport** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T04:22:00+05:30 — E3 checkpoint
+2026-09-06T14:10:00+05:30 — E5 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (912 passed, 2 warnings in 37.13s across all unit, integration, and adversarial suites: 859 baseline + 53 E3 tests)
+- `pytest` (978 passed, 2 warnings in 50.65s across all unit, integration, and adversarial suites: 912 baseline + 66 E5 tests)
+- `scripts/verify_api_smoke.py`: PASS (all baseline and integration endpoints pass)
+- `git diff --check`: PASS (clean formatting, zero whitespace errors)
 - `testing/unit/test_agentic_lifecycle_orchestration.py`: PASS (53/53 passed in 0.64s)
 - `scripts/verify_api_smoke.py`: PASS (FastAPI routes, scenarios, certifications, replay validation, hero-transaction, and intent parsing verified)
 - `npm run build` (frontend): PASS (Next.js 15.5.25 Turbopack production build clean)
@@ -157,6 +160,11 @@ COMPLETE (C_E3 PASS)
 - **E3 Gate Mandatory Revalidation on Replan**: Revised proposals and counter-offers resulting from bounded replanning MUST re-pass the E2 Consumer Gate and E2 Merchant Gate before reaching deterministic re-evaluation; agent suggestions never shortcut gate validation.
 - **E3 Non-Coercion of UNKNOWN Invariant**: UNKNOWN state is preserved throughout lifecycle orchestration; missing or delayed provider evidence triggers authoritative resolution attempts up to strict budget limits, transitioning to ABSTAIN if unresolved, and is NEVER coerced into PASS.
 - **E3 Replay Side-Effect Freedom Invariant**: Replaying an orchestrated lifecycle snapshot operates strictly in-memory on CPU without live network, live AI, or payment gateway side effects, preserving historical auditability.
+- **E5 Observational Projection Invariant**: The Transaction Passport is strictly a downstream, read-only proof/observability/audit projection of existing authoritative records. It NEVER authorizes money, alters authorization, mutates state, or overrides deterministic decisions.
+- **E5 Zero Second Source of Truth Invariant**: The Passport maintains zero parallel mutable state and zero competing state machines. It dynamically composes authoritative records from T04, T05, T06, T07, T11, T12, T13, and E1–E4.
+- **E5 Payment vs Integrity Separation Invariant**: `CAPTURED != PASS`. If Razorpay payment status is `captured` but deterministic integrity evaluation identified `DRIFT`, the Passport faithfully reflects `payment_captured=True`, `integrity_status=DRIFT`, and `final_outcome=DRIFT`. The Passport never infers transaction PASS from payment capture.
+- **E5 UNKNOWN Non-Coercion Invariant**: When authoritative evidence is missing, delayed, or conflicting, the Passport preserves `UNKNOWN` or `ABSTAIN`. It never coerces `UNKNOWN` to `PASS`.
+- **E5 Evidence Hierarchy Preservation Invariant**: Composed evidence records strictly preserve their source authority (`AUTHORITATIVE`, `MERCHANT_ATTESTED`, `ADVISORY`). Advisory AI or agent claims never become authoritative by virtue of inclusion in the Passport.
 
 ## Next Task
-E5 — End-to-End Control Room / System Certification (or canonical next E-series task as specified by project plan; wait for human approval).
+E6 — Failure → Recovery → Revalidation Demo Loop (Wait for human approval).

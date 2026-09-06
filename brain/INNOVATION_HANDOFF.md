@@ -935,3 +935,52 @@ E1 — Integration Boundary
   - `make test-env`: PASS (including Next.js production build)
   - `scripts/verify_api_smoke.py`: PASS
   - `git diff --check`: PASS
+
+---
+
+## E5 Verification Record (Transaction Passport)
+
+- **Implementation Scope**:
+  - Unified, immutable, frozen `TransactionPassport` providing an observational projection of the lifecycle of a TarkaRaksha transaction.
+  - Composes existing records from T04 deterministic integrity, T05 state machine, T06 evidence hierarchy, T07 MRDP proofs, T09 Razorpay payment adapter, T11 recovery executor, T12 UNKNOWN observer, T13 replay engine, and E1–E4 services.
+  - Zero second source of truth, zero parallel mutable state, zero competing state machines, and zero payment authorization capability.
+  - Strictly preserves `CAPTURED != PASS` invariant: payment capture does not imply integrity pass.
+  - Preserves first-class `UNKNOWN` state without coercion.
+  - 16 frozen domain sections:
+    1. Identity (7-tuple context binding)
+    2. Authorization (immutable IntentContract ceiling and constraints)
+    3. Agent Context (Buyer Agent proposal, rationale, gate result)
+    4. Merchant Context (Offer, inventory status, capabilities, gate result)
+    5. Lifecycle State (T05 projection, transition history, terminal flags)
+    6. Integrity (Authoritative T04 evaluation, domain findings, violations)
+    7. Drift / MRDP (T07 proof digest, discrepancy details, violated rules)
+    8. Evidence (T06 hierarchy, authority rankings, source distribution)
+    9. Security (E4 threat evaluation, prompt injection, tampering)
+    10. Recovery (T11 compensatory action, idempotency, attempts)
+    11. UNKNOWN Resolution (T12 observation attempts, final unresolved)
+    12. Revalidation (E3/I7 negotiation replans, gate statuses)
+    13. Checkpoints & Trace (I14 checkpoints, I13 fault localization)
+    14. SLA Metrics (I15 operational latencies and durations)
+    15. Payment (T09 Razorpay details, status, separation flag)
+    16. Replay (T13 side-effect-free replay verdict and state)
+  - Canonical SHA-256 digest computation (`compute_digest()`).
+  - Human-readable canonical format (`to_text_summary()`).
+  - Integration service retrieval: `IntegrationService.get_passport(transaction_id)`.
+  - Application-facing REST API: `GET /api/v1/integration/{transaction_id}/passport`.
+- **Files Created**:
+  - `backend/app/domain/passport/__init__.py`
+  - `backend/app/domain/passport/contracts.py`
+  - `backend/app/services/passport/__init__.py`
+  - `backend/app/services/passport/service.py`
+  - `testing/unit/test_transaction_passport.py`
+- **Files Modified**:
+  - `backend/app/services/integration/service.py` (added `get_passport` method)
+  - `backend/app/services/__init__.py` (re-exported TransactionPassportService)
+  - `backend/app/main.py` (registered `GET /api/v1/integration/{transaction_id}/passport` endpoint)
+- **Tests Added**: 66 focused unit and adversarial tests in `testing/unit/test_transaction_passport.py` covering all prompt scenarios.
+- **Regression Count**: 978 passed, 2 warnings in 50.65s (912 baseline + 66 new E5 tests).
+- **Core Invariant Verification**:
+  - `make test-bootstrap`: PASS
+  - `make test-env`: PASS (including Next.js production build)
+  - `scripts/verify_api_smoke.py`: PASS
+  - `git diff --check`: PASS
