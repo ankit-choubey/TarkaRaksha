@@ -68,6 +68,7 @@ def test_e6_01_canonical_happy_path_pass(orchestrator, ref_time):
         intent=intent,
         reference_time=ref_time,
         simulate_mutation=False,
+        scenario="e6",
     )
     assert record.current_stage == HeroStage.COMPLETED
     assert record.initial_integrity_result is not None
@@ -95,6 +96,7 @@ def test_e6_02_canonical_hero_loop_drift_recover_revalidate_pass(orchestrator, r
         intent=intent,
         reference_time=ref_time,
         simulate_mutation=True,
+        scenario="e6",
     )
     # 1. Completed
     assert record.current_stage == HeroStage.COMPLETED
@@ -373,3 +375,28 @@ def test_e6_13_post_hero_transaction_run_api_scenario_e6():
     assert data["final_integrity_result"]["status"] == "PASS"
     assert data["payment_result"]["status"] == "captured"
     assert "TRANSACTION RESTORED" in data["hero_message"]
+
+
+def test_e6_14_explicit_scenario_isolation(orchestrator, ref_time):
+    """Explicit scenario parameter controls whether E6 (₹50k) or I22 default (₹8k) logic executes."""
+    intent_e6 = create_canonical_e6_intent(ref_time)
+    
+    # 1. Explicit scenario="e6"
+    rec_e6 = orchestrator.execute_hero_journey(
+        intent=intent_e6,
+        reference_time=ref_time,
+        simulate_mutation=True,
+        scenario="e6",
+    )
+    assert rec_e6.mutation["mutated_price_paise"] == 5500000
+    assert rec_e6.mutation["authorized_max_paise"] == 5000000
+    assert rec_e6.final_integrity_result.status == IntegrityStatus.PASS
+
+    # 2. REST API explicit scenario="default" runs default I22 behavior
+    client = TestClient(app)
+    resp_default = client.post("/api/v1/hero-transaction/run", json={"scenario": "default", "simulate_mutation": True})
+    assert resp_default.status_code == 200
+    data_def = resp_default.json()
+    assert data_def["intent"]["max_total"]["amount"] == 800000
+    assert data_def["mutation"]["mutated_price_paise"] == 825000
+
