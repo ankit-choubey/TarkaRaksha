@@ -637,6 +637,7 @@ async def run_hero_transaction_endpoint(
             intent=intent,
             reference_time=ref_time,
             simulate_mutation=req.simulate_mutation,
+            scenario=req.scenario,
         )
     except Exception as e:
         logger.error(f"Hero transaction execution failed: {e}", exc_info=True)

@@ -154,6 +154,7 @@ class HeroTransactionOrchestrator:
         simulate_mutation: bool = True,
         inject_kill_switch_state: Optional[KillSwitchState] = None,
         inject_binding_mismatch: bool = False,
+        scenario: Optional[str] = None,
     ) -> HeroTransactionRecord:
         """
         Executes the full, realistic hero transaction journey:
@@ -243,7 +244,10 @@ class HeroTransactionOrchestrator:
         merchant_catalog = MerchantCatalogService(merchant_id=merchant_id, merchant_name="Croma Electronics Store")
         target_sku = intent.items[0].sku if intent.items else "SKU-SSD-1TB"
         target_name = intent.items[0].name if intent.items else "1TB External SSD"
-        is_e6 = (intent.max_total.amount == 5000000) or (target_sku == "SKU-4K-MONITOR-01")
+        if scenario is not None:
+            is_e6 = (scenario.lower() == "e6")
+        else:
+            is_e6 = (intent.max_total.amount == 5000000) or (target_sku == "SKU-4K-MONITOR-01")
 
         # Formulate merchant request
         commerce_req = self._buyer_service.formulate_merchant_request(
