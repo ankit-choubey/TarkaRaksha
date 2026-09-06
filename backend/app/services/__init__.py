@@ -23,6 +23,7 @@ from .gates import (
 )
 from .orchestration import AgenticLifecycleOrchestrator
 from .passport import TransactionPassportService
+from .control_room import ControlRoomService
 
 __all__ = [
     "evaluate_integrity",
@@ -45,6 +46,7 @@ __all__ = [
     "GateCompositionService",
     "AgenticLifecycleOrchestrator",
     "TransactionPassportService",
+    "ControlRoomService",
 ]
 
 
