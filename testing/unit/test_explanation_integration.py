@@ -112,7 +112,7 @@ def test_explain_transaction_end_to_end_pass(sample_intent, now):
     assert isinstance(explanation, ExplanationResult)
     assert explanation.deterministic_decision == IntegrityStatus.PASS
     assert explanation.execution_state == KillSwitchState.RUNNING
-    assert "pass" in explanation.summary.lower()
+    assert any(w in explanation.summary.lower() for w in ("pass", "satisfies", "compliant", "valid"))
     assert len(explanation.claims) >= 1
     assert explanation.validation_result.is_valid is True
 

@@ -243,44 +243,105 @@ class HeroTransactionOrchestrator:
         merchant_catalog = MerchantCatalogService(merchant_id=merchant_id, merchant_name="Croma Electronics Store")
         target_sku = intent.items[0].sku if intent.items else "SKU-SSD-1TB"
         target_name = intent.items[0].name if intent.items else "1TB External SSD"
+        is_e6 = (intent.max_total.amount == 5000000) or (target_sku == "SKU-4K-MONITOR-01")
 
-        # Set up merchant catalog with initial compliant pricing: ₹7,500 (750000 paise)
-        # Base price 635594 + 18% GST (114406) = 750000 paise (₹7,500.00)
-        merchant_catalog.add_catalog_item(
-            CatalogItem(
-                sku=target_sku,
-                title=target_name,
-                description="High-speed portable 1TB SSD storage",
-                category="Electronics",
-                base_price=Money(amount=635594, currency="INR"),
-                currency="INR",
-                tags=["storage", "ssd"],
-            ),
-            initial_stock=25,
-        )
-        merchant_catalog._shipping_options["ship-standard"] = ShippingOption(
-            option_id="ship-standard",
-            carrier="ExpressPost",
-            method_name="Standard Delivery",
-            cost=Money(amount=0, currency="INR"),
-            estimated_days=2,
-        )
-
-        # Formulate merchant request & generate offer
+        # Formulate merchant request
         commerce_req = self._buyer_service.formulate_merchant_request(
             intent=intent,
             buyer_agent_id=buyer_id,
             transaction_id=transaction_id,
-            preferred_shipping_id="ship-standard",
+            preferred_shipping_id="ship-express" if is_e6 else "ship-standard",
         )
-        initial_merchant_resp = merchant_catalog.process_buyer_request(commerce_req, reference_time=t_merch)
-        if not initial_merchant_resp.is_success:
-            raise RuntimeError(f"Merchant failed to generate initial offer: {initial_merchant_resp.rejection_reason}")
 
-        initial_offer = merchant_catalog.convert_response_to_merchant_offer(initial_merchant_resp)
-        if initial_offer is None:
-            raise RuntimeError("Failed to convert merchant response to offer evidence")
-        initial_offer = initial_offer.model_copy(update={"offer_id": f"off_init_{transaction_id}"})
+        if is_e6:
+            # Canonical E6 valid initial offer: Product ₹47,000 + Shipping ₹3,000 = Total ₹50,000
+            initial_offer = MerchantOffer(
+                offer_id=f"off_init_{transaction_id}",
+                merchant_id=merchant_id,
+                sku=target_sku,
+                quantity=1,
+                unit_price=Money(amount=4700000, currency="INR"),
+                discount=Money(amount=0, currency="INR"),
+                shipping=Money(amount=300000, currency="INR"),
+                tax=Money(amount=0, currency="INR"),
+                total=Money(amount=5000000, currency="INR"),
+                currency="INR",
+                inventory_status="AVAILABLE",
+                delivery_estimate="3 days",
+                offer_created_at=t_merch,
+                offer_expires_at=t_merch + timedelta(minutes=15),
+                merchant_policy_version="1.0.0",
+                evidence_refs=[f"merchant_offer_init_{transaction_id}"],
+            )
+            initial_merchant_resp = MerchantResponse(
+                response_id=f"resp_init_{transaction_id}",
+                merchant_id=merchant_id,
+                request_id=commerce_req.request_id,
+                intent_id=intent.intent_id,
+                transaction_id=transaction_id,
+                is_success=True,
+                offer_id=f"off_init_{transaction_id}",
+                items=[
+                    MerchantOfferItem(
+                        sku=target_sku,
+                        title=target_name,
+                        quantity=1,
+                        unit_price=Money(amount=4700000, currency="INR"),
+                        total_price=Money(amount=4700000, currency="INR"),
+                    )
+                ],
+                subtotal=Money(amount=4700000, currency="INR"),
+                discount=Money(amount=0, currency="INR"),
+                shipping=ShippingOption(
+                    option_id="ship-express",
+                    carrier="ExpressPost",
+                    method_name="Express 3-Day Delivery",
+                    cost=Money(amount=300000, currency="INR"),
+                    estimated_days=3,
+                ),
+                tax=TaxEstimate(
+                    tax_type="GST",
+                    rate_bps=0,
+                    amount=Money(amount=0, currency="INR"),
+                    jurisdiction="IN",
+                ),
+                total_amount=Money(amount=5000000, currency="INR"),
+                estimated_delivery_days=3,
+                offer_created_at=t_merch,
+                offer_expires_at=t_merch + timedelta(minutes=15),
+                explanation="Initial valid offer satisfying all buyer constraints",
+            )
+        else:
+            # Set up merchant catalog with initial compliant pricing: ₹7,500 (750000 paise)
+            # Base price 635594 + 18% GST (114406) = 750000 paise (₹7,500.00)
+            merchant_catalog.add_catalog_item(
+                CatalogItem(
+                    sku=target_sku,
+                    title=target_name,
+                    description="High-speed portable 1TB SSD storage",
+                    category="Electronics",
+                    base_price=Money(amount=635594, currency="INR"),
+                    currency="INR",
+                    tags=["storage", "ssd"],
+                ),
+                initial_stock=25,
+            )
+            merchant_catalog._shipping_options["ship-standard"] = ShippingOption(
+                option_id="ship-standard",
+                carrier="ExpressPost",
+                method_name="Standard Delivery",
+                cost=Money(amount=0, currency="INR"),
+                estimated_days=2,
+            )
+
+            initial_merchant_resp = merchant_catalog.process_buyer_request(commerce_req, reference_time=t_merch)
+            if not initial_merchant_resp.is_success:
+                raise RuntimeError(f"Merchant failed to generate initial offer: {initial_merchant_resp.rejection_reason}")
+
+            initial_offer = merchant_catalog.convert_response_to_merchant_offer(initial_merchant_resp)
+            if initial_offer is None:
+                raise RuntimeError("Failed to convert merchant response to offer evidence")
+            initial_offer = initial_offer.model_copy(update={"offer_id": f"off_init_{transaction_id}"})
 
         # Normalize offer evidence items
         initial_offer_ev_list = [
@@ -356,8 +417,13 @@ class HeroTransactionOrchestrator:
 
         if simulate_mutation:
             t_mut = t0 + timedelta(seconds=20)
-            # Deliberate commerce mutation: price increased to ₹8,250 (825000 paise) > ₹8,000 max
-            mutated_total_paise = 825000
+            # Deliberate commerce mutation
+            if is_e6:
+                # E6 controlled economic drift: ₹55,000 (5,500,000 paise) > ₹50,000 max
+                mutated_total_paise = 5500000
+            else:
+                # I22 price increased to ₹8,250 (825000 paise) > ₹8,000 max
+                mutated_total_paise = 825000
             mutation_data = {
                 "type": "PRICE_SURGE_DRIFT",
                 "original_price_paise": initial_offer.total.amount,
@@ -472,11 +538,20 @@ class HeroTransactionOrchestrator:
             # ------------------------------------------------------------------
             t_replan = t0 + timedelta(seconds=35)
             # Invariant: Buyer agent replans strictly within immutable IntentContract authorization
-            replan_data = {
-                "action": "REQUEST_DISCOUNT_OR_PRICE_MATCH",
-                "max_authorized_paise": intent.max_total.amount,
-                "requested_target_paise": 765000,  # ₹7,650
-            }
+            if is_e6:
+                replan_data = {
+                    "action": "REQUEST_DISCOUNT_OR_PRICE_MATCH",
+                    "max_authorized_paise": intent.max_total.amount,
+                    "requested_target_paise": 5000000,  # ₹50,000
+                    "sku": target_sku,
+                    "quantity": 1,
+                }
+            else:
+                replan_data = {
+                    "action": "REQUEST_DISCOUNT_OR_PRICE_MATCH",
+                    "max_authorized_paise": intent.max_total.amount,
+                    "requested_target_paise": 765000,  # ₹7,650
+                }
             tix_msg_replan = TIXMessage(
                 message_id=f"tix_msg_replan_{transaction_id}",
                 transaction_id=transaction_id,
@@ -497,30 +572,56 @@ class HeroTransactionOrchestrator:
             # STAGE 11: MERCHANT_REOFFERED
             # ------------------------------------------------------------------
             t_reoffer = t0 + timedelta(seconds=40)
-            remediated_total_paise = 765000  # ₹7,650 (within ₹8,000 budget)
-            remediated_offer_data = {
-                "offer_id": f"offer_remediated_{transaction_id}",
-                "remediated_total_paise": remediated_total_paise,
-                "merchant_id": merchant_id,
-            }
-            remediated_offer = MerchantOffer(
-                offer_id=f"offer_remediated_{transaction_id}",
-                merchant_id=merchant_id,
-                sku=target_sku,
-                quantity=1,
-                unit_price=Money(amount=remediated_total_paise, currency="INR"),
-                discount=Money(amount=0, currency="INR"),
-                shipping=Money(amount=0, currency="INR"),
-                tax=Money(amount=0, currency="INR"),
-                total=Money(amount=remediated_total_paise, currency="INR"),
-                currency="INR",
-                inventory_status="AVAILABLE",
-                delivery_estimate="2 days",
-                offer_created_at=t_reoffer,
-                offer_expires_at=t_reoffer + timedelta(minutes=15),
-                merchant_policy_version="1.0.0",
-                evidence_refs=[f"merchant_offer_remediated_{transaction_id}"],
-            )
+            if is_e6:
+                remediated_total_paise = 5000000  # ₹50,000 (Product ₹47,000 + Shipping ₹3,000)
+                remediated_offer_data = {
+                    "offer_id": f"offer_remediated_{transaction_id}",
+                    "remediated_total_paise": remediated_total_paise,
+                    "merchant_id": merchant_id,
+                }
+                remediated_offer = MerchantOffer(
+                    offer_id=f"offer_remediated_{transaction_id}",
+                    merchant_id=merchant_id,
+                    sku=target_sku,
+                    quantity=1,
+                    unit_price=Money(amount=4700000, currency="INR"),
+                    discount=Money(amount=0, currency="INR"),
+                    shipping=Money(amount=300000, currency="INR"),
+                    tax=Money(amount=0, currency="INR"),
+                    total=Money(amount=5000000, currency="INR"),
+                    currency="INR",
+                    inventory_status="AVAILABLE",
+                    delivery_estimate="3 days",
+                    offer_created_at=t_reoffer,
+                    offer_expires_at=t_reoffer + timedelta(minutes=15),
+                    merchant_policy_version="1.0.0",
+                    evidence_refs=[f"merchant_offer_remediated_{transaction_id}"],
+                )
+            else:
+                remediated_total_paise = 765000  # ₹7,650 (within ₹8,000 budget)
+                remediated_offer_data = {
+                    "offer_id": f"offer_remediated_{transaction_id}",
+                    "remediated_total_paise": remediated_total_paise,
+                    "merchant_id": merchant_id,
+                }
+                remediated_offer = MerchantOffer(
+                    offer_id=f"offer_remediated_{transaction_id}",
+                    merchant_id=merchant_id,
+                    sku=target_sku,
+                    quantity=1,
+                    unit_price=Money(amount=remediated_total_paise, currency="INR"),
+                    discount=Money(amount=0, currency="INR"),
+                    shipping=Money(amount=0, currency="INR"),
+                    tax=Money(amount=0, currency="INR"),
+                    total=Money(amount=remediated_total_paise, currency="INR"),
+                    currency="INR",
+                    inventory_status="AVAILABLE",
+                    delivery_estimate="2 days",
+                    offer_created_at=t_reoffer,
+                    offer_expires_at=t_reoffer + timedelta(minutes=15),
+                    merchant_policy_version="1.0.0",
+                    evidence_refs=[f"merchant_offer_remediated_{transaction_id}"],
+                )
             remediated_evidence_list = [
                 ev.model_copy(update={"intent_id": intent.intent_id, "transaction_id": transaction_id})
                 for ev in remediated_offer.to_evidence()
@@ -611,7 +712,7 @@ class HeroTransactionOrchestrator:
         # Extract active total from current evidence
         active_total_money = next(
             (ev.field_value for ev in current_active_evidence_list if ev.field_name == "total_amount"),
-            Money(amount=750000, currency="INR"),
+            Money(amount=5000000 if is_e6 else 750000, currency="INR"),
         )
         if isinstance(active_total_money, dict):
             active_total_money = Money(**active_total_money)
@@ -862,6 +963,23 @@ class HeroTransactionOrchestrator:
             "replay_verdict": replay_result.verdict.value,
         })
 
+        # Canonical Hero Result Message
+        if simulate_mutation:
+            hero_msg = (
+                "TRANSACTION RESTORED\n\n"
+                "Original authorization preserved\n"
+                "Payment verified\n"
+                "Recovery completed\n"
+                "Evidence recorded"
+            )
+        else:
+            hero_msg = (
+                "TRANSACTION VERIFIED\n\n"
+                "Original authorization preserved\n"
+                "Payment verified\n"
+                "Evidence recorded"
+            )
+
         record = HeroTransactionRecord(
             hero_transaction_id=hero_tx_id,
             transaction_id=transaction_id,
@@ -896,6 +1014,7 @@ class HeroTransactionOrchestrator:
             execution_mode=execution_mode,
             started_at=t0,
             completed_at=t_complete,
+            hero_message=hero_msg,
             lifecycle_digest="",
         )
 

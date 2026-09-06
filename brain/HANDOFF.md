@@ -1,12 +1,12 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `E5 — Transaction Passport`
-- **Current Checkpoint**: `C_E5 — PASS`
-- **Baseline SHA**: `38afb4a09cf939f9fa6d7d4fea12c8a718ab1091`
-- **Next Task**: `E6 — Failure → Recovery → Revalidation Demo Loop` (Await human owner approval)
+- **Current Task Completed**: `E6 — Failure → Recovery → Revalidation Hero Loop`
+- **Current Checkpoint**: `C_E6 — PASS`
+- **Baseline SHA**: `f208436`
+- **Next Task**: `E7 — Control Room & End-to-End System Certification` (Await human owner approval)
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-06T14:10:00+05:30
+- **Handoff Timestamp**: 2026-09-06T15:06:00+05:30
 
 ---
 

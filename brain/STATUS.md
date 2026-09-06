@@ -7,10 +7,10 @@
 E-Series Final Extension
 
 ## Current Task
-E5 — Transaction Passport
+E6 — Failure → Recovery → Revalidation Hero Loop
 
 ## Task Status
-COMPLETE (C_E5 PASS)
+COMPLETE (C_E6 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -51,20 +51,20 @@ COMPLETE (C_E5 PASS)
 - [x] **E3 — Agentic Transaction Lifecycle Orchestration** (Completed 2026-09-06)
 - [x] **E4 — Security / Threat Guard Composition** (Completed 2026-09-06)
 - [x] **E5 — Transaction Passport** (Completed 2026-09-06)
+- [x] **E6 — Failure → Recovery → Revalidation Hero Loop** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T14:10:00+05:30 — E5 checkpoint
+2026-09-06T15:05:00+05:30 — E6 checkpoint
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (978 passed, 2 warnings in 50.65s across all unit, integration, and adversarial suites: 912 baseline + 66 E5 tests)
-- `scripts/verify_api_smoke.py`: PASS (all baseline and integration endpoints pass)
-- `git diff --check`: PASS (clean formatting, zero whitespace errors)
-- `testing/unit/test_agentic_lifecycle_orchestration.py`: PASS (53/53 passed in 0.64s)
-- `scripts/verify_api_smoke.py`: PASS (FastAPI routes, scenarios, certifications, replay validation, hero-transaction, and intent parsing verified)
+- `pytest` (991 passed, 2 warnings in 58.13s across all unit, integration, and adversarial suites: 978 baseline + 13 new E6 tests)
+- `testing/unit/test_e6_failure_recovery_revalidation.py`: PASS (13/13 passed in 13.01s)
+- `testing/unit/test_hero_*.py`: PASS (17/17 passed in 18.54s)
+- `scripts/verify_api_smoke.py`: PASS (all baseline and integration endpoints pass, including hero transaction API)
 - `npm run build` (frontend): PASS (Next.js 15.5.25 Turbopack production build clean)
-- `git diff --check`: PASS (zero whitespace errors or unresolved merge markers)
+- `git diff --check`: PASS (clean formatting, zero whitespace errors)
 
 
 ## Environment & Toolchains Verified
@@ -165,6 +165,10 @@ COMPLETE (C_E5 PASS)
 - **E5 Payment vs Integrity Separation Invariant**: `CAPTURED != PASS`. If Razorpay payment status is `captured` but deterministic integrity evaluation identified `DRIFT`, the Passport faithfully reflects `payment_captured=True`, `integrity_status=DRIFT`, and `final_outcome=DRIFT`. The Passport never infers transaction PASS from payment capture.
 - **E5 UNKNOWN Non-Coercion Invariant**: When authoritative evidence is missing, delayed, or conflicting, the Passport preserves `UNKNOWN` or `ABSTAIN`. It never coerces `UNKNOWN` to `PASS`.
 - **E5 Evidence Hierarchy Preservation Invariant**: Composed evidence records strictly preserve their source authority (`AUTHORITATIVE`, `MERCHANT_ATTESTED`, `ADVISORY`). Advisory AI or agent claims never become authoritative by virtue of inclusion in the Passport.
+- **E6 Canonical Hero Loop Invariant**: Proves the complete closed-loop thesis on high-value commerce (₹50,000 ceiling, ₹47,000 product + ₹3,000 shipping = ₹50,000 PASS -> ₹55,000 controlled drift -> cryptographic MRDP -> bounded buyer replan within immutable authorization -> merchant alternative -> deterministic revalidation PASS -> Razorpay payment capture -> authoritative "TRANSACTION RESTORED" completion).
+- **E6 Immutable Authorization Invariant**: Recovery, remediation, and replanning may alter proposed prices or discounts, but CANNOT alter the IntentContract ceiling (₹50,000), SKU, quantity, or delivery constraints; authorization parameters remain strictly read-only.
+- **E6 Deterministic Revalidation Gate**: Payment execution is strictly prohibited while a transaction is in DRIFT or UNKNOWN; execution only unlocks after a fresh, independent deterministic evaluation over remediated evidence yields PASS.
+- **E6 Authoritative Message Invariant**: The final hero message ("TRANSACTION RESTORED" / "TRANSACTION VERIFIED") is emitted authoritatively from underlying verified state, never synthesized independently of transaction truth.
 
 ## Next Task
-E6 — Failure → Recovery → Revalidation Demo Loop (Wait for human approval).
+E7 — Control Room & End-to-End System Certification (Wait for human owner approval).

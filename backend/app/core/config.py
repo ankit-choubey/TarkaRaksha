@@ -16,7 +16,7 @@ class Settings:
     """
     def __init__(self):
         self.groq_api_key: Optional[str] = os.getenv("GROQ_API_KEY")
-        self.groq_model: str = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
+        self.groq_model: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
         self.groq_timeout_seconds: float = float(os.getenv("GROQ_TIMEOUT_SECONDS", "30.0"))
         self.groq_max_retries: int = int(os.getenv("GROQ_MAX_RETRIES", "2"))
 

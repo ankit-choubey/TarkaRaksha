@@ -8,9 +8,12 @@ from backend.app.domain.hero.contracts import (
     HeroTransactionRecord,
 )
 
+from backend.app.domain.hero.scenario_e6 import create_canonical_e6_intent
+
 __all__ = [
     "HeroDriftNotice",
     "HeroStage",
     "HeroStageTransition",
     "HeroTransactionRecord",
+    "create_canonical_e6_intent",
 ]

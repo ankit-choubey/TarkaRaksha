@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from backend.app.core.config import settings
-from backend.app.domain.hero import HeroTransactionRecord, HeroStage
+from backend.app.domain.hero import HeroTransactionRecord, HeroStage, create_canonical_e6_intent
 from backend.app.domain.models import (
     CreateTransactionRequest,
     CreateTransactionResponse,
@@ -585,6 +585,7 @@ async def run_all_certifications_endpoint(
 class RunHeroTransactionRequest(BaseModel):
     """Payload to trigger a hero transaction journey run."""
     intent: Optional[IntentContract] = None
+    scenario: Optional[str] = "default"  # "default" (I22 ₹8k SSD) or "e6" (E6 ₹50k Monitor)
     simulate_mutation: bool = True
     reference_time: Optional[datetime] = None
 
@@ -617,14 +618,20 @@ async def run_hero_transaction_endpoint(
     orchestrator: HeroTransactionOrchestrator = Depends(get_hero_orchestrator),
 ) -> HeroTransactionRecord:
     """
-    Executes the complete, end-to-end TarkaRaksha Hero Transaction (I22):
+    Executes the complete, end-to-end TarkaRaksha Hero Transaction (I22 / E6):
     Detect -> Prove -> Repair -> Revalidate -> Execute -> Verify.
     Composes Buyer Agent, Merchant Agent, TIX, T04 Integrity, T07 MRDP, I8 Binding,
     I9 Safety Control, Trace, Checkpoints, SLA, Replay, and Explanation.
+    Supports canonical E6 scenario via scenario='e6'.
     """
     req = request or RunHeroTransactionRequest()
     ref_time = req.reference_time or datetime.now(timezone.utc)
-    intent = req.intent or _default_hero_intent(ref_time)
+    if req.intent:
+        intent = req.intent
+    elif req.scenario and req.scenario.lower() == "e6":
+        intent = create_canonical_e6_intent(ref_time)
+    else:
+        intent = _default_hero_intent(ref_time)
     try:
         return orchestrator.execute_hero_journey(
             intent=intent,

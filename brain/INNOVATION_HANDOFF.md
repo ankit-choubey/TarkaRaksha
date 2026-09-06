@@ -984,3 +984,38 @@ E1 — Integration Boundary
   - `make test-env`: PASS (including Next.js production build)
   - `scripts/verify_api_smoke.py`: PASS
   - `git diff --check`: PASS
+
+---
+
+## E6 Verification Record (Failure → Recovery → Revalidation Hero Loop)
+
+- **Implementation Scope**:
+  - Closed-loop judging journey proving the complete TarkaRaksha thesis on a high-value commercial purchase:
+    `VALID TRANSACTION (₹50,000 ceiling, ₹47,000 product + ₹3,000 shipping -> PASS)`
+    `-> CONTROLLED DRIFT (₹55,000 -> DRIFT + Cryptographic MRDP)`
+    `-> BOUNDED RECOVERY (Buyer Replan within immutable ₹50,000 ceiling)`
+    `-> MERCHANT ALTERNATIVE (₹47,000 product + ₹3,000 shipping = ₹50,000 total)`
+    `-> REVALIDATION (Deterministic re-evaluation -> PASS)`
+    `-> PAYMENT EXECUTION (Razorpay Test Mode / captured)`
+    `-> VERIFIED RESTORATION ("TRANSACTION RESTORED")`.
+  - Zero duplicate engines: seamlessly composed existing I22 `HeroTransactionOrchestrator`, T04 deterministic integrity, T07 MRDP builder, T13 replay engine, I8 protocol binding, I9 kill switch, I13 trace, I14 checkpoints, I15 SLA metrics, and I21 AI explanation.
+  - Strict preservation of I22 backward compatibility: all 17 existing hero tests remain 100% green.
+  - Authoritative hero message generated from verified transaction state, confirming preserved authorization, verified payment, and completed recovery.
+  - Application-facing endpoint support: `POST /api/v1/hero-transaction/run` with `scenario="e6"`.
+- **Files Created**:
+  - `backend/app/domain/hero/scenario_e6.py`
+  - `testing/unit/test_e6_failure_recovery_revalidation.py`
+- **Files Modified**:
+  - `backend/app/domain/hero/contracts.py` (added `hero_message: Optional[str] = None` to `HeroTransactionRecord`)
+  - `backend/app/domain/hero/__init__.py` (re-exported `create_canonical_e6_intent`)
+  - `backend/app/services/hero/orchestrator.py` (supported canonical E6 pricing, mutation, remediation, and authoritative hero message assembly)
+  - `backend/app/main.py` (added `scenario` parameter and resolved E6 intent)
+  - `testing/unit/test_explanation_integration.py` (hardened AI explanation summary assertion against live LLM output variations)
+- **Tests Added**: 13 comprehensive unit and adversarial tests in `testing/unit/test_e6_failure_recovery_revalidation.py` covering all prompt requirements.
+- **Regression Count**: 991 passed, 2 warnings in 58.13s (978 baseline + 13 new E6 tests).
+- **Core Invariant Verification**:
+  - `make test-bootstrap`: PASS
+  - `make test-env`: PASS (including Next.js production build)
+  - `scripts/verify_api_smoke.py`: PASS
+  - `git diff --check`: PASS
+

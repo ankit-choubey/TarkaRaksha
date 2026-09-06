@@ -137,6 +137,7 @@ class HeroTransactionRecord(BaseModel):
     execution_mode: str = "SYNTHETIC_OFFLINE_HERO_RUN"  # "REAL_RAZORPAY_TEST_MODE" or "SYNTHETIC_OFFLINE_HERO_RUN"
     started_at: datetime
     completed_at: Optional[datetime] = None
+    hero_message: Optional[str] = None
     lifecycle_digest: str = ""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
