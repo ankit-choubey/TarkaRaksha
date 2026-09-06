@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   CheckCircle2,
   AlertOctagon,
@@ -130,8 +130,8 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
     }
   }, [currentStep, onViewInControlRoom]);
 
-  // Define the comprehensive 8-step verification pipeline
-  const stages: VerificationStageInfo[] = [
+  // Define the comprehensive 8-step verification pipeline (memoized for stable references)
+  const stages: VerificationStageInfo[] = useMemo(() => [
     {
       stepNumber: 1,
       stageCode: "E1_CONTEXT_BINDING",
@@ -186,10 +186,10 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
       popupMessage: {
         title: "AI Is Advisory · Not Authoritative",
         description: isQualityTradeoff
-          ? "AI spotted a superior display at ₹52,000. Under deterministic safety rules, user authorization is required."
+          ? "AI spotted a superior display at ₹52,000. Deterministic rules hold financial authority at 0."
           : "Groq LLM formulated purchase intent. Deterministic boundary verifies all numbers before gateway lock.",
         impact: "Guards against hallucinated spending.",
-        type: isQualityTradeoff ? "warning" : "info",
+        type: "info",
       },
     },
     {
@@ -332,7 +332,7 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
         title: "MRDP Cryptographic Proof Generated",
         description: "Tamper-evident proof digest generated. Holds merchant accountable and guides autonomous remediation.",
         impact: "Irrefutable proof of drift.",
-        type: isDriftScenario || isQualityTradeoff ? "warning" : "info",
+        type: "info",
       },
     },
     {
@@ -464,22 +464,54 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
         type: "success",
       },
     },
-  ];
+  ], [
+    orderId,
+    paymentId,
+    authorizedMax,
+    chargedAmount,
+    qualityChoice,
+    isDriftScenario,
+    isBlockedScenario,
+    isTimeoutScenario,
+    isDoubleWebhookScenario,
+    isQualityTradeoff,
+  ]);
+
+  // Track which step has already been evaluated for problem popup (avoids re-trigger loop on re-renders)
+  const lastPromptedStepRef = useRef<number | null>(null);
 
   // Helper to check if current stage is an actual problem / issue (User Request: "pop msg to appear for only a problem of issue is detected")
+  // Problems and discrepancies are intercepted strictly at Step 3 (T04 Deterministic Integrity Evaluation)
   const isProblemStage = (stage: VerificationStageInfo) => {
     if (!stage) return false;
+    if (stage.stepNumber !== 3) return false;
+
     return (
       stage.status === "DRIFT_FLAGGED" ||
       stage.status === "BLOCKED" ||
       stage.status === "UNKNOWN" ||
       stage.popupMessage.type === "warning" ||
-      (isQualityTradeoff && stage.stepNumber === 3 && qualityChoice === "pending")
+      isQualityTradeoff
     );
   };
 
-  // Only pop up message when an issue/problem is detected!
+  // Prevent background scroll when pop box or completion modal is open so txn items at bottom don't scroll/show through
   useEffect(() => {
+    if (isAlertModalOpen || completionModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isAlertModalOpen, completionModalOpen]);
+
+  // Only pop up message when an issue/problem is detected on step change!
+  useEffect(() => {
+    if (lastPromptedStepRef.current === currentStep) return;
+    lastPromptedStepRef.current = currentStep;
+
     const stage = stages[currentStep];
     if (stage && isProblemStage(stage)) {
       setIsAlertModalOpen(true);
@@ -491,7 +523,7 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
       setUserClickedAction(null);
       setPostClickCountdown(null);
     }
-  }, [currentStep, stages, isQualityTradeoff, qualityChoice]);
+  }, [currentStep, stages]);
 
   // Handle 5-second post-click countdown: waits 5s only, then pop box disappears and moves to next step automatically (User Request)
   useEffect(() => {
@@ -527,6 +559,13 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
     setIsPaused(false);
     setCountdown(4);
     setCurrentStep((s) => Math.min(s + 1, stages.length - 1));
+  };
+
+  const handleDismissModal = () => {
+    setIsAlertModalOpen(false);
+    setPostClickCountdown(null);
+    setUserClickedAction(null);
+    setIsPaused(false);
   };
 
   // Progressive timer: 4 seconds per step
@@ -568,6 +607,7 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
 
   // Reset Back to Zero (User Request: "for manual mode auto checkout page one it should reset back to zero again")
   const handleResetToZero = () => {
+    lastPromptedStepRef.current = null;
     setCurrentStep(0);
     setCountdown(4);
     setIsPaused(false);
@@ -666,7 +706,7 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
       {/*    (User Request: "pop up message as text box is not appearing")      */}
       {/* --------------------------------------------------------------------- */}
       {isAlertModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
           <div
             className={`w-full max-w-2xl rounded-3xl border-2 p-6 sm:p-7 shadow-2xl transition-all relative ${
               activeStage.popupMessage.type === "warning"
@@ -678,9 +718,9 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
           >
             {/* Close Pop-up Button */}
             <button
-              onClick={() => setIsAlertModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-white/80 transition"
-              title="Dismiss Alert Box"
+              onClick={handleDismissModal}
+              className="absolute top-4 right-4 p-1.5 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-white/80 transition cursor-pointer"
+              title="Close Pop-up Box"
             >
               <X className="h-5 w-5" />
             </button>
@@ -763,9 +803,9 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
                       </span>
                       <button
                         onClick={handleProceedImmediately}
-                        className="px-4 py-2 rounded-xl bg-white text-neutral-950 text-xs font-bold hover:bg-neutral-100 flex items-center space-x-1.5 shadow-md active:scale-95 transition"
+                        className="px-4 py-2 rounded-xl bg-white text-neutral-950 text-xs font-bold hover:bg-neutral-100 flex items-center space-x-1.5 shadow-md active:scale-95 transition cursor-pointer"
                       >
-                        <span>Proceed Immediately</span>
+                        <span>Close &amp; Proceed Now</span>
                         <ArrowRight className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -947,19 +987,29 @@ export const RealTimeVerificationFlow: React.FC<RealTimeVerificationFlowProps> =
 
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => setIsAlertModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-white border border-neutral-300 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition shadow-2xs"
+                    onClick={handleDismissModal}
+                    className="px-4 py-2 rounded-xl bg-white border border-neutral-300 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition shadow-2xs cursor-pointer"
                   >
-                    Dismiss Pop-up Box
+                    Close Pop-up Box
                   </button>
-                  {postClickCountdown === null && (
+                  {postClickCountdown !== null ? (
                     <button
-                      onClick={() => handleUserClickAction(`✓ Issue Acknowledged: ${activeStage.popupMessage.title}`)}
-                      className="px-5 py-2 rounded-xl bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 flex items-center space-x-1.5 shadow-sm"
+                      onClick={handleProceedImmediately}
+                      className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 flex items-center space-x-1.5 shadow-sm active:scale-95 transition cursor-pointer"
                     >
-                      <span>Acknowledge Issue &amp; Continue (5s Timer)</span>
+                      <span>Close &amp; Proceed Now</span>
                       <ArrowRight className="h-4 w-4" />
                     </button>
+                  ) : (
+                    !isQualityTradeoff && !isDriftScenario && !isBlockedScenario && !isTimeoutScenario && (
+                      <button
+                        onClick={() => handleUserClickAction(`✓ Issue Acknowledged: ${activeStage.popupMessage.title}`)}
+                        className="px-5 py-2 rounded-xl bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 flex items-center space-x-1.5 shadow-sm cursor-pointer"
+                      >
+                        <span>Acknowledge Issue &amp; Continue (5s Timer)</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    )
                   )}
                 </div>
               </div>
