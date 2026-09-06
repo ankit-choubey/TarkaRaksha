@@ -72,3 +72,6 @@ test-reports/
 # Logs
 logs/
 *.log
+
+# Design
+design/
