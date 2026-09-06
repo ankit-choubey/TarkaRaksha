@@ -119,6 +119,7 @@ from backend.app.domain.integration import (
     IntegrationExecutionRecord,
 )
 from backend.app.domain.orchestration import LifecycleOutcome, LifecycleViolationError
+from backend.app.domain.passport import TransactionPassport
 from backend.app.domain.buyer.contracts import BuyerTransactionProposal
 from backend.app.domain.merchant.contracts import MerchantResponse
 from backend.app.domain.binding.contracts import PaymentBindingClaim
@@ -732,5 +733,22 @@ def orchestrate_lifecycle_endpoint(
         raise HTTPException(status_code=422, detail=str(exc))
     except IntegrationBoundaryError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/api/v1/integration/{transaction_id}/passport", response_model=TransactionPassport)
+def get_transaction_passport_endpoint(
+    transaction_id: str,
+    service: IntegrationService = Depends(get_integration_service),
+) -> TransactionPassport:
+    """Retrieves an immutable, observational Transaction Passport for a transaction (E5)."""
+    try:
+        return service.get_passport(transaction_id)
+    except (KeyError, IntegrationBoundaryError) as exc:
+        if "not found" in str(exc).lower():
+            raise HTTPException(status_code=404, detail=f"Transaction '{transaction_id}' not found")
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
 
 

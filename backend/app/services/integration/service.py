@@ -636,3 +636,27 @@ class IntegrationService:
             untrusted_text=untrusted_text,
             attempt_id=attempt_id,
         )
+
+    def get_passport(
+        self,
+        transaction_id: str,
+        reference_time: Optional[datetime] = None,
+    ) -> Any:
+        """
+        Retrieves the read-only, observational Transaction Passport for a transaction (E5).
+        Composes existing authoritative records without mutating state or triggering external calls.
+        """
+        from backend.app.services.passport.service import TransactionPassportService
+        record = self._records.get(transaction_id)
+        if not record:
+            raise IntegrationBoundaryError(f"Transaction context '{transaction_id}' not found")
+        sm = self._state_machines.get(transaction_id)
+        ev_list = self._evidence_store.get(transaction_id, [])
+        passport_svc = TransactionPassportService()
+        return passport_svc.compose_passport(
+            transaction_id=transaction_id,
+            record=record,
+            state_machine=sm,
+            evidence_list=ev_list,
+            reference_time=reference_time,
+        )
