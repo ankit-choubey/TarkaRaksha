@@ -7,10 +7,10 @@
 E-Series Final Extension
 
 ## Current Task
-E6 — Failure → Recovery → Revalidation Hero Loop
+E7 — Real-time Control-Room Data Surface
 
 ## Task Status
-COMPLETE (C_E6 PASS)
+COMPLETE (C_E7 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -52,9 +52,10 @@ COMPLETE (C_E6 PASS)
 - [x] **E4 — Security / Threat Guard Composition** (Completed 2026-09-06)
 - [x] **E5 — Transaction Passport** (Completed 2026-09-06)
 - [x] **E6 — Failure → Recovery → Revalidation Hero Loop** (Completed 2026-09-06)
+- [x] **E7 — Real-time Control-Room Data Surface** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T15:22:00+05:30 — E6 final certification (992 passed)
+2026-09-06T15:35:30+05:30 — E7 final certification (25/25 E7 tests passed, 1017 total regression)
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
@@ -170,6 +171,11 @@ COMPLETE (C_E6 PASS)
 - **E6 Immutable Authorization Invariant**: Recovery, remediation, and replanning may alter proposed prices or discounts, but CANNOT alter the IntentContract ceiling (₹50,000), SKU, quantity, or delivery constraints; authorization parameters remain strictly read-only.
 - **E6 Deterministic Revalidation Gate**: Payment execution is strictly prohibited while a transaction is in DRIFT or UNKNOWN; execution only unlocks after a fresh, independent deterministic evaluation over remediated evidence yields PASS.
 - **E6 Authoritative Message Invariant**: The final hero message ("TRANSACTION RESTORED" / "TRANSACTION VERIFIED") is emitted authoritatively from underlying verified state, never synthesized independently of transaction truth.
+- **E7 Frontend Non-Authority Invariant**: The frontend Control Room is strictly an observational and telemetry projection layer. The UI possesses zero authority to evaluate integrity, calculate PASS/DRIFT/UNKNOWN, verify payments, authorize money, compute replay results, generate evidence, or alter deterministic outcomes.
+- **E7 UNKNOWN-First Safety Invariant**: The UI preserves and faithfully displays UNKNOWN as a first-class legitimate system state whenever authoritative evidence is missing, delayed, or conflicting. The UI never coerces, converts, or implies UNKNOWN → PASS, SUCCESS, or VERIFIED.
+- **E7 CAPTURED ≠ PASS Separation Invariant**: Payment gateway status (e.g. `captured`) and deterministic integrity verdict (e.g. `PASS` / `DRIFT`) are rendered across completely distinct visual cards and telemetry streams. Captured payment state is never portrayed as an integrity clearance.
+- **E7 Read-Only Projection Invariant**: `ControlRoomSnapshot` and all control room APIs (`/api/v1/control-room/*`) are strictly read-only projections over underlying authoritative backend records (`HeroTransactionRecord`, `IntegrationExecutionRecord`, `TransactionPassport`). No secondary mutable state or competing state machine is introduced.
+- **E7 Real vs Synthetic Boundary Invariant**: The Control Room strictly labels and visualizes execution mode (`SYNTHETIC_OFFLINE_HERO_RUN` vs `REAL_RAZORPAY_TEST_MODE`). Real Razorpay Test Mode is never claimed unless real sandbox credentials were authenticated and verified.
 
 ## Next Task
-E7 — Real-time Control-Room Data Surface (Wait for human owner approval).
+E8 — Scenario / Proof Surface

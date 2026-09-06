@@ -1,55 +1,68 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `E6 — Failure → Recovery → Revalidation Hero Loop`
-- **Current Checkpoint**: `C_E6 — PASS`
-- **Baseline SHA**: `f208436`
-- **Next Task**: `E7 — Real-time Control-Room Data Surface` (Await human owner approval)
+- **Current Task Completed**: `E7 — Real-time Control-Room Data Surface`
+- **Current Checkpoint**: `C_E7 — PASS`
+- **Baseline SHA**: `a5ab20ac8da35f8e796a532723f8d4616df9a7cf`
+- **Next Task**: `E8 — Scenario / Proof Surface`
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-06T15:20:00+05:30
+- **Handoff Timestamp**: 2026-09-06T15:35:00+05:30
 
 ---
 
-## 1. What Was Done in E6 & Fix-Only Cleanup
+## 1. What Was Done in E7
 
-1. **Canonical E6 Failure → Recovery → Revalidation Hero Loop**:
-   - High-value commercial transaction proving the closed-loop thesis:
-     - **Canonical Authorization**: Ceiling ₹50,000 (5,000,000 paise), SKU `SKU-4K-MONITOR-01`, Qty 1, Shipping ceiling ₹3,000, Currency INR.
-     - **Initial Valid Offer**: ₹47,000 product + ₹3,000 shipping = ₹50,000 total. Deterministic evaluation: `PASS`.
-     - **Controlled Mutation**: Mutated total ₹55,000 (price drift). Deterministic evaluation: `DRIFT`.
-     - **Cryptographic Proof**: Generated Machine-Readable Drift Proof (`MRDP`) with SHA-256 digest capturing expected ₹50,000 vs observed ₹55,000.
-     - **Bounded Remediation**: Buyer replan within original immutable authorization (₹50,000 max). Merchant counter-offer restores ₹47,000 product + ₹3,000 shipping = ₹50,000 total.
-     - **Deterministic Revalidation**: Remediated offer independently re-evaluated; yields `PASS`.
-     - **Payment Gating & Execution**: Payment is strictly blocked while in DRIFT or UNKNOWN; execution unlocks only upon revalidation PASS.
-     - **Authoritative Restored Outcome**: System authoritatively emits `TRANSACTION RESTORED`.
-   - **Provider Execution Distinction**:
-     - When valid Razorpay sandbox credentials (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`) are configured, real Razorpay Test Mode order creation and HMAC-SHA256 signature capture are verified.
-     - When sandbox credentials are not present or placeholders, synthetic offline payment simulation is executed. Gateway success is never falsely claimed.
-   - **AI Advisory vs Deterministic Logic**:
-     - Deterministic backend logic authoritatively decides all integrity verdicts (`PASS`, `DRIFT`, `UNKNOWN`).
-     - Advisory AI explanation (via default `openai/gpt-oss-20b`) is strictly descriptive, with structured deterministic fallback.
+1. **Control Room Contracts & Composition Models (`backend/app/domain/control_room/`)**:
+   - `ControlRoomSnapshot`: Read-only, deterministic projection DTO aggregating the full transaction story.
+   - `ControlRoomIdentity`: Cryptographic 7-tuple binding (`transaction_id`, `intent_id`, `agent_id`, `merchant_id`, `order_id`, `payment_id`, `attempt_id`).
+   - Domain models for `ControlRoomLifecycle`, `ControlRoomAuthorization`, `ControlRoomBuyerAgent`, `ControlRoomMerchantAgent`, `ControlRoomIntegrity`, `ControlRoomDriftProof`, `ControlRoomRecovery`, `ControlRoomPayment`, `ControlRoomSecurity`, `ControlRoomEvidenceItem`, `ControlRoomReplay`, `ControlRoomObservability`, and `ControlRoomTimelineStage`.
+   - Tamper-evident snapshot digest computation (`compute_digest()` using canonical SHA-256).
 
-2. **Fix-Only Cleanup Completed**:
-   - **Model Decision**: Kept `openai/gpt-oss-20b` as default `GROQ_MODEL` in `backend/app/core/config.py`.
-   - **Restored Intent Parser**: Restored `backend/app/services/ai/intent_parser.py` byte-for-byte to pre-E6 baseline `f208436`.
-   - **Explicit Scenario Selection**: Refactored `execute_hero_journey` and API endpoint `POST /api/v1/hero-transaction/run` to explicitly accept `scenario: Optional[str] = "default"`. Passing `scenario="e6"` deterministically selects E6 canonical flow without guessing from monetary amounts.
-   - **I22 Backward Compatibility**: 100% preserved. All 17 existing I22 hero tests pass green.
-   - **E6 Focused Tests**: 14 tests pass green in `testing/unit/test_e6_failure_recovery_revalidation.py`.
-   - **Total Hero Tests**: 31 tests (14 E6 + 17 I22) pass green.
-   - **Full Regression**: 992 tests pass green.
+2. **Observational Control Room Service (`backend/app/services/control_room/`)**:
+   - `ControlRoomService`: Purely projectional service composing snapshots from `HeroTransactionRecord`, `IntegrationExecutionRecord`, and `TransactionPassport`.
+   - Aggregates recent transaction summaries (`get_recent_summaries`) and latest active snapshot (`get_latest_snapshot`).
+   - Zero duplicate state machines, zero duplicate decision logic, zero financial side effects.
+
+3. **REST API Endpoints (`backend/app/main.py`)**:
+   - `GET /api/v1/control-room/snapshot/{transaction_id}`: Returns complete projection snapshot.
+   - `GET /api/v1/control-room/latest`: Returns most recent transaction snapshot.
+   - `GET /api/v1/control-room/recent`: Returns lightweight recent summaries list.
+   - `GET /api/v1/control-room/live`: Polling feed returning latest snapshot, active count, and timestamps.
+
+4. **Production Real-time Frontend (`frontend/app/page.tsx`)**:
+   - Full dark-mode, high-density Agentic Transaction Integrity & Recovery Control Plane.
+   - **Hero Area**: Transaction identity, 7-tuple cryptographic badge, lifecycle badge, and execution mode indicator (`SYNTHETIC_OFFLINE_HERO_RUN` vs `REAL_RAZORPAY_TEST_MODE`).
+   - **Triad Status Cards**: Distinct Lifecycle, Deterministic Integrity (`PASS`/`DRIFT`/`UNKNOWN`), and Payment Status (`CAPTURED ≠ PASS` invariant strictly preserved).
+   - **Interactive Timeline**: Visualizing progression (`AUTHORIZED → OFFER_OBSERVED → DRIFT_DETECTED → MRDP_GENERATED → RECOVERY_PROPOSED → REVALIDATED → PASS`).
+   - **Expected vs Observed Economic Ledger**: Financial ceiling vs mutated offer vs remediated offer with discrepancy delta.
+   - **Agent Split**: Buyer Agent (Alice, with `openai/gpt-oss-20b` advisory badge) vs Merchant Agent (Bob, with attestation badge).
+   - **5 Observability Deep-Dive Tabs**:
+     1. Integrity & MRDP: Rule checks, violations, cryptographic drift proof digest.
+     2. Recovery Loop: Remediation proposals, replan rounds, counter-offer details, revalidation status.
+     3. Evidence Ledger: Provenance source, authority tier (`AUTHORITATIVE`, `MERCHANT_ATTESTED`, `ADVISORY`), tamper digests.
+     4. Security & Kill Switch: 7-tuple binding verification, threat status, prompt injection interception, kill-switch state.
+     5. Replay & SLA Metrics: Deterministic CPU replay verdict (`MATCH`), SLA detection/repair latencies, checkpoint chain status.
+   - **Real-time Live Polling**: Toggleable 3-second live polling loop with auto-fetch and manual refresh.
+   - **Scenario Triggering**: Canonical quick-action buttons to launch E6 Hero Loop and I22 Hero transactions directly from the UI.
+
+5. **Exhaustive Testing & Verification**:
+   - 25 dedicated unit and adversarial tests in `testing/unit/test_control_room_surface.py`.
+   - Covers 7-tuple identity, missing subsystem data, PASS/DRIFT/UNKNOWN/ABSTAIN rendering, CAPTURED vs PASS separation, recovery revalidation loop, security/kill switch, evidence provenance, replay MATCH/MISMATCH, and synthetic vs real provider distinction.
+   - Full test suite: 1017 passing tests (0 failures).
+   - Production frontend build (`npm run build`) clean with Next.js Turbopack.
 
 ---
 
 ## 2. Core Invariants Maintained
 - **Principle**: "AI proposes. Evidence proves. Deterministic logic decides."
-- **Immutable Authorization**: Recovery and replanning may alter proposed prices, but never change the `IntentContract` ceiling (₹50,000) or authorization constraints.
-- **Deterministic Revalidation Gate**: Payment is strictly prohibited while a transaction is in DRIFT or UNKNOWN; execution unlocks only after fresh deterministic revalidation yields PASS.
-- **Authoritative Outcome Emitted**: Final restored message ("TRANSACTION RESTORED") reflects verified state, never synthesized independently.
-- **Provider Accuracy**: Strictly distinguishes real Razorpay Test Mode execution from synthetic offline payment execution.
-- **Financial Minor Units**: All monetary values strictly use integer minor units (paise/cents). Zero floats.
+- **Frontend Non-Authority**: Frontend renders authoritative backend results; never decides PASS/DRIFT/UNKNOWN or authorizes money.
+- **UNKNOWN-First Safety**: Missing or ambiguous evidence renders as UNKNOWN; never coerced into PASS.
+- **Payment Separation**: Payment capture status is strictly separated from deterministic integrity verdict (`CAPTURED ≠ PASS`).
+- **Default AI Model**: Kept `openai/gpt-oss-20b` as default `GROQ_MODEL`.
+- **Provider Accuracy**: Strictly distinguishes real Razorpay Test Mode from synthetic offline simulation.
 
 ---
 
 ## 3. What Needs to Be Done Next
-1. Execute **E7 — Real-time Control-Room Data Surface**.
-2. Await human owner instruction / approval before beginning E7.
+1. Execute **E8 — Scenario / Proof Surface**.
+2. Never automatically begin E8 without explicit instruction.

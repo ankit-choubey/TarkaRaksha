@@ -1027,6 +1027,40 @@ E1 — Integration Boundary
 
 ---
 
+## E7 Verification Record (Real-time Control-Room Data Surface)
+
+- **Implementation Scope**:
+  - Exposes existing authoritative transaction, integrity, recovery, security, evidence, trace, checkpoint, SLA, and replay state through a coherent production-quality application surface.
+  - Composition and observability surface only: NOT a new decision engine, payment engine, replay engine, or state machine.
+  - Frontend Non-Authority: UI renders authoritative backend data; never computes PASS/DRIFT/UNKNOWN or authorizes money.
+  - Strict preservation of `CAPTURED != PASS` boundary.
+  - UNKNOWN rendered as first-class legitimate state without coercion to PASS or SUCCESS.
+  - Read-Only Projection DTO: `ControlRoomSnapshot` captures identity (7-tuple), lifecycle, authorization, buyer/merchant agents, integrity, MRDP, recovery, payment, security, evidence, replay, observability, and timeline stages with cryptographic digest.
+  - Read-Only REST APIs registered at `/api/v1/control-room/*` (`snapshot/{transaction_id}`, `latest`, `recent`, `live`).
+  - High-density dark-mode Next.js UI (`frontend/app/page.tsx`) with live polling, telemetry header, status triad, lifecycle timeline, expected vs observed economics, agent breakdown, 5 deep-dive observability tabs, and quick-action scenario buttons.
+- **Files Created**:
+  - `backend/app/domain/control_room/contracts.py`
+  - `backend/app/domain/control_room/__init__.py`
+  - `backend/app/services/control_room/service.py`
+  - `backend/app/services/control_room/__init__.py`
+  - `testing/unit/test_control_room_surface.py`
+- **Files Modified**:
+  - `backend/app/services/__init__.py` (re-exported `ControlRoomService`)
+  - `backend/app/main.py` (registered control-room REST endpoints)
+  - `frontend/app/page.tsx` (real-time control-room surface implementation)
+  - `brain/STATUS.md`
+  - `brain/HANDOFF.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 25 comprehensive unit and adversarial tests in `testing/unit/test_control_room_surface.py`.
+- **Regression Count**: 1017 passed, 2 warnings in full regression suite.
+- **Core Invariant Verification**:
+  - `make test-bootstrap`: PASS
+  - `make test-env`: PASS (including Next.js production build)
+  - `scripts/verify_api_smoke.py`: PASS
+  - `git diff --check`: PASS
+
+---
+
 ## Next Task
-**E7 — Real-time Control-Room Data Surface** (Await human owner instruction and approval).
+**E8 — Scenario / Proof Surface** (Await human owner instruction and approval).
 
