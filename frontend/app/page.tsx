@@ -38,7 +38,10 @@ import { ScenarioModal } from "../components/control-room/drawers/ScenarioModal"
 import { LandingPage } from "../components/landing/LandingPage";
 
 export default function Home() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const apiUrl = rawApiUrl.startsWith("http://") || rawApiUrl.startsWith("https://")
+    ? rawApiUrl.replace(/\/$/, "")
+    : `https://${rawApiUrl.replace(/\/$/, "")}`;
 
   // Multi-View Navigation: "landing" | "order_simulator" | "analytics" | "control_room" | "login"
   const [currentView, setCurrentView] = useState<AppView>("landing");
