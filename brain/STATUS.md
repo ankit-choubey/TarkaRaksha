@@ -59,12 +59,13 @@ COMPLETE (C_E6 PASS)
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (991 passed, 2 warnings in 58.13s across all unit, integration, and adversarial suites: 978 baseline + 13 new E6 tests)
-- `testing/unit/test_e6_failure_recovery_revalidation.py`: PASS (13/13 passed in 13.01s)
-- `testing/unit/test_hero_*.py`: PASS (17/17 passed in 18.54s)
+- `pytest` (992 passed, 2 warnings across all unit, integration, and adversarial suites: 978 baseline + 14 new E6 tests)
+- `testing/unit/test_e6_failure_recovery_revalidation.py`: PASS (14/14 passed)
+- `testing/unit/test_hero_*.py`: PASS (17/17 passed)
 - `scripts/verify_api_smoke.py`: PASS (all baseline and integration endpoints pass, including hero transaction API)
 - `npm run build` (frontend): PASS (Next.js 15.5.25 Turbopack production build clean)
 - `git diff --check`: PASS (clean formatting, zero whitespace errors)
+- Execution Mode Distinction: Verified synthetic offline payment simulation when credentials unconfigured, and real Razorpay Test Mode when active sandbox credentials provided. Deterministic backend logic is authoritative; AI explanation is strictly descriptive/advisory.
 
 
 ## Environment & Toolchains Verified
@@ -171,4 +172,4 @@ COMPLETE (C_E6 PASS)
 - **E6 Authoritative Message Invariant**: The final hero message ("TRANSACTION RESTORED" / "TRANSACTION VERIFIED") is emitted authoritatively from underlying verified state, never synthesized independently of transaction truth.
 
 ## Next Task
-E7 — Control Room & End-to-End System Certification (Wait for human owner approval).
+E7 — Real-time Control-Room Data Surface (Wait for human owner approval).

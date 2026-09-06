@@ -72,6 +72,9 @@
 - [x] **E1 — Integration Boundary** (Verified Green, 777/777 tests passing)
 - [x] **E2 — Consumer + Merchant Gate Composition** (Verified Green, 859/859 tests passing)
 - [x] **E3 — Agentic Transaction Lifecycle Orchestration** (Verified Green, 912/912 tests passing)
+- [x] **E4 — Security / Threat Guard Composition** (Verified Green, 912/912 tests passing)
+- [x] **E5 — Transaction Passport** (Verified Green, 978/978 tests passing)
+- [x] **E6 — Failure → Recovery → Revalidation Hero Loop** (Verified Green, 992/992 tests passing)
 
 ---
 
@@ -1001,21 +1004,29 @@ E1 — Integration Boundary
   - Zero duplicate engines: seamlessly composed existing I22 `HeroTransactionOrchestrator`, T04 deterministic integrity, T07 MRDP builder, T13 replay engine, I8 protocol binding, I9 kill switch, I13 trace, I14 checkpoints, I15 SLA metrics, and I21 AI explanation.
   - Strict preservation of I22 backward compatibility: all 17 existing hero tests remain 100% green.
   - Authoritative hero message generated from verified transaction state, confirming preserved authorization, verified payment, and completed recovery.
-  - Application-facing endpoint support: `POST /api/v1/hero-transaction/run` with `scenario="e6"`.
+  - Application-facing endpoint support: `POST /api/v1/hero-transaction/run` with explicit `scenario="e6"`.
+  - Provider Execution Distinction: Strictly separates real Razorpay Test Mode execution (when sandbox credentials are configured) from synthetic offline payment simulation (when unconfigured). Gateway success is never falsely claimed.
+  - Advisory AI Boundary: Deterministic backend logic is authoritative; advisory AI explanation (using default `openai/gpt-oss-20b`) is descriptive.
 - **Files Created**:
   - `backend/app/domain/hero/scenario_e6.py`
   - `testing/unit/test_e6_failure_recovery_revalidation.py`
 - **Files Modified**:
   - `backend/app/domain/hero/contracts.py` (added `hero_message: Optional[str] = None` to `HeroTransactionRecord`)
   - `backend/app/domain/hero/__init__.py` (re-exported `create_canonical_e6_intent`)
-  - `backend/app/services/hero/orchestrator.py` (supported canonical E6 pricing, mutation, remediation, and authoritative hero message assembly)
+  - `backend/app/services/hero/orchestrator.py` (supported canonical E6 pricing, mutation, remediation, explicit `scenario` parameter, and authoritative hero message assembly)
   - `backend/app/main.py` (added `scenario` parameter and resolved E6 intent)
-  - `testing/unit/test_explanation_integration.py` (hardened AI explanation summary assertion against live LLM output variations)
-- **Tests Added**: 13 comprehensive unit and adversarial tests in `testing/unit/test_e6_failure_recovery_revalidation.py` covering all prompt requirements.
-- **Regression Count**: 991 passed, 2 warnings in 58.13s (978 baseline + 13 new E6 tests).
+  - `backend/app/core/config.py` (confirmed `openai/gpt-oss-20b` as default `GROQ_MODEL`)
+  - `backend/app/services/ai/intent_parser.py` (restored pre-E6 baseline byte-for-byte)
+- **Tests Added**: 14 comprehensive unit and adversarial tests in `testing/unit/test_e6_failure_recovery_revalidation.py` covering all prompt requirements.
+- **Regression Count**: 992 passed, 2 warnings in full regression suite.
 - **Core Invariant Verification**:
   - `make test-bootstrap`: PASS
   - `make test-env`: PASS (including Next.js production build)
   - `scripts/verify_api_smoke.py`: PASS
   - `git diff --check`: PASS
+
+---
+
+## Next Task
+**E7 — Real-time Control-Room Data Surface** (Await human owner instruction and approval).
 
