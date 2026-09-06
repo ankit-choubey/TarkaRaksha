@@ -474,6 +474,40 @@ npm run dev
 
 ---
 
+## Production Cloud Deployment (Native Zero-Docker PaaS)
+
+TarkaRaksha provides native configuration for deployment across modern cloud platforms without requiring containerization overhead.
+
+### 1. Architecture Topology
+
+| Layer | Service | Hosting Target | Runtime | Build Command | Start Command |
+|---|---|---|---|---|---|
+| **Control Plane API** | `tarkaraksha-backend` | Render / Railway | Python 3.12 | `pip install -r requirements.txt` | `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT` |
+| **Control Room UI** | `tarkaraksha-frontend` | Vercel / Render | Node.js 20 | `npm install && npm run build` | `npm run start` |
+
+### 2. Environment Configuration
+
+The single bridge connecting the frontend to the backend in production is `NEXT_PUBLIC_API_URL`.
+
+| Variable | Environment | Target Service | Example Value | Description |
+|---|---|---|---|---|
+| `NEXT_PUBLIC_API_URL` | Production | Frontend | `https://tarkaraksha-backend.onrender.com` | Public HTTPS URL of the deployed FastAPI backend |
+| `PYTHON_VERSION` | Production | Backend | `3.12.2` | Python runtime version lock |
+| `RAZORPAY_KEY_ID` | Production | Backend | `rzp_test_...` | Razorpay API Key ID (optional for synthetic runs) |
+| `RAZORPAY_KEY_SECRET` | Production | Backend | `...` | Razorpay API Key Secret |
+| `GROQ_API_KEY` | Production | Backend | `gsk_...` | Groq Llama 3.3 Versatile API Key (optional for fallback) |
+
+### 3. One-Click Blueprint Deployment (Render)
+
+The repository includes a canonical infrastructure-as-code specification (`render.yaml`). To deploy both services simultaneously:
+
+1. Navigate to the Render Dashboard (`dashboard.render.com`).
+2. Select **New +** -> **Blueprint**.
+3. Connect the `TarkaRaksha` GitHub repository.
+4. Render automatically parses `render.yaml` and deploys both `tarkaraksha-backend` and `tarkaraksha-frontend` with health check bindings (`/health`).
+
+---
+
 ## API Reference
 
 ### Core Transaction Lifecycle

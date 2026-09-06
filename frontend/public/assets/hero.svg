@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050811" />
+      <stop offset="50%" stop-color="#0b1120" />
+      <stop offset="100%" stop-color="#070d1a" />
+    </linearGradient>
+    <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="50%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="amberGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="emeraldGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="crimsonGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#b91c1c" />
+    </linearGradient>
+    <pattern id="cyberGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.75" stroke-opacity="0.45" />
+    </pattern>
+    <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Layer -->
+  <rect width="1200" height="420" fill="url(#bgGrad)" />
+  <rect width="1200" height="420" fill="url(#cyberGrid)" />
+
+  <!-- Ambient Glow Elements -->
+  <circle cx="200" cy="80" r="180" fill="#06b6d4" opacity="0.07" filter="url(#glowEffect)" />
+  <circle cx="1000" cy="340" r="220" fill="#6366f1" opacity="0.08" filter="url(#glowEffect)" />
+  <circle cx="600" cy="200" r="150" fill="#f59e0b" opacity="0.04" filter="url(#glowEffect)" />
+
+  <!-- Top Border Accent Line -->
+  <rect x="0" y="0" width="1200" height="3" fill="url(#cyanGlow)" />
+
+  <!-- Outer Frame -->
+  <rect x="24" y="24" width="1152" height="372" rx="16" fill="#0b1329" fill-opacity="0.55" stroke="#1e293b" stroke-width="1.5" />
+
+  <!-- Header Category Badge -->
+  <g transform="translate(60, 56)">
+    <rect x="0" y="0" width="310" height="26" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+    <circle cx="12" cy="13" r="4" fill="#06b6d4" />
+    <text x="24" y="17" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace" font-size="10.5" font-weight="600" letter-spacing="1.5">ENTERPRISE TRANSACTION CONTROL PLANE</text>
+  </g>
+
+  <g transform="translate(860, 56)">
+    <rect x="0" y="0" width="280" height="26" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1" stroke-opacity="0.4" />
+    <circle cx="12" cy="13" r="4" fill="#10b981" />
+    <text x="24" y="17" fill="#10b981" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace" font-size="10.5" font-weight="700" letter-spacing="1.2">1062 / 1062 TESTS VERIFIED [100%]</text>
+  </g>
+
+  <!-- Main Branding Title -->
+  <text x="60" y="132" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, sans-serif" font-size="44" font-weight="800" letter-spacing="-0.5">TARKARAKSHA</text>
+  <text x="400" y="132" fill="#06b6d4" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, sans-serif" font-size="28" font-weight="500" letter-spacing="2">/ तर्क रक्षा</text>
+
+  <!-- Tagline -->
+  <text x="60" y="166" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16.5" font-weight="500" letter-spacing="0.2">Agentic Transaction Integrity, Machine-Readable Drift Proof (MRDP) &amp; Autonomous Recovery Control Plane</text>
+
+  <!-- Authoritative Core Principle Banner -->
+  <g transform="translate(60, 192)">
+    <rect x="0" y="0" width="1080" height="38" rx="8" fill="#030712" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.5" />
+    <path d="M 0 8 Q 0 0 8 0 L 24 0 L 0 24 Z" fill="#06b6d4" opacity="0.7" />
+    <text x="20" y="24" fill="#38bdf8" font-family="monospace" font-size="12" font-weight="700" letter-spacing="1">CORE INVARIANT:</text>
+    <text x="145" y="24" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace" font-size="12.5" font-weight="600" letter-spacing="0.5">"AI is advisory. Evidence proves. Deterministic verification is authoritative."</text>
+    <rect x="880" y="7" width="188" height="24" rx="4" fill="#0f172a" stroke="#334155" stroke-width="0.8" />
+    <text x="892" y="23" fill="#cbd5e1" font-family="monospace" font-size="10.5" font-weight="600">ZERO FINANCIAL AUTHORITY</text>
+  </g>
+
+  <!-- The 4-Stage Control Loop Flow Cards -->
+  <!-- Card 1: DETECT -->
+  <g transform="translate(60, 248)">
+    <rect x="0" y="0" width="250" height="118" rx="10" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="1.2" />
+    <rect x="14" y="14" width="70" height="20" rx="4" fill="#06b6d4" fill-opacity="0.15" stroke="#06b6d4" stroke-width="0.8" />
+    <text x="24" y="28" fill="#38bdf8" font-family="monospace" font-size="10" font-weight="700" letter-spacing="1">STAGE 1</text>
+    <text x="14" y="56" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700">DETECT</text>
+    <text x="14" y="78" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="400">Deterministic Rule Engine (T04)</text>
+    <text x="14" y="96" fill="#64748b" font-family="monospace" font-size="10">Economic · Semantic · Temporal</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <path d="M 320 307 L 334 307" stroke="#475569" stroke-width="2" stroke-linecap="round" />
+  <polygon points="334,303 342,307 334,311" fill="#475569" />
+
+  <!-- Card 2: PROVE -->
+  <g transform="translate(345, 248)">
+    <rect x="0" y="0" width="250" height="118" rx="10" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="1.2" />
+    <rect x="14" y="14" width="70" height="20" rx="4" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="0.8" />
+    <text x="24" y="28" fill="#fbbf24" font-family="monospace" font-size="10" font-weight="700" letter-spacing="1">STAGE 2</text>
+    <text x="14" y="56" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700">PROVE</text>
+    <text x="14" y="78" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="400">Cryptographic MRDP (T07)</text>
+    <text x="14" y="96" fill="#64748b" font-family="monospace" font-size="10">SHA-256 Digest · Non-Repudiable</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <path d="M 605 307 L 619 307" stroke="#475569" stroke-width="2" stroke-linecap="round" />
+  <polygon points="619,303 627,307 619,311" fill="#475569" />
+
+  <!-- Card 3: REPAIR -->
+  <g transform="translate(630, 248)">
+    <rect x="0" y="0" width="250" height="118" rx="10" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="1.2" />
+    <rect x="14" y="14" width="70" height="20" rx="4" fill="#8b5cf6" fill-opacity="0.15" stroke="#8b5cf6" stroke-width="0.8" />
+    <text x="24" y="28" fill="#a78bfa" font-family="monospace" font-size="10" font-weight="700" letter-spacing="1">STAGE 3</text>
+    <text x="14" y="56" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700">REPAIR</text>
+    <text x="14" y="78" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="400">Bounded Replanning (T11/I7)</text>
+    <text x="14" y="96" fill="#64748b" font-family="monospace" font-size="10">Immutable Authorization Ceiling</text>
+  </g>
+
+  <!-- Arrow 3 -->
+  <path d="M 890 307 L 904 307" stroke="#475569" stroke-width="2" stroke-linecap="round" />
+  <polygon points="904,303 912,307 904,311" fill="#475569" />
+
+  <!-- Card 4: REVALIDATE -->
+  <g transform="translate(915, 248)">
+    <rect x="0" y="0" width="225" height="118" rx="10" fill="#0f172a" fill-opacity="0.85" stroke="#10b981" stroke-width="1.2" />
+    <rect x="14" y="14" width="70" height="20" rx="4" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="0.8" />
+    <text x="24" y="28" fill="#34d399" font-family="monospace" font-size="10" font-weight="700" letter-spacing="1">STAGE 4</text>
+    <text x="14" y="56" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700">REVALIDATE</text>
+    <text x="14" y="78" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="400">Replay &amp; Gate Verification</text>
+    <text x="14" y="96" fill="#10b981" font-family="monospace" font-size="10">PASS · RESTORED · AUDITED</text>
+  </g>
+
+  <!-- Bottom Accent Border -->
+  <rect x="24" y="394" width="1152" height="2" fill="url(#cyanGlow)" />
+</svg>
