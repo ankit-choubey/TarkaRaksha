@@ -129,6 +129,9 @@ from backend.app.services.integration import (
     IntegrationService,
 )
 
+from backend.app.domain.control_room import ControlRoomSnapshot, ControlRoomSummary
+from backend.app.services.control_room import ControlRoomService
+
 _global_hero_orchestrator = HeroTransactionOrchestrator()
 
 
@@ -143,6 +146,17 @@ _global_integration_service = IntegrationService()
 def get_integration_service() -> IntegrationService:
     """Dependency provider for IntegrationService (E1). Can be overridden in tests."""
     return _global_integration_service
+
+
+_global_control_room_service = ControlRoomService(
+    hero_orchestrator=_global_hero_orchestrator,
+    integration_service=_global_integration_service,
+)
+
+
+def get_control_room_service() -> ControlRoomService:
+    """Dependency provider for ControlRoomService (E7). Can be overridden in tests."""
+    return _global_control_room_service
 
 
 
@@ -757,6 +771,76 @@ def get_transaction_passport_endpoint(
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+# ============================================================================
+# CONTROL ROOM DATA SURFACE (E7)
+# ============================================================================
+
+@app.get("/api/v1/control-room/snapshot/{transaction_id}", response_model=ControlRoomSnapshot)
+def get_control_room_snapshot_endpoint(
+    transaction_id: str,
+    control_room_service: ControlRoomService = Depends(get_control_room_service),
+) -> ControlRoomSnapshot:
+    """
+    Retrieves a unified, read-only ControlRoomSnapshot for a transaction (E7).
+    Compiles facts across Hero Orhcestrator, Integration Service, and Passport.
+    """
+    snapshot = control_room_service.get_snapshot(transaction_id)
+    if not snapshot:
+        raise HTTPException(status_code=404, detail=f"Control Room snapshot for transaction '{transaction_id}' not found")
+    return snapshot
+
+
+@app.get("/api/v1/control-room/latest", response_model=ControlRoomSnapshot)
+def get_control_room_latest_endpoint(
+    control_room_service: ControlRoomService = Depends(get_control_room_service),
+) -> ControlRoomSnapshot:
+    """
+    Retrieves the latest available transaction snapshot for real-time live monitoring (E7).
+    """
+    snapshot = control_room_service.get_latest_snapshot()
+    if not snapshot:
+        raise HTTPException(status_code=404, detail="No active or completed transactions found in Control Plane")
+    return snapshot
+
+
+@app.get("/api/v1/control-room/recent", response_model=List[ControlRoomSummary])
+def list_control_room_recent_endpoint(
+    limit: int = 10,
+    control_room_service: ControlRoomService = Depends(get_control_room_service),
+) -> List[ControlRoomSummary]:
+    """
+    Returns recent transaction summary items for rapid switching in the Control Room (E7).
+    """
+    return control_room_service.list_recent_summaries(limit=limit)
+
+
+@app.get("/api/v1/control-room/live")
+def get_control_room_live_state_endpoint(
+    control_room_service: ControlRoomService = Depends(get_control_room_service),
+) -> Dict[str, Any]:
+    """
+    Returns live operational status of the Control Plane:
+    System status, default AI model, kill switch, active transactions count, and latest snapshot.
+    """
+    latest = control_room_service.get_latest_snapshot()
+    summaries = control_room_service.list_recent_summaries(limit=5)
+    return {
+        "status": "ONLINE",
+        "service": "TarkaRaksha Agentic Transaction Integrity Control Plane",
+        "version": "1.0.0",
+        "advisory_ai_model": settings.groq_model,
+        "ai_authority": "ADVISORY_ONLY",
+        "deterministic_engine": "AUTHORITATIVE",
+        "transactions_tracked": len(summaries),
+        "latest_transaction_id": latest.identity.transaction_id if latest else None,
+        "latest_integrity_status": latest.integrity.status.value if latest else None,
+        "latest_snapshot": latest.model_dump(mode="json") if latest else None,
+        "recent_summaries": [s.model_dump(mode="json") for s in summaries],
+        "server_time": datetime.now(timezone.utc).isoformat(),
+    }
+
 
 
 

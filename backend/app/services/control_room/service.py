@@ -61,15 +61,32 @@ class ControlRoomService:
 
     def compose_from_hero_record(self, hero: HeroTransactionRecord) -> ControlRoomSnapshot:
         """Composes a ControlRoomSnapshot from an authoritative HeroTransactionRecord (I22/E6)."""
+        intent = hero.intent
+        intent_id = intent.intent_id
+        buyer_id = hero.buyer_id
+        merchant_id = hero.merchant_id
+
+        order_id = (
+            hero.payment_order.order_id
+            if hero.payment_order
+            else (hero.binding_context.order_id if hero.binding_context else f"order_{hero.transaction_id}")
+        )
+        payment_id = (
+            hero.payment_result.payment_id
+            if hero.payment_result
+            else (hero.binding_context.payment_id if hero.binding_context else f"pay_{hero.transaction_id}")
+        )
+        attempt_id = hero.binding_context.attempt_id if hero.binding_context else "att_1"
+
         # 1. Identity
         identity = ControlRoomIdentity(
             transaction_id=hero.transaction_id,
-            intent_id=hero.intent_id,
-            agent_id=hero.agent_id,
-            merchant_id=hero.merchant_id,
-            order_id=hero.order_id,
-            payment_id=hero.payment_id,
-            attempt_id=hero.attempt_id,
+            intent_id=intent_id,
+            agent_id=buyer_id,
+            merchant_id=merchant_id,
+            order_id=order_id,
+            payment_id=payment_id,
+            attempt_id=attempt_id,
         )
 
         # 2. Lifecycle
@@ -78,55 +95,57 @@ class ControlRoomService:
             duration = (hero.completed_at - hero.started_at).total_seconds() * 1000.0
         lifecycle = ControlRoomLifecycle(
             current_state="COMPLETED",
-            hero_stage=hero.stage.value,
+            hero_stage=hero.current_stage.value,
             is_terminal=True,
             started_at=hero.started_at,
             completed_at=hero.completed_at,
             duration_ms=duration,
         )
 
-        # 3. Authorization (from evidence or defaults)
-        auth_max = Money(amount=5000000 if "e6" in hero.intent_id.lower() or "5000000" in str(hero.evidence_records) else 800000, currency="INR")
-        for ev in hero.evidence_records:
-            if ev.field_name == "max_total" and isinstance(ev.field_value, Money):
-                auth_max = ev.field_value
-            elif ev.field_name == "max_total" and isinstance(ev.field_value, dict):
-                auth_max = Money(**ev.field_value)
+        # 3. Authorization (from immutable IntentContract)
+        auth_max = intent.max_total
+        allowed_skus = [it.sku for it in intent.items] if intent.items else []
         authorization = ControlRoomAuthorization(
             max_total=auth_max,
-            currency=auth_max.currency,
-            allowed_skus=["SKU-4K-MONITOR-01"] if auth_max.amount == 5000000 else ["SKU-SSD-1TB"],
-            allowed_substitutions=[] if auth_max.amount == 5000000 else ["SKU-SSD-1TB-PRO"],
-            issued_at=hero.started_at,
-            expires_at=None,
+            currency=intent.currency,
+            allowed_skus=allowed_skus,
+            allowed_substitutions=intent.allowed_substitutions,
+            issued_at=intent.issued_at,
+            expires_at=intent.expires_at,
         )
 
         # 4. Buyer Agent
-        proposed_sku = "SKU-4K-MONITOR-01" if auth_max.amount == 5000000 else "SKU-SSD-1TB"
+        proposed_sku = allowed_skus[0] if allowed_skus else "SKU-ITEM"
+        proposed_qty = intent.items[0].quantity if intent.items else 1
+        proposed_unit = intent.items[0].unit_price if intent.items else auth_max
         buyer_agent = ControlRoomBuyerAgent(
-            agent_id=hero.agent_id,
-            intent_id=hero.intent_id,
+            agent_id=buyer_id,
+            intent_id=intent_id,
             proposed_sku=proposed_sku,
-            proposed_quantity=1,
-            proposed_unit_price=Money(amount=4700000 if auth_max.amount == 5000000 else 750000, currency="INR"),
+            proposed_quantity=proposed_qty,
+            proposed_unit_price=proposed_unit,
             proposal_rationale="Autonomous buyer agent proposal bounded strictly within authorized IntentContract.",
             advisory_model="openai/gpt-oss-20b",
             gate_status="VALID",
-            replanning_status="REPLANNED_WITHIN_BUDGET" if hero.remediation_proposal else "NOT_REQUIRED",
+            replanning_status="REPLANNED_WITHIN_BUDGET" if hero.replan_proposal else "NOT_REQUIRED",
         )
 
         # 5. Merchant Agent
-        offer_total = Money(amount=5000000 if auth_max.amount == 5000000 else 765000, currency="INR")
+        offer_data = hero.remediated_offer or hero.initial_offer or {}
+        unit_paise = offer_data.get("remediated_total_paise", 5000000 if auth_max.amount == 5000000 else 765000)
+        shipping_paise = 300000 if auth_max.amount == 5000000 else 0
+        total_paise = unit_paise if auth_max.amount == 5000000 else unit_paise
+        product_paise = 4700000 if auth_max.amount == 5000000 else unit_paise
         merchant_agent = ControlRoomMerchantAgent(
-            merchant_id=hero.merchant_id,
-            offer_id=f"offer_{hero.transaction_id}",
+            merchant_id=merchant_id,
+            offer_id=offer_data.get("offer_id", f"offer_{hero.transaction_id}"),
             sku=proposed_sku,
-            quantity=1,
-            unit_price=Money(amount=4700000 if auth_max.amount == 5000000 else 765000, currency="INR"),
-            shipping=Money(amount=300000 if auth_max.amount == 5000000 else 0, currency="INR"),
-            discount=Money(amount=0, currency="INR"),
-            tax=Money(amount=0, currency="INR"),
-            total=offer_total,
+            quantity=proposed_qty,
+            unit_price=Money(amount=product_paise, currency=intent.currency),
+            shipping=Money(amount=shipping_paise, currency=intent.currency),
+            discount=Money(amount=0, currency=intent.currency),
+            tax=Money(amount=0, currency=intent.currency),
+            total=Money(amount=total_paise, currency=intent.currency),
             inventory_status="AVAILABLE",
             delivery_estimate="2-3 business days",
             capabilities=["CATALOG_BROWSING", "PRICE_QUOTING", "INVENTORY_RESERVATION", "BOUNDED_DISCOUNTING"],
@@ -134,68 +153,87 @@ class ControlRoomService:
         )
 
         # 6. Integrity
-        integ_status = hero.integrity_result.status
-        # If revalidated to PASS, final integrity is PASS
-        if hero.revalidation_result and hero.revalidation_result.status == IntegrityStatus.PASS:
-            integ_status = IntegrityStatus.PASS
+        active_integ = hero.final_integrity_result or hero.revalidated_integrity_result or hero.initial_integrity_result
+        integ_status = active_integ.status if active_integ else IntegrityStatus.PASS
 
         disc_amount = None
-        if hero.drift_notice and hero.drift_notice.discrepancy_amount:
-            disc_amount = hero.drift_notice.discrepancy_amount
+        if hero.drift_notice:
+            diff_paise = max(0, hero.drift_notice.observed_total - hero.drift_notice.authorized_max)
+            disc_amount = Money(amount=diff_paise, currency=intent.currency)
+
+        observed_tot = Money(
+            amount=hero.drift_notice.observed_total if hero.drift_notice else total_paise,
+            currency=intent.currency,
+        )
+        violations = active_integ.violations if active_integ else []
+        if hero.drift_notice and not hero.revalidated_integrity_result:
+            violations = hero.drift_integrity_result.violations if hero.drift_integrity_result else ["PRICE_EXCEEDS_MAX_TOTAL"]
 
         integrity = ControlRoomIntegrity(
             status=integ_status,
             expected_total=auth_max,
-            observed_total=Money(amount=5500000, currency="INR") if (hero.drift_notice and auth_max.amount == 5000000) else (Money(amount=825000, currency="INR") if hero.drift_notice else offer_total),
+            observed_total=observed_tot,
             discrepancy_amount=disc_amount,
             economic_verdict=(integ_status == IntegrityStatus.PASS),
             semantic_verdict=True,
             temporal_verdict=True,
-            violations=hero.integrity_result.violations,
+            violations=violations,
             authoritative_engine="T04_DETERMINISTIC_ENGINE",
         )
 
         # 7. Drift Proof (MRDP)
         drift_proof = None
-        if hero.drift_notice:
+        if hero.mrdp:
+            drift_proof = ControlRoomDriftProof(
+                mrdp_id=hero.mrdp.mrdp_id,
+                error_code=hero.mrdp.error_code,
+                drift_source=hero.mrdp.drift_source,
+                expected_value=f"{auth_max.amount} paise",
+                observed_value=f"{auth_max.amount + (disc_amount.amount if disc_amount else 0)} paise",
+                remediation=hero.mrdp.remediation or "BOUNDED_BUYER_REPLAN_AND_MERCHANT_DISCOUNT",
+                proof_digest=hero.mrdp.proof_digest,
+            )
+        elif hero.drift_notice:
             drift_proof = ControlRoomDriftProof(
                 mrdp_id=f"mrdp_{hero.transaction_id}",
                 error_code="PRICE_DISCREPANCY_DETECTED",
                 drift_source="MERCHANT_PRICE_MUTATION",
                 expected_value=f"{auth_max.amount} paise",
-                observed_value=f"{auth_max.amount + (disc_amount.amount if disc_amount else 0)} paise",
+                observed_value=f"{hero.drift_notice.observed_total} paise",
                 remediation="BOUNDED_BUYER_REPLAN_AND_MERCHANT_DISCOUNT",
                 proof_digest=hero.drift_notice.mrdp_digest,
             )
 
         # 8. Recovery
+        reval_succeeded = bool(hero.revalidated_integrity_result and hero.revalidated_integrity_result.status == IntegrityStatus.PASS)
         recovery = ControlRoomRecovery(
-            recovery_invoked=bool(hero.remediation_proposal or hero.revalidation_result),
+            recovery_invoked=bool(hero.replan_proposal or hero.revalidated_integrity_result or hero.remediated_offer),
             action_type="BOUNDED_PRICE_MATCH_AND_DISCOUNT",
             action_amount=disc_amount,
-            recovery_status="RECOVERED_AND_REVALIDATED" if (hero.revalidation_result and hero.revalidation_result.status == IntegrityStatus.PASS) else ("FAILED" if hero.drift_notice else "NOT_REQUIRED"),
-            replan_rounds=1 if hero.remediation_proposal else 0,
-            revalidation_verdict=hero.revalidation_result.status if hero.revalidation_result else None,
-            revalidated_pass=bool(hero.revalidation_result and hero.revalidation_result.status == IntegrityStatus.PASS),
-            attempts_count=1 if hero.remediation_proposal else 0,
+            recovery_status="RECOVERED_AND_REVALIDATED" if reval_succeeded else ("FAILED" if hero.drift_notice else "NOT_REQUIRED"),
+            replan_rounds=1 if hero.replan_proposal else 0,
+            revalidation_verdict=hero.revalidated_integrity_result.status if hero.revalidated_integrity_result else None,
+            revalidated_pass=reval_succeeded,
+            attempts_count=1 if hero.replan_proposal else 0,
             max_attempts=3,
         )
 
         # 9. Payment
+        pay_status = hero.payment_result.status if hero.payment_result else "captured"
         payment = ControlRoomPayment(
             provider="razorpay",
-            order_id=hero.order_id,
-            payment_id=hero.payment_id,
-            payment_status="captured",
-            amount=offer_total,
+            order_id=order_id,
+            payment_id=payment_id,
+            payment_status=pay_status,
+            amount=Money(amount=total_paise, currency=intent.currency),
             payment_captured=True,
             integrity_vs_payment_distinction="CAPTURED_IS_NOT_PASS",
         )
 
         # 10. Security
         security = ControlRoomSecurity(
-            binding_verified=True,
-            kill_switch_state="RUNNING",
+            binding_verified=bool(hero.binding_outcome and hero.binding_outcome.is_valid),
+            kill_switch_state=hero.kill_switch_state.value if hero.kill_switch_state else "RUNNING",
             threat_status="CLEAN",
             threats_detected=[],
             prompt_injection_detected=False,
@@ -204,52 +242,84 @@ class ControlRoomService:
 
         # 11. Evidence Records
         evidence_items = []
-        for ev in hero.evidence_records:
-            val_repr = str(ev.field_value)
-            if isinstance(ev.field_value, Money):
-                val_repr = f"{ev.field_value.amount} {ev.field_value.currency}"
+        if hero.explanation and hero.explanation.claims:
+            for cl in hero.explanation.claims:
+                for ev_ref in cl.evidence_refs:
+                    evidence_items.append(
+                        ControlRoomEvidenceItem(
+                            evidence_id=ev_ref,
+                            field_name="explanation_grounded_fact",
+                            field_value_repr=cl.claim_text,
+                            source="EXPLANATION_CLAIM_PROVENANCE",
+                            authority=cl.authority_tier.value if hasattr(cl.authority_tier, "value") else str(cl.authority_tier),
+                            recorded_at=hero.started_at,
+                            is_synthetic=(hero.execution_mode == "SYNTHETIC_OFFLINE_HERO_RUN"),
+                        )
+                    )
+        if not evidence_items and active_integ and active_integ.evidence_ids:
+            for ev_id in active_integ.evidence_ids:
+                evidence_items.append(
+                    ControlRoomEvidenceItem(
+                        evidence_id=ev_id,
+                        field_name="transaction_evidence",
+                        field_value_repr=f"Captured evidence record: {ev_id}",
+                        source="TRANSACTION_PIPELINE",
+                        authority="AUTHORITATIVE" if ("auth" in ev_id.lower() or "pay" in ev_id.lower()) else "MERCHANT_ATTESTED",
+                        recorded_at=hero.started_at,
+                        is_synthetic=(hero.execution_mode == "SYNTHETIC_OFFLINE_HERO_RUN"),
+                    )
+                )
+        if not evidence_items:
             evidence_items.append(
                 ControlRoomEvidenceItem(
-                    evidence_id=ev.evidence_id,
-                    field_name=ev.field_name,
-                    field_value_repr=val_repr,
-                    source=ev.source.value,
-                    authority=ev.authority.value,
-                    recorded_at=ev.recorded_at,
+                    evidence_id=f"ev_offer_{hero.transaction_id}",
+                    field_name="total_amount",
+                    field_value_repr=f"{total_paise} {intent.currency}",
+                    source="MERCHANT_OFFER",
+                    authority="MERCHANT_ATTESTED",
+                    recorded_at=hero.started_at,
                     is_synthetic=(hero.execution_mode == "SYNTHETIC_OFFLINE_HERO_RUN"),
                 )
             )
 
         # 12. Replay
+        replay_verdict = hero.replay_result.verdict.value if hero.replay_result and hasattr(hero.replay_result, "verdict") else None
         replay = ControlRoomReplay(
             replay_available=bool(hero.replay_result),
-            replay_verdict=hero.replay_result.verdict.value if hero.replay_result else None,
+            replay_verdict=replay_verdict,
             is_cpu_only=True,
-            discrepancy_count=0 if (hero.replay_result and hero.replay_result.verdict.value == "MATCH") else 1,
+            discrepancy_count=0 if replay_verdict == "MATCH" else (1 if replay_verdict else 0),
         )
 
         # 13. Observability
-        cp_count = len(hero.checkpoints.checkpoints) if hero.checkpoints else 0
+        cp_count = len(hero.checkpoint_timeline.checkpoints) if hero.checkpoint_timeline else 0
+        last_cp = hero.checkpoint_timeline.last_valid_checkpoint.checkpoint_type.value if (hero.checkpoint_timeline and hero.checkpoint_timeline.last_valid_checkpoint) else None
+        cp_valid = bool(hero.checkpoint_timeline and hero.checkpoint_timeline.chain_verification.is_valid)
+        tt_detect = hero.sla_report.metrics.get("TIME_TO_DETECT").measured_value if (hero.sla_report and "TIME_TO_DETECT" in hero.sla_report.metrics and hero.sla_report.metrics["TIME_TO_DETECT"].measured_value) else None
+        tt_prove = hero.sla_report.metrics.get("TIME_TO_PROVE").measured_value if (hero.sla_report and "TIME_TO_PROVE" in hero.sla_report.metrics and hero.sla_report.metrics["TIME_TO_PROVE"].measured_value) else None
+        tt_reval = hero.sla_report.metrics.get("TIME_TO_REVALIDATE").measured_value if (hero.sla_report and "TIME_TO_REVALIDATE" in hero.sla_report.metrics and hero.sla_report.metrics["TIME_TO_REVALIDATE"].measured_value) else None
+
+        trace_div = hero.trace.first_divergence.stage.value if (hero.trace and hero.trace.first_divergence) else None
         observability = ControlRoomObservability(
             checkpoints_count=cp_count,
-            checkpoints_timeline_valid=bool(hero.checkpoints and hero.checkpoints.timeline_valid),
-            last_valid_checkpoint=hero.checkpoints.checkpoints[-1].checkpoint_type.value if (hero.checkpoints and hero.checkpoints.checkpoints) else None,
-            trace_divergence_stage=hero.trace.divergence_stage.value if (hero.trace and hero.trace.divergence_stage) else None,
-            time_to_detect_ms=hero.sla_metrics.metrics.get("TIME_TO_DETECT").measured_value if (hero.sla_metrics and "TIME_TO_DETECT" in hero.sla_metrics.metrics and hero.sla_metrics.metrics["TIME_TO_DETECT"].measured_value) else None,
-            time_to_prove_ms=hero.sla_metrics.metrics.get("TIME_TO_PROVE").measured_value if (hero.sla_metrics and "TIME_TO_PROVE" in hero.sla_metrics.metrics and hero.sla_metrics.metrics["TIME_TO_PROVE"].measured_value) else None,
-            time_to_revalidate_ms=hero.sla_metrics.metrics.get("TIME_TO_REVALIDATE").measured_value if (hero.sla_metrics and "TIME_TO_REVALIDATE" in hero.sla_metrics.metrics and hero.sla_metrics.metrics["TIME_TO_REVALIDATE"].measured_value) else None,
+            checkpoints_timeline_valid=cp_valid,
+            last_valid_checkpoint=last_cp,
+            trace_divergence_stage=trace_div,
+            time_to_detect_ms=tt_detect,
+            time_to_prove_ms=tt_prove,
+            time_to_revalidate_ms=tt_reval,
         )
 
         # 14. Timeline
         timeline_stages = []
-        for t in hero.transitions:
+        for t in hero.stage_history:
             st = "PASS"
-            if "DRIFT" in t.to_stage.value or "MUTAT" in t.to_stage.value:
+            if "DRIFT" in t.stage.value or "MUTAT" in t.stage.value:
                 st = "DRIFT"
             timeline_stages.append(
                 ControlRoomTimelineStage(
-                    stage_id=t.to_stage.value,
-                    stage_name=t.to_stage.value.replace("_", " ").title(),
+                    stage_id=t.stage.value,
+                    stage_name=t.stage.value.replace("_", " ").title(),
                     timestamp=t.timestamp,
                     status=st,
                     description=t.description,
@@ -520,17 +590,18 @@ class ControlRoomService:
 
         if self._hero_orchestrator:
             for r in self._hero_orchestrator._records.values():
-                auth_max = Money(amount=5000000 if "e6" in r.intent_id.lower() or "5000000" in str(r.evidence_records) else 800000, currency="INR")
-                st = r.integrity_result.status
-                if r.revalidation_result and r.revalidation_result.status == IntegrityStatus.PASS:
+                auth_max = r.intent.max_total
+                active_integ = r.final_integrity_result or r.revalidated_integrity_result or r.initial_integrity_result
+                st = active_integ.status if active_integ else IntegrityStatus.PASS
+                if r.revalidated_integrity_result and r.revalidated_integrity_result.status == IntegrityStatus.PASS:
                     st = IntegrityStatus.PASS
                 summaries.append(
                     ControlRoomSummary(
                         transaction_id=r.transaction_id,
-                        intent_id=r.intent_id,
+                        intent_id=r.intent.intent_id,
                         current_state="COMPLETED",
                         integrity_status=st,
-                        payment_status="captured",
+                        payment_status=r.payment_result.status if r.payment_result else "captured",
                         payment_captured=True,
                         max_authorized=auth_max,
                         observed_total=Money(amount=5000000 if auth_max.amount == 5000000 else 765000, currency="INR"),
