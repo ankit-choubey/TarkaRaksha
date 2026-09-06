@@ -1,0 +1,227 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%">
+  <defs>
+    <linearGradient id="soBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050813" />
+      <stop offset="50%" stop-color="#0a1022" />
+      <stop offset="100%" stop-color="#060b17" />
+    </linearGradient>
+    <linearGradient id="cyanLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <linearGradient id="amberLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="emeraldLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <pattern id="soGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1e293b" stroke-width="0.6" stroke-opacity="0.35" />
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="680" fill="url(#soBg)" />
+  <rect width="1200" height="680" fill="url(#soGrid)" />
+
+  <!-- Outer Border Frame -->
+  <rect x="20" y="20" width="1160" height="640" rx="14" fill="#080e1e" fill-opacity="0.7" stroke="#1e293b" stroke-width="1.5" />
+
+  <!-- Section 1 Header: System Architecture Overview -->
+  <g transform="translate(48, 42)">
+    <text x="0" y="0" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="700" letter-spacing="0.5">TARKARAKSHA HIGH-ASSURANCE CONTROL PLANE ARCHITECTURE</text>
+    <text x="0" y="20" fill="#64748b" font-family="monospace" font-size="11" letter-spacing="1">FOUR-TIER COMPOSITION: AGENTIC PROTOCOL · INTEGRITY ENGINE · RECOVERY SAGA · OBSERVATION</text>
+  </g>
+
+  <!-- Status Pill Top Right -->
+  <g transform="translate(930, 36)">
+    <rect x="0" y="0" width="220" height="26" rx="6" fill="#0f172a" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.4" />
+    <circle cx="12" cy="13" r="4" fill="#06b6d4" />
+    <text x="24" y="17" fill="#38bdf8" font-family="monospace" font-size="10.5" font-weight="700">CPU-ONLY VERIFICATION</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- LAYER 1: AGENTIC PROTOCOL & INTENT INGESTION (TOP)                         -->
+  <!-- ========================================================================= -->
+  <g transform="translate(48, 85)">
+    <rect x="0" y="0" width="1104" height="110" rx="10" fill="#0b1329" stroke="#334155" stroke-width="1" />
+    <text x="16" y="22" fill="#38bdf8" font-family="monospace" font-size="10" font-weight="700" letter-spacing="1.5">TIER 1: AGENTIC INTERACTION &amp; PROTOCOL BINDING (I5, I4, I6, I8)</text>
+
+    <!-- Card: User Intent Contract -->
+    <g transform="translate(16, 34)">
+      <rect x="0" y="0" width="250" height="62" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+      <text x="12" y="20" fill="#f8fafc" font-family="sans-serif" font-size="12" font-weight="700">User IntentContract (T03)</text>
+      <text x="12" y="38" fill="#94a3b8" font-family="monospace" font-size="10">Immutable Ceiling: Max Minor Units</text>
+      <text x="12" y="52" fill="#64748b" font-family="monospace" font-size="9.5">Allowed SKUs · Temporal Validity</text>
+    </g>
+
+    <!-- Card: Buyer Agent -->
+    <g transform="translate(280, 34)">
+      <rect x="0" y="0" width="250" height="62" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+      <text x="12" y="20" fill="#f8fafc" font-family="sans-serif" font-size="12" font-weight="700">Buyer Agent (I5 / Groq)</text>
+      <text x="12" y="38" fill="#94a3b8" font-family="monospace" font-size="10">Advisory Proposal Generation</text>
+      <text x="12" y="52" fill="#eab308" font-family="monospace" font-size="9.5">Zero Payment Authorization</text>
+    </g>
+
+    <!-- Card: Merchant Agent -->
+    <g transform="translate(544, 34)">
+      <rect x="0" y="0" width="250" height="62" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+      <text x="12" y="20" fill="#f8fafc" font-family="sans-serif" font-size="12" font-weight="700">Merchant Agent (I4, I19)</text>
+      <text x="12" y="38" fill="#94a3b8" font-family="monospace" font-size="10">Capability Graph Attestation</text>
+      <text x="12" y="52" fill="#64748b" font-family="monospace" font-size="9.5">Inventory · Pricing · SLA Commit</text>
+    </g>
+
+    <!-- Card: TIX Chained Transport -->
+    <g transform="translate(808, 34)">
+      <rect x="0" y="0" width="280" height="62" rx="6" fill="#0f172a" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.6" />
+      <text x="12" y="20" fill="#38bdf8" font-family="sans-serif" font-size="12" font-weight="700">TIX Integrity Exchange (I6)</text>
+      <text x="12" y="38" fill="#cbd5e1" font-family="monospace" font-size="10">SHA-256 Chained Transport</text>
+      <text x="12" y="52" fill="#10b981" font-family="monospace" font-size="9.5">Anti-Spoofing · Sequential Chain</text>
+    </g>
+  </g>
+
+  <!-- Connectors from Tier 1 to Tier 2 -->
+  <path d="M 590 195 L 590 220" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3,3" />
+
+  <!-- ========================================================================= -->
+  <!-- LAYER 2: DETERMINISTIC VERIFICATION CONTROL PLANE (MIDDLE)                 -->
+  <!-- ========================================================================= -->
+  <g transform="translate(48, 220)">
+    <rect x="0" y="0" width="1104" height="240" rx="10" fill="#070e22" stroke="#06b6d4" stroke-width="1.2" stroke-opacity="0.7" />
+    <text x="16" y="24" fill="#38bdf8" font-family="monospace" font-size="11" font-weight="700" letter-spacing="1.5">TIER 2: DETERMINISTIC INTEGRITY ENGINE &amp; EXECUTION SAFETY KERNEL (T04, T05, T07, I9)</text>
+
+    <!-- Sub-Box 1: Pre-Execution Gates (E2) -->
+    <g transform="translate(16, 40)">
+      <rect x="0" y="0" width="250" height="184" rx="6" fill="#0b1329" stroke="#1e293b" stroke-width="1" />
+      <rect x="0" y="0" width="250" height="26" rx="6" fill="#0f172a" />
+      <text x="12" y="17" fill="#cbd5e1" font-family="sans-serif" font-size="11.5" font-weight="700">PRE-EXECUTION GATES (E2)</text>
+      
+      <text x="12" y="50" fill="#38bdf8" font-family="monospace" font-size="10.5" font-weight="700">[Consumer Gate]</text>
+      <text x="12" y="66" fill="#94a3b8" font-family="sans-serif" font-size="10">Ceiling &amp; Temporal Validator</text>
+      <text x="12" y="80" fill="#ef4444" font-family="monospace" font-size="9.5">Prompt Injection Sanitizer</text>
+
+      <line x1="12" y1="94" x2="238" y2="94" stroke="#1e293b" stroke-width="1" />
+
+      <text x="12" y="116" fill="#10b981" font-family="monospace" font-size="10.5" font-weight="700">[Merchant Gate]</text>
+      <text x="12" y="132" fill="#94a3b8" font-family="sans-serif" font-size="10">Capability Alignment Engine</text>
+      <text x="12" y="146" fill="#94a3b8" font-family="monospace" font-size="9.5">Catalog &amp; Inventory Attestation</text>
+      <text x="12" y="168" fill="#64748b" font-family="monospace" font-size="9">Rejects Malicious Payloads</text>
+    </g>
+
+    <!-- Sub-Box 2: Deterministic Rule Engine (T04) -->
+    <g transform="translate(280, 40)">
+      <rect x="0" y="0" width="270" height="184" rx="6" fill="#0b1329" stroke="#1e293b" stroke-width="1" />
+      <rect x="0" y="0" width="270" height="26" rx="6" fill="#0f172a" />
+      <text x="12" y="17" fill="#cbd5e1" font-family="sans-serif" font-size="11.5" font-weight="700">RULE VERIFICATION (T04)</text>
+
+      <text x="12" y="48" fill="#f8fafc" font-family="sans-serif" font-size="11" font-weight="600">Economic Rule</text>
+      <text x="12" y="64" fill="#94a3b8" font-family="monospace" font-size="10">Zero-Float Paise Representation</text>
+      
+      <text x="12" y="90" fill="#f8fafc" font-family="sans-serif" font-size="11" font-weight="600">Semantic Rule</text>
+      <text x="12" y="106" fill="#94a3b8" font-family="monospace" font-size="10">SKU Match, Quantity, Substitution</text>
+
+      <text x="12" y="132" fill="#f8fafc" font-family="sans-serif" font-size="11" font-weight="600">Temporal Rule</text>
+      <text x="12" y="148" fill="#94a3b8" font-family="monospace" font-size="10">Event ID Uniqueness &amp; Deadlines</text>
+
+      <rect x="12" y="160" width="246" height="18" rx="3" fill="#030712" />
+      <text x="18" y="173" fill="#38bdf8" font-family="monospace" font-size="9.5" font-weight="700">DRIFT &gt; UNKNOWN &gt; PASS Semantics</text>
+    </g>
+
+    <!-- Sub-Box 3: State Machine & Safety (T05 / I9) -->
+    <g transform="translate(564, 40)">
+      <rect x="0" y="0" width="260" height="184" rx="6" fill="#0b1329" stroke="#1e293b" stroke-width="1" />
+      <rect x="0" y="0" width="260" height="26" rx="6" fill="#0f172a" />
+      <text x="12" y="17" fill="#cbd5e1" font-family="sans-serif" font-size="11.5" font-weight="700">STATE MACHINE &amp; SAFETY (T05/I9)</text>
+
+      <text x="12" y="48" fill="#f8fafc" font-family="sans-serif" font-size="11" font-weight="600">11 Lifecycle States</text>
+      <text x="12" y="64" fill="#94a3b8" font-family="monospace" font-size="9.5">CREATED -> EXECUTING -> OBSERVING</text>
+      <text x="12" y="78" fill="#94a3b8" font-family="monospace" font-size="9.5">PASS | DRIFT | UNKNOWN</text>
+
+      <text x="12" y="104" fill="#ef4444" font-family="sans-serif" font-size="11" font-weight="600">Deterministic Kill Switch (I9)</text>
+      <text x="12" y="120" fill="#94a3b8" font-family="monospace" font-size="9.5">RUNNING · PAUSED · KILLED</text>
+      <text x="12" y="134" fill="#f59e0b" font-family="monospace" font-size="9.5">REQUIRES_REVALIDATION</text>
+
+      <rect x="12" y="152" width="236" height="24" rx="4" fill="#030712" stroke="#ef4444" stroke-width="0.8" />
+      <text x="18" y="168" fill="#ef4444" font-family="monospace" font-size="9.5" font-weight="700">CAPTURED != PASS Invariant</text>
+    </g>
+
+    <!-- Sub-Box 4: Proof, Replay & Resolution -->
+    <g transform="translate(838, 40)">
+      <rect x="0" y="0" width="250" height="184" rx="6" fill="#0b1329" stroke="#1e293b" stroke-width="1" />
+      <rect x="0" y="0" width="250" height="26" rx="6" fill="#0f172a" />
+      <text x="12" y="17" fill="#cbd5e1" font-family="sans-serif" font-size="11.5" font-weight="700">PROOF, REPLAY &amp; RESOLVE</text>
+
+      <text x="12" y="50" fill="#f59e0b" font-family="monospace" font-size="10.5" font-weight="700">MRDP Proof (T07)</text>
+      <text x="12" y="66" fill="#94a3b8" font-family="sans-serif" font-size="10">Cryptographic SHA-256 Digest</text>
+
+      <line x1="12" y1="78" x2="238" y2="78" stroke="#1e293b" stroke-width="1" />
+
+      <text x="12" y="98" fill="#06b6d4" font-family="monospace" font-size="10.5" font-weight="700">Replay Engine (T13)</text>
+      <text x="12" y="114" fill="#94a3b8" font-family="sans-serif" font-size="10">Deterministic CPU-Only Audit</text>
+      <text x="12" y="128" fill="#64748b" font-family="monospace" font-size="9.5">MATCH · MISMATCH · INVALID</text>
+
+      <line x1="12" y1="138" x2="238" y2="138" stroke="#1e293b" stroke-width="1" />
+
+      <text x="12" y="156" fill="#a855f7" font-family="monospace" font-size="10.5" font-weight="700">UNKNOWN Resolver (T12)</text>
+      <text x="12" y="172" fill="#94a3b8" font-family="sans-serif" font-size="9.5">Safe Non-Side-Effecting Inquest</text>
+    </g>
+  </g>
+
+  <!-- Connectors from Tier 2 to Tier 3 & Tier 4 -->
+  <path d="M 320 460 L 320 490" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3,3" />
+  <path d="M 880 460 L 880 490" stroke="#10b981" stroke-width="2" stroke-dasharray="3,3" />
+
+  <!-- ========================================================================= -->
+  <!-- LAYER 3: PAYMENT GATEWAY ADAPTER (BOTTOM LEFT)                            -->
+  <!-- ========================================================================= -->
+  <g transform="translate(48, 490)">
+    <rect x="0" y="0" width="530" height="145" rx="10" fill="#0b1329" stroke="#334155" stroke-width="1" />
+    <text x="16" y="24" fill="#38bdf8" font-family="monospace" font-size="10.5" font-weight="700" letter-spacing="1.5">TIER 3: AUTHORITATIVE PAYMENT GATEWAY ADAPTER (T09, I8)</text>
+
+    <g transform="translate(16, 38)">
+      <rect x="0" y="0" width="240" height="92" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+      <text x="12" y="20" fill="#f8fafc" font-family="sans-serif" font-size="11.5" font-weight="700">7-Tuple Context Binding (I8)</text>
+      <text x="12" y="38" fill="#94a3b8" font-family="monospace" font-size="9">intent_id · agent_id · merchant_id</text>
+      <text x="12" y="52" fill="#94a3b8" font-family="monospace" font-size="9">transaction_id · order_id</text>
+      <text x="12" y="66" fill="#94a3b8" font-family="monospace" font-size="9">payment_id · attempt_id</text>
+      <text x="12" y="82" fill="#10b981" font-family="monospace" font-size="9" font-weight="600">Cross-Context Reuse Rejected</text>
+    </g>
+
+    <g transform="translate(268, 38)">
+      <rect x="0" y="0" width="246" height="92" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+      <text x="12" y="20" fill="#f8fafc" font-family="sans-serif" font-size="11.5" font-weight="700">Razorpay Test Mode (T09)</text>
+      <text x="12" y="38" fill="#94a3b8" font-family="monospace" font-size="9.5">Live Orders: POST /v1/orders</text>
+      <text x="12" y="52" fill="#94a3b8" font-family="monospace" font-size="9.5">HMAC-SHA256 Signature Verify</text>
+      <text x="12" y="68" fill="#94a3b8" font-family="monospace" font-size="9.5">Raw Binary Bytes Ingestion</text>
+      <text x="12" y="84" fill="#38bdf8" font-family="monospace" font-size="9">Reconciliation &amp; Idempotency</text>
+    </g>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- LAYER 4: CONTROL ROOM & OBSERVABILITY SURFACE (BOTTOM RIGHT)              -->
+  <!-- ========================================================================= -->
+  <g transform="translate(602, 490)">
+    <rect x="0" y="0" width="550" height="145" rx="10" fill="#0b1329" stroke="#10b981" stroke-width="1" stroke-opacity="0.6" />
+    <text x="16" y="24" fill="#10b981" font-family="monospace" font-size="10.5" font-weight="700" letter-spacing="1.5">TIER 4: OBSERVATION, PROOF &amp; TELEMETRY SURFACES (E7, E8, E5)</text>
+
+    <g transform="translate(16, 38)">
+      <rect x="0" y="0" width="250" height="92" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+      <text x="12" y="20" fill="#f8fafc" font-family="sans-serif" font-size="11.5" font-weight="700">Real-Time Control Room (E7)</text>
+      <text x="12" y="38" fill="#94a3b8" font-family="monospace" font-size="9.5">Next.js 15 App Router + Turbopack</text>
+      <text x="12" y="52" fill="#94a3b8" font-family="monospace" font-size="9.5">Status Triad · 5 Deep-Dive Tabs</text>
+      <text x="12" y="66" fill="#94a3b8" font-family="monospace" font-size="9.5">Live Lifecycle Telemetry</text>
+      <text x="12" y="82" fill="#38bdf8" font-family="monospace" font-size="9" font-weight="600">Zero Execution Authority</text>
+    </g>
+
+    <g transform="translate(278, 38)">
+      <rect x="0" y="0" width="256" height="92" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+      <text x="12" y="20" fill="#f8fafc" font-family="sans-serif" font-size="11.5" font-weight="700">Scenario Proof Surface (E8)</text>
+      <text x="12" y="38" fill="#94a3b8" font-family="monospace" font-size="9.5">12 Canonical Adversarial Scenarios</text>
+      <text x="12" y="52" fill="#94a3b8" font-family="monospace" font-size="9.5">5-Question Narrative Ledger</text>
+      <text x="12" y="66" fill="#94a3b8" font-family="monospace" font-size="9.5">6-Stage Proof Chain Stepper</text>
+      <text x="12" y="82" fill="#f59e0b" font-family="monospace" font-size="9" font-weight="600">Tamper-Evident SHA-256 Digest</text>
+    </g>
+  </g>
+</svg>
