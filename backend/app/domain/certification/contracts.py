@@ -173,3 +173,35 @@ class CertificationSuiteResult(BaseModel):
         extra="forbid",
     )
 
+
+class EndToEndCertificationItem(BaseModel):
+    """Factual proof item for a single end-to-end certification requirement (E9)."""
+    requirement: str
+    status: str  # PASS / FAIL / NOT_APPLICABLE
+    evidence_type: str  # LIVE_VERIFIED / SYNTHETIC_OFFLINE_FIXTURE
+    verified_fact: str
+    evidence_digest: Optional[str] = None
+    transaction_id: Optional[str] = None
+    proof_ref: Optional[str] = None
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class EndToEndCertificationReport(BaseModel):
+    """
+    Immutable, tamper-evident final demonstration certification report (E9).
+    Aggregates verifiable proof across all 12 canonical certification areas.
+    """
+    certification_id: str
+    overall_status: str  # PASS / CONDITIONAL / FAIL
+    baseline_sha: str
+    target_sha: str
+    items: List[EndToEndCertificationItem]
+    invariants_verified: Dict[str, bool]
+    live_verified_count: int
+    synthetic_fixture_count: int
+    generated_at: datetime
+    certification_digest: str
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+

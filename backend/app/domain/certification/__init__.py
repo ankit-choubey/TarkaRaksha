@@ -6,6 +6,8 @@ from backend.app.domain.certification.contracts import (
     CertificationResult,
     CertificationStatus,
     CertificationSuiteResult,
+    EndToEndCertificationItem,
+    EndToEndCertificationReport,
     GroundTruthDefinition,
 )
 from backend.app.domain.certification.ground_truth import (
@@ -23,6 +25,8 @@ __all__ = [
     "CertificationResult",
     "CertificationStatus",
     "CertificationSuiteResult",
+    "EndToEndCertificationItem",
+    "EndToEndCertificationReport",
     "GroundTruthDefinition",
     "CANONICAL_GROUND_TRUTH",
     "get_ground_truth",

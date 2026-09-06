@@ -25,6 +25,7 @@ from .orchestration import AgenticLifecycleOrchestrator
 from .passport import TransactionPassportService
 from .control_room import ControlRoomService
 from .scenario import ScenarioProofService
+from .certification import EndToEndCertificationService
 
 __all__ = [
     "evaluate_integrity",
@@ -49,6 +50,7 @@ __all__ = [
     "AgenticLifecycleOrchestrator",
     "TransactionPassportService",
     "ControlRoomService",
+    "EndToEndCertificationService",
 ]
 
 

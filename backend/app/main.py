@@ -64,9 +64,13 @@ from backend.app.domain.certification import (
     CertificationMatrixRow,
     CertificationResult,
     CertificationSuiteResult,
+    EndToEndCertificationReport,
     GroundTruthDefinition,
 )
-from backend.app.services.certification import GroundTruthCertificationService
+from backend.app.services.certification import (
+    EndToEndCertificationService,
+    GroundTruthCertificationService,
+)
 from backend.app.services import TransactionService
 from backend.app.services.ai import parse_intent, IntentParsingError
 from backend.app.services.payment import (
@@ -111,6 +115,14 @@ _global_certification_service = GroundTruthCertificationService()
 def get_certification_service() -> GroundTruthCertificationService:
     """Dependency provider for GroundTruthCertificationService. Can be overridden in tests."""
     return _global_certification_service
+
+
+_global_e2e_certification_service = EndToEndCertificationService()
+
+
+def get_e2e_certification_service() -> EndToEndCertificationService:
+    """Dependency provider for EndToEndCertificationService (E9). Can be overridden in tests."""
+    return _global_e2e_certification_service
 
 
 from backend.app.domain.integration import (
@@ -638,6 +650,14 @@ async def run_all_certifications_endpoint(
 ) -> CertificationSuiteResult:
     """Runs all canonical scenario certifications and returns the suite result with matrix (I12)."""
     return service.certify_all()
+
+
+@app.get("/api/v1/certification/e9", response_model=EndToEndCertificationReport)
+async def get_e9_certification_report_endpoint(
+    service: EndToEndCertificationService = Depends(get_e2e_certification_service),
+) -> EndToEndCertificationReport:
+    """Returns the comprehensive End-to-End Demonstration Certification Report (E9)."""
+    return service.run_full_certification()
 
 
 # --- I22 Complete Hero Transaction Endpoints ---
