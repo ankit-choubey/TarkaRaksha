@@ -293,3 +293,107 @@ def test_e9_10_scenario_proof_surface_catalog_completeness(cert_service):
         assert len(proof.proof_digest) == 64
 
 
+# ==============================================================================
+# 10. RAZORPAY TEST MODE INTEGRATION & SIGNATURE VERIFICATION
+# ==============================================================================
+
+def test_e9_11_razorpay_test_mode_order_and_signature_verification(cert_service):
+    """
+    Certifies Razorpay Test Mode integration:
+    Live order creation on Razorpay Test Mode and cryptographic HMAC-SHA256
+    signature verification using configured test credentials in .env.
+    """
+    item = cert_service.certify_razorpay_mode()
+    assert item.status == "PASS"
+    assert item.evidence_type == "LIVE_VERIFIED"
+    assert item.transaction_id is not None
+    assert item.transaction_id.startswith("order_")
+    assert item.evidence_digest is not None
+    assert len(item.evidence_digest) == 64
+
+
+# ==============================================================================
+# 11. STATE MACHINE SAFETY & CAPTURED != PASS
+# ==============================================================================
+
+def test_e9_12_state_machine_safety_and_captured_vs_pass(cert_service):
+    """
+    Certifies that payment capture does not equal integrity PASS and that
+    duplicate capture attempts are deterministically intercepted as DRIFT.
+    """
+    item = cert_service.certify_state_machine_safety()
+    assert item.status == "PASS"
+    assert "capture does not equal integrity pass" in item.verified_fact.lower()
+
+    # Direct proof inspection
+    proof = cert_service.proof_service.generate_proof(ScenarioId.DUPLICATE_PAYMENT)
+    assert proof.actual_verdict == "DRIFT"
+    assert proof.actual_verdict != "PASS"
+    assert any("DoubleExecutionRisk" in v or "exceeding authorized max" in v for v in proof.violations)
+
+
+# ==============================================================================
+# 12. AI ADVISORY BOUNDARY & ZERO FINANCIAL AUTHORITY
+# ==============================================================================
+
+def test_e9_13_ai_advisory_boundary_zero_financial_authority(cert_service):
+    """
+    Certifies that AI explanations and adversarial prompt injections cannot
+    override deterministic verification or force a financial PASS.
+    """
+    proof = cert_service.proof_service.generate_proof(ScenarioId.PROMPT_INJECTION_IN_EVIDENCE)
+    assert proof.actual_verdict == "UNKNOWN"
+    assert proof.actual_verdict != "PASS"
+    assert proof.security_findings.get("prompt_injection_intercepted") is True
+
+
+# ==============================================================================
+# 13. FULL E9 CERTIFICATION REPORT API ENDPOINT
+# ==============================================================================
+
+def test_e9_14_e9_certification_report_api_endpoint(client):
+    """
+    Certifies that GET /api/v1/certification/e9 returns the complete,
+    immutable, tamper-evident EndToEndCertificationReport.
+    """
+    res = client.get("/api/v1/certification/e9")
+    assert res.status_code == 200
+    data = res.json()
+
+    assert data["overall_status"] == "PASS"
+    assert len(data["items"]) == 12
+    assert data["live_verified_count"] >= 1
+    assert data["synthetic_fixture_count"] >= 11
+    assert len(data["certification_digest"]) == 64
+    assert data["baseline_sha"] == "4e978adb78d82ec43e28ca71076d8db11d65ef03"
+
+    # Verify each item status
+    for item in data["items"]:
+        assert item["status"] in ("PASS", "NOT_APPLICABLE")
+        assert len(item["requirement"]) > 0
+        assert len(item["verified_fact"]) > 0
+
+
+# ==============================================================================
+# 14. ALL E9 INVARIANTS PROGRAMMATICALLY VERIFIED
+# ==============================================================================
+
+def test_e9_15_all_e9_invariants_verified(cert_service):
+    """
+    Certifies all 7 core invariants declared in EndToEndCertificationReport:
+    - ai_remains_advisory
+    - deterministic_verification_authoritative
+    - frontend_observational
+    - unknown_cannot_directly_become_pass
+    - authorization_cannot_silently_increase
+    - replay_side_effect_free
+    - payment_distinct_from_integrity_pass
+    """
+    report = cert_service.run_full_certification()
+    assert report.overall_status == "PASS"
+    invariants = report.invariants_verified
+    assert len(invariants) == 7
+    assert all(invariants.values()) is True
+
+
+
