@@ -322,7 +322,7 @@ def test_real_groq_smoke_test_when_credentials_present():
         pytest.skip("Real Groq smoke test skipped because credentials were unavailable.")
 
     provider = GroqAIProvider(api_key=api_key)
-    prompt = "Buy 1 unit of dedicated server SKU SERVER-256GB for maximum 50000 INR."
+    prompt = "Buy 1 unit of dedicated server SKU SERVER-256GB at unit price 50000 INR for maximum 50000 INR."
     now = datetime(2026, 9, 5, 12, 0, 0, tzinfo=timezone.utc)
 
     contract = parse_intent(
