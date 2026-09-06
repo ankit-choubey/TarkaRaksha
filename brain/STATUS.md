@@ -7,10 +7,10 @@
 E-Series Final Extension
 
 ## Current Task
-E8 — Scenario / Proof Surface
+E9 — Final End-to-End Demonstration Certification
 
 ## Task Status
-COMPLETE (C_E8 PASS)
+COMPLETE (C_E9 PASS)
 
 ## Completed Tasks
 - [x] **T01 — Repository Bootstrap** (Completed 2026-09-05)
@@ -38,7 +38,7 @@ COMPLETE (C_E8 PASS)
 - [x] **I9 — Deterministic Kill Switch / Execution Safety Control** (Completed 2026-09-05)
 - [x] **I21 — Evidence-Aware AI Explanation** (Completed 2026-09-05)
 - [x] **I10 — Operational Deployment Modes** (Completed 2026-09-05)
-- [x] **I19 — Merchant-Side Capability Graph** (Completed 2026-09-05)
+- [x] **I19 — Merchant-Side Capability Graph** (Completed 2026-09-06)
 - [x] **I11 — Deterministic Scenario Lab** (Completed 2026-09-06)
 - [x] **I12 — Ground-Truth Certification** (Completed 2026-09-06)
 - [x] **I13 — Integrity Trace / Fault Localization** (Completed 2026-09-06)
@@ -54,17 +54,21 @@ COMPLETE (C_E8 PASS)
 - [x] **E6 — Failure → Recovery → Revalidation Hero Loop** (Completed 2026-09-06)
 - [x] **E7 — Real-time Control-Room Data Surface** (Completed 2026-09-06)
 - [x] **E8 — Scenario / Proof Surface** (Completed 2026-09-06)
+- [x] **E9 — Final End-to-End Demonstration Certification** (Completed 2026-09-06)
 
 ## Last Verified
-2026-09-06T15:53:30+05:30 — E8 final certification (30/30 E8 tests passed, 56/56 E6/E7 regression passed, 1047 total regression)
+2026-09-06T16:25:00+05:30 — E9 final demonstration certification (15/15 E9 tests passed, 1062 total regression passed, 100% green)
 
 ## Tests Run
 - `make test-bootstrap`: PASS (all master brain files, zero root copies, pyproject valid, zero secrets)
 - `make test-env`: PASS (toolchains verified, Next.js build clean, smoke tests pass)
-- `pytest` (992 passed, 2 warnings across all unit, integration, and adversarial suites: 978 baseline + 14 new E6 tests)
+- `pytest` (1062 passed, 2 warnings across all unit, integration, and adversarial suites)
+- `testing/unit/test_e9_end_to_end_certification.py`: PASS (15/15 passed)
+- `testing/unit/test_scenario_proof_surface.py`: PASS (30/30 passed)
+- `testing/unit/test_control_room_surface.py`: PASS (25/25 passed)
 - `testing/unit/test_e6_failure_recovery_revalidation.py`: PASS (14/14 passed)
 - `testing/unit/test_hero_*.py`: PASS (17/17 passed)
-- `scripts/verify_api_smoke.py`: PASS (all baseline and integration endpoints pass, including hero transaction API)
+- `scripts/verify_api_smoke.py`: PASS (all baseline, integration, and certification endpoints pass)
 - `npm run build` (frontend): PASS (Next.js 15.5.25 Turbopack production build clean)
 - `git diff --check`: PASS (clean formatting, zero whitespace errors)
 - Execution Mode Distinction: Verified synthetic offline payment simulation when credentials unconfigured, and real Razorpay Test Mode when active sandbox credentials provided. Deterministic backend logic is authoritative; AI explanation is strictly descriptive/advisory.
@@ -182,6 +186,11 @@ COMPLETE (C_E8 PASS)
 - **E8 Canonical 12-Scenario Completeness Invariant**: All 12 canonical scenarios (`HAPPY_PATH`, `PRICE_DRIFT`, `WRONG_SKU`, `INVENTORY_DISAPPEARS`, `DELIVERY_DRIFT`, `DUPLICATE_PAYMENT`, `DELAYED_WEBHOOK`, `REPLAY_ATTACK`, `PROMPT_INJECTION_IN_EVIDENCE`, `MERCHANT_AGENT_COMPROMISED`, `BUYER_AGENT_REUSE`, `UNKNOWN_PROVIDER_STATE`) are defined with stable IDs, initial conditions, mutations, expected behaviors, and proof specifications.
 - **E8 Real vs Synthetic Mode Distinction Invariant**: Scenarios visibly distinguish between `REAL_RAZORPAY_TEST_MODE` and fixture runs (`SYNTHETIC_OFFLINE_FIXTURE_RUN`). Offline simulation is never claimed or portrayed as live gateway capture.
 - **E8 AI Advisory Demarcation Invariant**: AI explanations and proposal rationales are labeled strictly as `ADVISORY` (model: `openai/gpt-oss-20b`); models possess zero financial or verification authority.
+- **E9 End-to-End Demonstration Certification Invariant**: E9 is purely an audit and certification layer verifying that all previous implementations (T01–T13, I0–I22, E0–E8) compose into a unified, evidence-backed control plane. Certification is read-only, side-effect free, and possesses zero authority to approve payments or override deterministic verdicts.
+- **E9 Deterministic Verification Authority**: "AI proposes. Evidence proves. Deterministic logic decides." AI models (strictly advisory `openai/gpt-oss-20b`) and autonomous agents have zero financial authority, zero payment capture authority, and zero ability to declare PASS or turn UNKNOWN into PASS.
+- **E9 Razorpay Test Mode vs Synthetic Boundary Invariant**: Real Razorpay Test Mode order creation and cryptographic HMAC-SHA256 signature verification against sandbox credentials are classified as `LIVE_VERIFIED`. Full payment capture and webhook workflows requiring simulated gateway callbacks are classified honestly as `SYNTHETIC_OFFLINE_FIXTURE`.
+- **E9 CAPTURED != PASS Separation Invariant**: Payment gateway capture status is orthogonal to transaction integrity. Duplicate payment captures or unauthorized captures are deterministically intercepted as `DRIFT` (e.g. `DoubleExecutionRisk`), never coerced or misattributed to `PASS`.
+- **E9 UNKNOWN Non-Coercion Invariant**: When provider evidence is missing, delayed, or indeterminate, UNKNOWN state is preserved as a first-class legitimate outcome triggering non-side-effecting resolution flows, and is never coerced into PASS or DRIFT without proof.
 
 ## Next Task
-E9 — Final End-to-End Demonstration Certification
+T14 — Control Room UI

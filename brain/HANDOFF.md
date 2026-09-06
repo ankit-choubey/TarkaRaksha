@@ -1,12 +1,12 @@
 # HANDOFF.md — Agent Session Handoff Document
 
 ## Handoff Metadata
-- **Current Task Completed**: `E8 — Scenario / Proof Surface`
-- **Current Checkpoint**: `C_E8 — PASS`
-- **Baseline SHA**: `5c59a7dde7ef741078a785077677dd67070226f2`
-- **Next Task**: `E9 — Final End-to-End Demonstration Certification`
+- **Current Task Completed**: `E9 — Final End-to-End Demonstration Certification`
+- **Current Checkpoint**: `C_E9 — PASS`
+- **Baseline SHA**: `4e978adb78d82ec43e28ca71076d8db11d65ef03` (E8 final baseline)
+- **Next Task**: `T14 — Control Room UI`
 - **Active Branch**: `main`
-- **Handoff Timestamp**: 2026-09-06T15:54:00+05:30
+- **Handoff Timestamp**: 2026-09-06T16:26:00+05:30
 
 ---
 
@@ -60,19 +60,25 @@
    - Full regression suite: 1047 passed (0 failures).
    - Clean Next.js Turbopack production build (`npm run build`).
 
+6. **E9 End-to-End Demonstration Certification**:
+   - `EndToEndCertificationService`: Unified audit engine certifying all 12 key system properties across integration, recovery, security, binding, telemetry, scenarios, live Razorpay verification, and state machine integrity.
+   - Contracts: `EndToEndCertificationItem`, `EndToEndCertificationReport`.
+   - REST Endpoint: `GET /api/v1/certification/e9`.
+   - 15 comprehensive certification tests in `testing/unit/test_e9_end_to_end_certification.py` (all 15 passing).
+   - Full regression suite: 1062 passing tests (0 failures).
+
 ---
 
 ## 2. Core Invariants Maintained
 - **Principle**: "AI proposes. Evidence proves. Deterministic logic decides."
-- **Scenario Lab Non-Authority**: The Scenario Lab is an observation and demonstration surface; it never decides PASS/DRIFT/UNKNOWN or authorizes money.
-- **UNKNOWN-First Safety**: Missing or ambiguous provider telemetry renders as UNKNOWN; never coerced into PASS.
-- **Payment Separation**: `CAPTURED != PASS`. Captured gateway state is never portrayed as an integrity clearance.
-- **Ceiling Invariance**: Scenarios cannot escalate or mutate the original authorized budget ceiling.
-- **Default AI Model**: Kept `openai/gpt-oss-20b` as default `GROQ_MODEL` with strictly advisory status.
-- **Provider Accuracy**: Strictly distinguishes real Razorpay Test Mode from synthetic offline simulation (`SYNTHETIC_OFFLINE_FIXTURE_RUN`).
+- **Advisory AI**: AI models (`openai/gpt-oss-20b`) have zero financial, payment, or verification authority.
+- **Payment Separation**: `CAPTURED != PASS`. Captured gateway state is never portrayed as an integrity clearance; duplicate capture attempts are deterministically intercepted as `DRIFT`.
+- **UNKNOWN-First Safety**: Missing or ambiguous provider telemetry renders as `UNKNOWN`; never coerced into `PASS`.
+- **Budget Ceiling Invariance**: Recovery and remediation proposals cannot exceed the immutable authorized ceiling (e.g. ₹50,000).
+- **Execution Mode Demarcation**: Genuine Razorpay Test Mode order creation and HMAC-SHA256 signature verification are labeled `LIVE_VERIFIED`. Full mock capture/webhook fixtures are labeled `SYNTHETIC_OFFLINE_FIXTURE`.
 
 ---
 
 ## 3. What Needs to Be Done Next
-1. Execute **E9 — Final End-to-End Demonstration Certification**.
-2. Never automatically begin E9 without explicit instruction.
+1. Execute **T14 — Control Room UI / major visual design and polish**.
+2. Never automatically begin T15 without explicit instruction.

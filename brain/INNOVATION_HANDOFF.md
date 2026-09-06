@@ -1096,7 +1096,56 @@ E1 — Integration Boundary
 
 ---
 
+## E9 Verification Record (Final End-to-End Demonstration Certification)
+
+- **Implementation Scope**:
+  - Establishes the final end-to-end certification harness (`EndToEndCertificationService`), auditing that all components (T01–T13, I0–I22, E0–E8) compose into one coherent, tamper-evident control plane.
+  - Core principle maintained: "AI proposes. Evidence proves. Deterministic logic decides."
+  - Advisory AI demarcation: AI models (`openai/gpt-oss-20b`) and autonomous agents have zero financial authority, cannot authorize money, and cannot declare PASS or coerce UNKNOWN into PASS.
+  - Real vs Synthetic demarcation: Live Razorpay Test Mode order creation and HMAC-SHA256 signature verification against sandbox credentials (`rzp_test_***`) are classified as `LIVE_VERIFIED`. Full mock payment capture workflows are classified as `SYNTHETIC_OFFLINE_FIXTURE`.
+  - CAPTURED != PASS: Payment capture does not equal integrity PASS; duplicate capture attempts are deterministically intercepted as `DRIFT` (`DoubleExecutionRisk`).
+  - UNKNOWN First-Class State: Missing or ambiguous provider telemetry renders as `UNKNOWN`, triggering non-side-effecting resolution flows, and is never coerced into PASS.
+  - Read-Only Audit API: Registered `GET /api/v1/certification/e9` returning structured `EndToEndCertificationReport`.
+- **Files Created**:
+  - `backend/app/services/certification/end_to_end.py`
+  - `testing/unit/test_e9_end_to_end_certification.py`
+- **Files Modified**:
+  - `backend/app/domain/certification/contracts.py` (EndToEndCertificationItem, EndToEndCertificationReport)
+  - `backend/app/domain/certification/__init__.py`
+  - `backend/app/services/certification/__init__.py`
+  - `backend/app/services/__init__.py`
+  - `backend/app/main.py`
+  - `brain/STATUS.md`
+  - `brain/HANDOFF.md`
+  - `brain/INNOVATION_HANDOFF.md`
+- **Tests Added**: 15 comprehensive certification tests in `testing/unit/test_e9_end_to_end_certification.py`.
+- **Regression Count**: 1062 passed, 2 warnings in full regression suite (100% green).
+- **Core Invariant Verification**:
+  - `make test-bootstrap`: PASS
+  - `make test-env`: PASS (including Next.js production build)
+  - `scripts/verify_api_smoke.py`: PASS
+  - `git diff --check`: PASS
+
+### E9 Certification Matrix Summary
+
+| Requirement # | Requirement Name | Status | Evidence Type | Key Fact Verified |
+|---|---|---|---|---|
+| 1 | Canonical Happy Path Composition | PASS | SYNTHETIC_OFFLINE_FIXTURE | Valid offer passes integrity, state transitions to PASS, payment verified |
+| 2 | Canonical Economic Drift & Hero Loop | PASS | SYNTHETIC_OFFLINE_FIXTURE | Price drift detected (₹50k -> ₹55k), MRDP generated, replan, restored |
+| 3 | Remediation Bounded Within Ceiling | PASS | SYNTHETIC_OFFLINE_FIXTURE | Replan within ₹50k ceiling accepted; budget breach strictly rejected |
+| 4 | Merchant / Agent Abuse Containment | PASS | SYNTHETIC_OFFLINE_FIXTURE | Compromised merchant claim blocked; kill switch gates execution |
+| 5 | UNKNOWN Provider State Safety Path | PASS | SYNTHETIC_OFFLINE_FIXTURE | Indeterminate provider state yields UNKNOWN; never coerced into PASS |
+| 6 | Deterministic Replay & Tamper Detection | PASS | SYNTHETIC_OFFLINE_FIXTURE | CPU-only replay yields MATCH on identical input; MISMATCH on tamper |
+| 7 | 7-Tuple Context Binding Enforcement | PASS | SYNTHETIC_OFFLINE_FIXTURE | Context mismatch across agent/intent/merchant unconditionally rejected |
+| 8 | State Machine Safety & CAPTURED != PASS | PASS | SYNTHETIC_OFFLINE_FIXTURE | Payment capture does not equal integrity PASS; duplicate captures drift |
+| 9 | Transaction Passport Observational Composition | PASS | SYNTHETIC_OFFLINE_FIXTURE | Read-only passport composes complete audit trail without state mutation |
+| 10 | Control Room Live Telemetry Integration | PASS | SYNTHETIC_OFFLINE_FIXTURE | Snapshot synchronized with live telemetry and 5 deep-dive tabs |
+| 11 | Scenario Proof Surface Completeness | PASS | SYNTHETIC_OFFLINE_FIXTURE | All 12 canonical scenarios produce verified, tamper-evident proofs |
+| 12 | Live Razorpay Test Mode Order & Signature | PASS | LIVE_VERIFIED | Genuine order created (rzp_test_*) and HMAC-SHA256 signature verified |
+
+---
+
 ## Next Task
-**E9 — Final End-to-End Demonstration Certification** (Await human owner instruction and approval).
+**T14 — Control Room UI / major visual design and polish** (Canonical next task per `brain/TarkaRaksha_Execution.md`).
 
 

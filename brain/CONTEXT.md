@@ -70,3 +70,17 @@
 
 9. **Application Layer & Control Plane UI (`backend/app/main.py`, `frontend/app/page.tsx`)**:
    - Complete slice operational: Protected Order Creation (`POST /api/v1/transaction/create`), Completion & Verification (`POST /api/v1/transaction/complete`), Webhook Ingestion (`POST /api/v1/webhook/razorpay`), Recovery (`POST /api/v1/transaction/recover`), UNKNOWN Resolution (`POST /api/v1/transaction/resolve`), and Replay (`POST /api/v1/replay`).
+
+---
+
+## E-Series Productization & Certification (E0–E9)
+1. **E0 — Baseline Freeze**: Frozen baseline contracts and ensured backward compatibility across all T01–T13 and I0–I22 layers.
+2. **E1 — Integration Boundary (`IntegrationService`)**: Unified application orchestrator binding Buyer Agent, Merchant Agent, TIX, Intent, Transaction, Payment, Integrity, Recovery, and Replay under strict 7-tuple context isolation (`intent_id`, `agent_id`, `merchant_id`, `transaction_id`, `order_id`, `payment_id`, `attempt_id`).
+3. **E2 — Consumer + Merchant Gate Composition (`ConsumerGate`, `MerchantGate`)**: Pre-execution gates enforcing temporal validity, budget ceilings, SKU constraints, prompt injection interception, and merchant capability alignment.
+4. **E3 — Agentic Lifecycle Orchestration (`AgenticLifecycleOrchestrator`)**: Full transactional lifecycle coordinating proposal, gate checks, TIX messaging, T04 deterministic evaluation, bounded replanning, and revalidation.
+5. **E4 — Security & Threat Guard Composition (`ThreatGuardService`)**: Defenses against prompt injection, credential swapping, replay attacks, duplicate captures, and signature forgery.
+6. **E5 — Transaction Passport (`TransactionPassportService`)**: Read-only, tamper-evident observational audit passport composing 7-tuple binding, gate verdicts, TIX hashes, MRDP digests, and SLA metrics.
+7. **E6 — Failure → Recovery → Revalidation Hero Loop (`HeroTransactionService`)**: Closed-loop high-value commerce verification (₹50,000 ceiling, ₹47,000 product + ₹3,000 shipping = ₹50,000 PASS -> ₹55,000 controlled drift -> MRDP -> bounded replanning -> merchant alternative -> deterministic revalidation -> payment capture -> "TRANSACTION RESTORED").
+8. **E7 — Real-Time Control-Room Data Surface (`ControlRoomService`, `frontend/app/page.tsx`)**: High-density telemetry dashboard providing live triad status, timeline, economic delta, and 5 deep-dive tabs. UI possesses zero authority.
+9. **E8 — Scenario / Proof Surface (`ScenarioProofService`, `frontend/app/page.tsx`)**: 12 canonical scenario catalog with interactive 5-Question proof narrative, parameter comparison ledger, 6-stage proof chain, and Control Room deep linking.
+10. **E9 — Final End-to-End Demonstration Certification (`EndToEndCertificationService`)**: Complete 12-item certification matrix verifying the unified system across live Razorpay order/signature verification (`LIVE_VERIFIED`), synthetic offline fixtures (`SYNTHETIC_OFFLINE_FIXTURE`), CAPTURED != PASS, UNKNOWN non-coercion, and AI advisory demarcation (`openai/gpt-oss-20b`). REST API: `GET /api/v1/certification/e9`.
